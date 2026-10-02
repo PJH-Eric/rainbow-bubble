@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rainbow-bubble-server
+    runtime: node
+    region: singapore   # 台灣連線延遲較低（Oregon 約 150 ms → 新加坡約 50～80 ms）
+    plan: free
+    buildCommand: echo "no build"
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: GAME_ALLOWED_ORIGIN
+        sync: false   # 填 GitHub Pages 網址，例如 https://帳號.github.io

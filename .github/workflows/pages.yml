@@ -1,0 +1,36 @@
+name: 部署前端到 GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 執行測試
+        run: node tests/verify.js && node tests/rooms.js && node tests/server.js && node scripts/online-check.js && node scripts/netcode-check.js
+      - name: 注入 server URL（Repository variable GAME_SERVER_URL）
+        env:
+          GAME_SERVER_URL: ${{ vars.GAME_SERVER_URL }}
+        run: |
+          if [ -n "$GAME_SERVER_URL" ]; then node scripts/inject-server-url.js; else echo "未設定 GAME_SERVER_URL：只會有單機模式"; fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4

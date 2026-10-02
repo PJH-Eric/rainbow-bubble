@@ -1,0 +1,12 @@
+{
+  "name": "彩虹泡泡砲",
+  "short_name": "彩虹泡泡砲",
+  "description": "可愛的泡泡射擊小遊戲：單機、電腦對手、線上房間與觀戰",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#dff3ff",
+  "theme_color": "#8fd6ff",
+  "lang": "zh-Hant",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

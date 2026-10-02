@@ -1,0 +1,48 @@
+/* 線上大廳／房間樣式（online.js 專用）。盡量沿用 style.css 的 card / pill / seat / room-item / invite-card / link-box。 */
+.col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.col.tight { gap: 8px; }
+.lobby-status { margin-left: auto; display: inline-flex; }
+.topbar .room-head { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.topbar .room-head h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.card h3 .pill { margin-left: 8px; }
+.card h3 .icon-btn { flex: none; }
+
+.notice { background: #fff6d8; }
+.wake-card { background: linear-gradient(135deg, #eaf6ff, #fff1fa); }
+.wake-card .wake-art { align-items: center; flex-wrap: wrap; }
+.wake-card .wake-art .avatar { flex: none; }
+.lobby-unset p { overflow-wrap: anywhere; }
+.invite-card h3 { font-size: 1.15rem; font-weight: 900; overflow-wrap: anywhere; }
+.invite-card, .invite-card > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+.action-row > .btn { flex: 1 1 140px; }
+.code-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; justify-content: flex-end; }
+.code-input { flex: 1 1 110px; min-width: 0; max-width: 170px; text-transform: uppercase; letter-spacing: .25em; text-align: center; font-weight: 900; }
+
+.seat.away { opacity: .7; }
+.seat .avatar { flex: none; }
+.seat-name { min-width: 0; }
+.seats { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+
+.room-chat { display: flex; flex-direction: column; min-width: 0; }
+.room-chat .chat-log { flex: none; height: 200px; min-height: 120px; max-height: 40vh; background: #fff; border: 3px solid var(--line); border-radius: 14px; padding: 6px 8px; }
+.room-chat .chat-log .msg.spec b { color: var(--ink3); }
+.room-chat .chat-form { margin-top: 8px; }
+.room-chat .chat-form .text-input { flex: 1 1 auto; min-width: 0; }
+
+.invite-item { min-width: 0; }
+.invite-item .link-box { flex-wrap: nowrap; }
+.invite-item .link-box .btn { flex: none; }
+
+@media (max-width: 560px) {
+  .topbar .room-head h2 { font-size: 1.15rem; }
+  .code-row { justify-content: flex-start; }
+  .code-input { max-width: none; }
+}
+.chat-form .btn { flex: none; white-space: nowrap; }
+.chat-form .btn .btn-label { white-space: nowrap; }
+.topbar > .chips { flex: none; justify-content: flex-end; }
+.action-row > .btn { min-width: 0; }
+.action-row .btn-label, .code-row .btn-label { white-space: nowrap; }
