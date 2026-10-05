@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { starR: 1, laser: 0.05, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.05, star: 0.05, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { starR: 1, laser: 0.05, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.05, star: 0.05, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { starR: 2, laser: 0.045, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.045, star: 0.045, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { starR: 2, laser: 0.04, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.04, star: 0.04, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { starR: 1, laser: 0.035, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.035, star: 0.035, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { starR: 1, laser: 0.035, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.035, star: 0.035, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { starR: 2, laser: 0.03, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.03, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { starR: 2, laser: 0.025, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.025, star: 0.025, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
