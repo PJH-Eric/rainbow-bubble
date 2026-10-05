@@ -137,8 +137,15 @@
   }
 
   /* ---------- 發射序列（由 seed 與已發射次數決定） ---------- */
-  /* 第 0 列（天花板那排）還有空格＝泡泡可以直接打到天花板；這時不出閃電泡泡，不然一發就整片掉下來太容易 */
-  const ceilingOpen = b => { const row = b.rows[0]; if (!row) return true; for (let c = 0; c < rowLen(b, 0); c++) if (!row[c]) return true; return false; };
+  /* 真的有角度能把泡泡打到天花板（落在第 0 排）才算「打得到天花板」；第 0 排有空格但被擋住打不到不算。
+   * 這時不出閃電泡泡，不然一發就整片掉下來太容易 */
+  const ceilingOpen = b => {
+    const row = b.rows[0]; let hole = !row;
+    if (row) for (let c = 0; c < rowLen(b, 0); c++) if (!row[c]) { hole = true; break; }
+    if (!hole) return false;
+    for (let a = MIN_A; a <= MAX_A; a += 200) if (trace(b, a).land.r === 0) return true;
+    return false;
+  };
   function genItem(b, idx) {
     const r1 = rand01(b.queueSeed, idx * 3 + 1);
     const r2 = rand01(b.queueSeed, idx * 3 + 2);

@@ -148,14 +148,20 @@ t('發射序列會出現閃電泡泡，且與彩虹、星星機率相同', () =>
   const hi = Math.max(cnt.rainbow, cnt.star, cnt.laser), lo = Math.min(cnt.rainbow, cnt.star, cnt.laser);
   assert(lo > hi * 0.6, '三種機率應該接近：' + JSON.stringify(cnt));
 });
-t('天花板排有空格（可打到天花板）時不出閃電泡泡；落在天花板排的閃電泡泡改當星星', () => {
+t('真的打得到天花板時不出閃電泡泡；打不到時照常出；落在天花板排的閃電泡泡改當星星', () => {
   const b = R.newBoard({ seed: 11, level: 'normal' });
-  for (let i = 0; i < 3000; i++) assert(R.genItem(b, i).k !== 'laser' || b.rows[0].every(v => v), '第 0 排滿時才可能有閃電泡泡');
-  b.rows[0][4] = 0;                           /* 天花板排開一個洞 */
-  for (let i = 0; i < 3000; i++) assert(R.genItem(b, i).k !== 'laser', '天花板打得到時不該出閃電泡泡，i=' + i);
+  let n = 0;
+  for (let i = 0; i < 3000; i++) if (R.genItem(b, i).k === 'laser') n++;
+  assert(n > 0, '天花板關著時應該照常出閃電泡泡');
+  b.rows[0][4] = 0;                           /* 天花板排的洞被下面的泡泡擋住、打不到：仍然照常出 */
+  let m = 0;
+  for (let i = 0; i < 400; i++) if (R.genItem(b, i).k === 'laser') m++;
+  assert(m > 0, '洞打不到時不該被禁止');
   const b2 = blank();
   fillDistinct(b2, 1);
-  b2.rows[0][5] = 0;
+  b2.rows[0][5] = 0;                          /* 下面沒有擋住：真的打得到天花板 */
+  b2.miss = 0;
+  for (let i = 0; i < 400; i++) assert(R.genItem(b2, i).k !== 'laser', '天花板打得到時不該出閃電泡泡，i=' + i);
   b2.cur = { k: 'laser', c: 0 };
   const a = angleTo(b2, 0, 5);
   assert(a != null, '找不到天花板落點');
