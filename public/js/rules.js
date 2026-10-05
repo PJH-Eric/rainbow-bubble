@@ -200,6 +200,17 @@
       while (row.length < rowLen(b, r)) row.push(0);
       b.rows.push(row);
     });
+    /* 保證有星星記號泡泡：很多版型沒有標記，補到約 5% 的泡泡（至少 3 顆，用獨立亂數不影響其他抽籤） */
+    {
+      const cells = []; let marked = 0;
+      b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 1) marked++; else if (modOf(v) === 0) cells.push([r, c]); } }));
+      const want = Math.max(3, Math.round((cells.length + marked) * 0.05));
+      const mr = mulberry32(hash2(opt.seed, 271));
+      for (let i = marked; i < want && cells.length; i++) {
+        const q = cells.splice(Math.floor(mr() * cells.length), 1)[0];
+        b.rows[q[0]][q[1]] |= (1 << 4);
+      }
+    }
     ensureStartable(b, rng);
     b.cur = genItem(b, 0);
     b.nxt = genItem(b, 1);
