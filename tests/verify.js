@@ -145,7 +145,8 @@ t('發射序列會出現閃電泡泡，且與彩虹、星星機率相同', () =>
   const cnt = {};
   for (let i = 0; i < 6000; i++) { const k = R.genItem(b, i).k; cnt[k] = (cnt[k] || 0) + 1; }
   assert(cnt.laser > 0 && !cnt.laserh && !cnt.laserv, '應該只有一種閃電泡泡：' + JSON.stringify(cnt));
-  const hi = Math.max(cnt.rainbow, cnt.star, cnt.laser), lo = Math.min(cnt.rainbow, cnt.star, cnt.laser);
+  const lz = cnt.laser / (b.cfg.laserBoost || 1);   /* 天花板關著時機率有乘 laserBoost，這裡還原 */
+  const hi = Math.max(cnt.rainbow, cnt.star, lz), lo = Math.min(cnt.rainbow, cnt.star, lz);
   assert(lo > hi * 0.6, '三種機率應該接近：' + JSON.stringify(cnt));
 });
 t('真的打得到天花板時不出閃電泡泡；打不到時照常出；落在天花板排的閃電泡泡改當星星', () => {
