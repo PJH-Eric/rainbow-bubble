@@ -200,16 +200,14 @@
       while (row.length < rowLen(b, r)) row.push(0);
       b.rows.push(row);
     });
-    /* 保證有星星記號泡泡：很多版型沒有標記，補到約 5% 的泡泡（至少 3 顆，用獨立亂數不影響其他抽籤） */
+    /* 星星記號泡泡每局固定 2～3 顆：版型自帶的太多就拿掉多的，不夠就補（用獨立亂數，不影響其他抽籤） */
     {
-      const cells = []; let marked = 0;
-      b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 1) marked++; else if (modOf(v) === 0) cells.push([r, c]); } }));
-      const want = Math.max(3, Math.round((cells.length + marked) * 0.05));
       const mr = mulberry32(hash2(opt.seed, 271));
-      for (let i = marked; i < want && cells.length; i++) {
-        const q = cells.splice(Math.floor(mr() * cells.length), 1)[0];
-        b.rows[q[0]][q[1]] |= (1 << 4);
-      }
+      const want = 2 + (mr() < 0.36 ? 1 : 0);
+      const marked = [], plain = [];
+      b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 1) marked.push([r, c]); else if (modOf(v) === 0) plain.push([r, c]); } }));
+      while (marked.length > want) { const q = marked.splice(Math.floor(mr() * marked.length), 1)[0]; b.rows[q[0]][q[1]] &= 15; }
+      while (marked.length < want && plain.length) { const q = plain.splice(Math.floor(mr() * plain.length), 1)[0]; b.rows[q[0]][q[1]] |= (1 << 4); marked.push(q); }
     }
     ensureStartable(b, rng);
     b.cur = genItem(b, 0);
