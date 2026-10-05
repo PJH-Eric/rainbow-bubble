@@ -804,12 +804,15 @@
       if (!pat) fam = findFamily(idOrRandom);
     }
     if (!pat && !fam) {
-      var pool = [], i;
-      for (i = 0; i < PATTERNS.length; i++) if (!noObs || !PATTERNS[i].obstacle) pool.push(PATTERNS[i]);
+      var pool = [], fpool = [], i, allow = opt.allow || null;
+      var ok = function (x) { return !allow || allow.indexOf(x) >= 0; };   /* allow：只在這份清單裡抽（各難度挑過的地圖） */
+      for (i = 0; i < PATTERNS.length; i++) if ((!noObs || !PATTERNS[i].obstacle) && ok(PATTERNS[i].id)) pool.push(PATTERNS[i]);
+      for (i = 0; i < FAMILIES.length; i++) if (ok(FAMILIES[i].id)) fpool.push(FAMILIES[i]);
+      if (!pool.length && !fpool.length) { pool = PATTERNS.filter(function (p) { return !noObs || !p.obstacle; }); fpool = FAMILIES.slice(); }
       var roll = rng();
       var pick = rng();
-      if (roll < 0.7 && pool.length) pat = pool[Math.floor(pick * pool.length)];
-      else fam = FAMILIES[Math.floor(pick * FAMILIES.length)];
+      if (pool.length && (roll < 0.7 || !fpool.length)) pat = pool[Math.floor(pick * pool.length)];
+      else fam = fpool[Math.floor(pick * fpool.length)];
     }
 
     var rows, id, name;

@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { starR: 1, laser: 0.04, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { starR: 1, laser: 0.04, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { starR: 1, laser: 0.035, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.035, star: 0.035, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { starR: 1, laser: 0.03, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { assist: 0.8, pity: 1, starR: 1, laser: 0.04, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { assist: 0.7, pity: 1, starR: 1, laser: 0.04, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { assist: 0.15, pity: 1, starR: 1, laser: 0.035, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.035, star: 0.035, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { assist: 0.08, pity: 3, starR: 1, laser: 0.03, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -118,14 +118,43 @@
     return Array.from(seen).sort((x, y) => x - y);
   }
 
+  /* 現在「打得到、而且能湊成 3 顆」的顏色：有一組同色（≥2 顆）的某顆泡泡露出空位（在盤面下緣或側邊露出來的） */
+  function readyColors(b) {
+    const seen = new Set(), out = new Set();
+    for (let r = 0; r < b.rows.length; r++) for (let c = 0; c < b.rows[r].length; c++) {
+      const v = b.rows[r][c];
+      if (!isBubble(v) || v === OBST || seen.has(key(r, c))) continue;
+      const g = group(b, r, c);
+      for (const q of g) seen.add(key(q[0], q[1]));
+      if (g.length < 2) continue;
+      const open = g.some(q => {
+        for (const n of neighbors(b, q[0], q[1])) if (!isBubble(get(b, n[0], n[1])) && n[0] < LINE_ROW) return true;
+        return false;
+      });
+      if (open) out.add(colorOf(v));
+    }
+    return Array.from(out).sort((x, y) => x - y);
+  }
+
   /* ---------- 發射序列（由 seed 與已發射次數決定） ---------- */
   function genItem(b, idx) {
     const r1 = rand01(b.queueSeed, idx * 3 + 1);
     const r2 = rand01(b.queueSeed, idx * 3 + 2);
     const present = presentColors(b);
     /* wild：難度越高，越常出現盤面上沒有的顏色（要靠交換或繞路消） */
-    const wild = b.cfg.wild > 0 && rand01(b.queueSeed, idx * 3 + 3) < b.cfg.wild;
-    const pool = (wild || !present.length) ? b.colors : present;
+    let wild = b.cfg.wild > 0 && rand01(b.queueSeed, idx * 3 + 3) < b.cfg.wild;
+    /* 穩定難度：每一發有固定比例會從「現在打得到、能湊成 3 顆」的顏色裡抽（assist，難度越低越高）；
+     * 剛剛才沒消到時（miss）更是必定給一發能消的，不讓運氣把難度拉得忽高忽低 */
+    const lucky = b.miss >= (b.cfg.pity || 1);
+    let pool = present;
+    if (lucky) wild = false;
+    if (wild || !present.length) pool = b.colors;
+    else {
+      const ready = readyColors(b);
+      if (ready.length && (lucky || rand01(b.queueSeed + 31337, idx) < (b.cfg.assist || 0))) pool = ready;
+      /* 卡關保險：盤面上已經沒有任何成對的同色（只剩落單的），普通泡泡怎麼射都消不掉，這時送一顆星星或閃電泡泡 */
+      else if (!ready.length && lucky && bubbleCount(b) > 0) return { k: rand01(b.queueSeed + 4242, idx) < 0.5 ? 'star' : 'laser', c: 0 };
+    }
     const color = pool[Math.floor(r2 * pool.length) % pool.length];
     if (r1 < b.cfg.rainbow) return { k: 'rainbow', c: 0 };
     if (r1 < b.cfg.rainbow + b.cfg.star) return { k: 'star', c: 0 };
@@ -146,7 +175,8 @@
       cur: { k: 'n', c: 1 }, nxt: { k: 'n', c: 1 }
     };
     const Layouts = root.Layouts || (typeof require === 'function' ? require('./layouts.js') : null);
-    const lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng, noObstacles: level === 'baby' });
+    const Tiers = root.LayoutTiers || (typeof require === 'function' ? require('./layout-tiers.js') : null);
+    const lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng, noObstacles: level === 'baby', allow: Tiers && Tiers[level] ? Tiers[level] : null });
     b.layoutId = lay.id; b.layoutName = lay.name;
     /* 顏色槽 → 本局顏色：用 seed 洗牌，槽數超過顏色數就循環使用 */
     const perm = b.colors.slice();
@@ -182,7 +212,7 @@
    * 做法：找出讓盤面大量掉落的那一發，把被打掉那一組裡的一顆換成別的顏色，反覆直到安全。 */
   function ensureNoOneShot(b, rng) {
     const total = bubbleCount(b);
-    const limit = Math.max(9, Math.floor(total * 0.5));
+    const limit = Math.max(8, Math.floor(total * 0.34));
     for (let guard = 0; guard < 60; guard++) {
       let worst = null;
       for (const which of ['cur', 'nxt']) {
