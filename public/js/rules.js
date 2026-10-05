@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { starN: 6, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { starN: 7, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { starN: 8, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { starN: 9, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -318,17 +318,30 @@
   }
 
   /* ---------- 消除結算 ---------- */
-  /* 星星標記：被消除或掉落時，連帶炸掉周圍 6 顆（可連鎖） */
+  /* 星星標記：被消除或掉落時，連帶炸掉周圍最近的 N 顆（N 依難度：幼幼班 6／簡單 7／普通 8／困難 9；可連鎖）。
+   * 6 顆正好是貼身一圈；多出來的由第二圈裡離星星最近的補上（距離相同時依列、欄順序，結果固定）。 */
   function explodeStars(b, seeds, removed) {
+    const N = (b.cfg && b.cfg.starN) || 6;
     const q = seeds.slice();
     while (q.length) {
       const p = q.pop();
-      for (const n of neighbors(b, p[0], p[1])) {
-        const k = key(n[0], n[1]);
-        const v = get(b, n[0], n[1]);
-        if (removed.has(k) || !isBubble(v)) continue;
-        removed.set(k, { r: n[0], c: n[1], v, how: 'star' });
-        if (modOf(v) === 1) q.push(n);
+      const x0 = cx(b, p[0], p[1]), y0 = cy(p[0]);
+      const cand = [];
+      for (let r = Math.max(0, p[0] - 2); r <= p[0] + 2; r++) {
+        const row = b.rows[r];
+        if (!row) continue;
+        for (let c = 0; c < row.length; c++) {
+          if (r === p[0] && c === p[1]) continue;
+          const v = row[c];
+          if (!isBubble(v) || removed.has(key(r, c))) continue;
+          const dx = cx(b, r, c) - x0, dy = cy(r) - y0, d = dx * dx + dy * dy;
+          if (d < 16.5) cand.push({ r, c, v, d });
+        }
+      }
+      cand.sort((a, z) => (a.d - z.d) || (a.r - z.r) || (a.c - z.c));
+      for (const n of cand.slice(0, N)) {
+        removed.set(key(n.r, n.c), { r: n.r, c: n.c, v: n.v, how: 'star' });
+        if (modOf(n.v) === 1) q.push([n.r, n.c]);
       }
     }
   }
@@ -547,7 +560,7 @@
     mulberry32, hash2, rand01, clampAngle,
     colorOf, modOf, isBubble, offOf, rowLen, cx, cy, get, neighbors, inBoard, shooterPos,
     cloneBoard, bubbleCount, lowestRow, presentColors,
-    newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating
+    newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating, settle
   };
   root.Rules = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

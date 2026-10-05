@@ -102,6 +102,20 @@ t('星星標記：消除時連帶炸掉周圍', () => {
   const res = R.applyShot(b, angleTo(b, 0, 5) || angleTo(b, 0, 2));
   assert(res.popped.some(p => p.how === 'star'), '應有被星星炸掉的泡泡');
 });
+t('星星炸掉周圍的數量依難度：幼幼班 6／簡單 7／普通 8／困難 9', () => {
+  const want = { baby: 6, easy: 7, normal: 8, hard: 9 };
+  for (const lv of R.LEVELS) {
+    const b = blank(lv);
+    for (let r = 0; r < 9; r++) {
+      while (b.rows.length <= r) b.rows.push(new Array(R.rowLen(b, b.rows.length)).fill(0));
+      for (let c = 0; c < R.rowLen(b, r); c++) b.rows[r][c] = 1 + ((r * 2 + c * 3) % 4);   /* 沒有同色連片，免得干擾 */
+    }
+    b.rows[4][4] = 1 | 16;
+    const st = R.settle(b, [[4, 4]]);
+    const boom = st.popped.filter(p => p.how === 'star').length;
+    assert.strictEqual(boom, want[lv], lv + ' 應炸掉 ' + want[lv] + ' 顆，實際 ' + boom);
+  }
+});
 t('獎勵標記算 3 顆分數', () => {
   const b = blank();
   put(b, 0, 3, 1 | 32); put(b, 0, 4, 1);
