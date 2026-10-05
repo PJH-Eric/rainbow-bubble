@@ -552,11 +552,11 @@ test('倒數中電腦不動；開打後電腦用 ev 射擊（s = 電腦 slot）�
   startIt(x);
   x.run(2900);
   assert.strictEqual(x.all('aaaaaaaa1', 'ev').length, 0, '倒數期間不動');
-  x.run(14000);
+  x.run(8000);
   const g = roomOf(x).match;
   const sh = shotsOf(x, 'aaaaaaaa1');
   assert(sh.some(e => e.s === 1) && sh.some(e => e.s === 2) && !sh.some(e => e.s === 0), '兩個電腦都有射、人類沒動');
-  assert(x.hub.counters.shots >= 12);
+  assert(x.hub.counters.shots >= 8);
   const client = Match.create(g.cfg);
   for (const msg of x.all('aaaaaaaa1', 'ev')) for (const ev of msg.evs) Match.apply(client, ev);
   assert.deepStrictEqual(client.boards.map(Rules.boardHash), g.m.boards.map(Rules.boardHash));

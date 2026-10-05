@@ -316,24 +316,20 @@
       s += '<polygon points="' + starPts(50, 52, 22, 9.5, 5) + '" fill="#fff" stroke="#fff" stroke-width="0.5" stroke-linejoin="round"/>';
       s += '<ellipse cx="36" cy="33" rx="9" ry="5" transform="rotate(-38 36 33)" fill="#fff" opacity="0.85"/>';
       s += sparkle(84, 18, 7) + sparkle(14, 80, 5.5);
-    } else if (kind === 'laserh' || kind === 'laserv') { // 閃電／雷射泡：電藍色泡泡，雷射方向用兩端的箭頭＋光束標示
-      var hz = kind === 'laserh';
+    } else if (kind === 'laser') { // 閃電泡泡：深藍泡泡＋中央大閃電＋上下左右四個箭頭（十字雷射）
       defs = rg(p + 'in', 0.4, 0.3, 0.9, [[0, '#8fb0ff'], [0.55, '#4a5fe0'], [1, '#262a8c']]) +
         rg(p + 'glow', 0.5, 0.5, 0.5, [[0, '#fff6a8', 0.9], [1, '#ffd23a', 0]]);
       s += '<circle cx="50" cy="50" r="44" fill="#2a1240" opacity="0.15"/>';
       s += '<circle cx="50" cy="50" r="44" fill="url(#' + p + 'in)" stroke="#1b1f6e" stroke-width="3.5"/>';
       s += '<circle cx="50" cy="50" r="40" fill="none" stroke="#bcd0ff" stroke-width="1.8" opacity="0.6"/>';
-      // 細的方向光線（虛線）＋兩端粗箭頭，清楚標示橫向／縱向
-      var bm = hz ? 'M24 50 H76' : 'M50 24 V76';
-      s += '<path d="' + bm + '" stroke="#bfe6ff" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 7" opacity="0.9"/>';
-      var ar = hz ? ['M14 50 L29 36 V45 H33 V55 H29 V64Z', 'M86 50 L71 36 V45 H67 V55 H71 V64Z'] : ['M50 14 L36 29 H45 V33 H55 V29 H64Z', 'M50 86 L36 71 H45 V67 H55 V71 H64Z'];
-      for (i = 0; i < 2; i++) s += '<path d="' + ar[i] + '" fill="#ffffff" stroke="#1b1f6e" stroke-width="3" stroke-linejoin="round" paint-order="stroke"/>';
-      // 中央大閃電
-      s += '<circle cx="50" cy="50" r="22" fill="url(#' + p + 'glow)"/>';
+      s += '<path d="M26 50 H74 M50 26 V74" stroke="#bfe6ff" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 7" opacity="0.9"/>';
+      var ar = ['M13 50 L27 37 V44 H31 V56 H27 V63Z', 'M87 50 L73 37 V44 H69 V56 H73 V63Z', 'M50 13 L37 27 H44 V31 H56 V27 H63Z', 'M50 87 L37 73 H44 V69 H56 V73 H63Z'];
+      for (i = 0; i < 4; i++) s += '<path d="' + ar[i] + '" fill="#ffffff" stroke="#1b1f6e" stroke-width="3" stroke-linejoin="round" paint-order="stroke"/>';
+      s += '<circle cx="50" cy="50" r="20" fill="url(#' + p + 'glow)"/>';
       var bolt = 'M57 22 L35 54 H48 L41 80 L66 44 H52 Z';
-      s += '<path d="' + bolt + '" fill="#ffe14a" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>';
-      s += '<path d="' + bolt + '" fill="#ffd21f" stroke="#b86a00" stroke-width="3" stroke-linejoin="round"/>';
-      s += '<ellipse cx="31" cy="27" rx="9" ry="5" transform="rotate(-38 31 27)" fill="#fff" opacity="0.6"/>';
+      s += '<g transform="translate(50 51) scale(0.62) translate(-50 -51)"><path d="' + bolt + '" fill="#ffe14a" stroke="#fff" stroke-width="9" stroke-linejoin="round"/>';
+      s += '<path d="' + bolt + '" fill="#ffd21f" stroke="#b86a00" stroke-width="3.8" stroke-linejoin="round"/></g>';
+      s += '<ellipse cx="31" cy="27" rx="9" ry="5" transform="rotate(-38 31 27)" fill="#fff" opacity="0.55"/>';
     } else { // cloud 雲朵磚：圓角方塊感，看起來推不動
       defs = lg(p + 'f', 0, 0, 0, 1, [[0, '#ffffff'], [0.65, '#f4f8ff'], [1, '#dbe6f7']]);
       var shapes = '<rect x="10" y="36" width="80" height="50" rx="22"/><circle cx="33" cy="42" r="19"/><circle cx="58" cy="34" r="23"/><circle cx="76" cy="48" r="15"/>';

@@ -14,7 +14,7 @@ const ROOT = path.join(__dirname, '..');
   await pg.evaluate(() => { App.store.solo.opponents = 0; App.store.solo.mode = 'race'; App.store.solo.level = 'normal'; App.store.solo.duration = 0; App.go('solo'); });
   await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot canvas');
   await pg.waitForFunction(() => App.game && App.game.mt() > 300, null, { timeout: 8000 });
-  for (const k of ['laserh', 'laserv']) {
+  for (const k of ['laser']) {
     const before = await pg.evaluate(() => { const b = App.game.m.boards[0]; return b.rows.flat().filter(x => x).length; });
     await pg.evaluate(k => { const b = App.game.m.boards[0]; b.cur = { k, c: 0 }; }, k);
     const cv = await pg.$('.bslot.mine canvas'); const bb = await cv.boundingBox();

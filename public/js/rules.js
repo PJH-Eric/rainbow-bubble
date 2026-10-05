@@ -129,7 +129,7 @@
     const color = pool[Math.floor(r2 * pool.length) % pool.length];
     if (r1 < b.cfg.rainbow) return { k: 'rainbow', c: 0 };
     if (r1 < b.cfg.rainbow + b.cfg.star) return { k: 'star', c: 0 };
-    if (r1 < b.cfg.rainbow + b.cfg.star + (b.cfg.laser || 0)) return { k: rand01(b.queueSeed + 7919, idx) < 0.5 ? 'laserh' : 'laserv', c: 0 };
+    if (r1 < b.cfg.rainbow + b.cfg.star + (b.cfg.laser || 0)) return { k: 'laser', c: 0 };
     return { k: 'n', c: color };
   }
 
@@ -346,14 +346,12 @@
   }
   function weight(v) { return modOf(v) === 2 ? 3 : 1; }
 
-  /** 雷射線上的所有泡泡：橫向 = 同一排；縱向 = 每一排裡最靠近那一條直線的泡泡（六角格會左右錯開半格，所以是一條之字線） */
-  function laserLine(b, r, c, horizontal) {
-    const out = [];
-    if (horizontal) {
-      const row = b.rows[r] || [];
-      for (let i = 0; i < row.length; i++) if (isBubble(row[i])) out.push([r, i]);
-      return out;
-    }
+  /** 雷射十字線上的所有泡泡：同一排全部＋每一排裡最靠近那條直線的泡泡（六角格會左右錯開半格，所以直的是一條之字線） */
+  function laserLine(b, r, c) {
+    const out = [], seen = new Set();
+    const add = (rr, cc) => { const k = rr * 100 + cc; if (!seen.has(k)) { seen.add(k); out.push([rr, cc]); } };
+    const row0 = b.rows[r] || [];
+    for (let i = 0; i < row0.length; i++) if (isBubble(row0[i])) add(r, i);
     const x0 = cx(b, r, c);
     for (let rr = 0; rr < b.rows.length; rr++) {
       const row = b.rows[rr];
@@ -363,7 +361,7 @@
         const d = Math.abs(cx(b, rr, i) - x0);
         if (d < bd - 1e-9) { bd = d; best = i; }
       }
-      if (best >= 0 && bd <= 1 + 1e-6 && isBubble(row[best])) out.push([rr, best]);
+      if (best >= 0 && bd <= 1 + 1e-6 && isBubble(row[best])) add(rr, best);
     }
     return out;
   }
@@ -472,12 +470,12 @@
       pop = [[r, c]];
     }
     let popHow = 'match';
-    if (item.k === 'laserh' || item.k === 'laserv') {
-      /* 雷射泡泡：落下後橫向消掉整排／縱向消掉整列（含自己） */
+    if (item.k === 'laser') {
+      /* 閃電泡泡：落下後同時消掉整排＋整列（十字，含自己） */
       set(b, r, c, 1);
-      pop = laserLine(b, r, c, item.k === 'laserh');
+      pop = laserLine(b, r, c);
       popHow = 'laser';
-      res.laser = { r, c, h: item.k === 'laserh' };
+      res.laser = { r, c };
     }
     let st = { popped: [], dropped: [], gained: 0 };
     if (pop.length) st = settle(b, pop, popHow);
@@ -560,8 +558,8 @@
       const row = b.rows[r];
       for (let c = 0; c < row.length; c++) if (row[c]) h = hash2(h, r * 4096 + c * 64 + row[c]);
     }
-    h = hash2(h, b.cur.c * 8 + (b.cur.k === 'n' ? 0 : b.cur.k === 'rainbow' ? 1 : b.cur.k === 'star' ? 2 : b.cur.k === 'laserh' ? 3 : 4));
-    h = hash2(h, b.nxt.c * 8 + (b.nxt.k === 'n' ? 0 : b.nxt.k === 'rainbow' ? 1 : b.nxt.k === 'star' ? 2 : b.nxt.k === 'laserh' ? 3 : 4));
+    h = hash2(h, b.cur.c * 8 + (b.cur.k === 'n' ? 0 : b.cur.k === 'rainbow' ? 1 : b.cur.k === 'star' ? 2 : b.cur.k === 'laser' ? 3 : 4));
+    h = hash2(h, b.nxt.c * 8 + (b.nxt.k === 'n' ? 0 : b.nxt.k === 'rainbow' ? 1 : b.nxt.k === 'star' ? 2 : b.nxt.k === 'laser' ? 3 : 4));
     return hash2(h, b.cleared);
   }
 

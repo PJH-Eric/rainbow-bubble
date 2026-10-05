@@ -44,7 +44,7 @@
   /** 先把常用精靈圖全部載入，避免開局時閃一下空白 */
   Art.preload = function (dragonIds) {
     for (let c = 1; c <= 10; c++) for (let m = 0; m < 3; m++) Art.sprite('b:' + c + ':' + m);
-    ['rainbow', 'star', 'laserh', 'laserv', 'cloud'].forEach(k => Art.sprite('s:' + k));
+    ['rainbow', 'star', 'laser', 'cloud'].forEach(k => Art.sprite('s:' + k));
     Art.sprite('cannon');
     (dragonIds || Art.DRAGONS.map(d => d.id)).forEach(id => { ['idle', 'shoot', 'cheer', 'sad'].forEach(p => Art.sprite('dragon:' + id + ':' + p)); Art.sprite('face:' + id); });
   };

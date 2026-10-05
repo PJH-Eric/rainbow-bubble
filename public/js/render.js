@@ -140,8 +140,9 @@
         const lx = R.cx(prev, res.land.r, res.land.c), ly = TOP + R.cy(res.land.r);
         if (snd) snd.sfx('land');
         if (res.laser) {
-          const pts = [];   /* 直線光束（縱向不必跟著六邊形交錯彎折） */
-          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 600, x: lx, y: ly, h: res.laser.h, pts, pre: k });
+          /* 十字雷射：橫、縱兩條直線光束同時由射中處射向四方 */
+          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 600, x: lx, y: ly, h: true, pts: [], pre: k });
+          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 600, x: lx, y: ly, h: false, pts: [], pre: k });
         }
         /* 爆開 */
         const lst = res.popped || [];
@@ -150,7 +151,7 @@
           if (p.how === 'fizzle') { this.fx.push({ k: 'spark', t0: now, dur: 500, x: lx, y: ly }); continue; }
           const x = R.cx(prev, p.r, p.c), y = TOP + R.cy(p.r);
           /* 雷射：泡泡在光束掃到的瞬間才爆開（由射中處向兩端依距離依序） */
-          const delay = reduce ? 0 : (p.how === 'laser' && res.laser ? Math.round((res.laser.h ? Math.abs(x - lx) / this.ws.w : Math.abs(y - ly) / this.ws.h) * 300) : idx * 28);
+          const delay = reduce ? 0 : (p.how === 'laser' && res.laser ? Math.round(Math.min(Math.abs(x - lx) / this.ws.w, Math.abs(y - ly) / this.ws.h) * 300) : idx * 28);
           this.fx.push({ k: 'pop', t0: now + delay, dur: reduce ? 150 : 420, x, y, v: p.v, how: p.how, pre: k, idx });
           if (p.how === 'star') big = true;
           sx += x; sy += y; sn++; idx++;
