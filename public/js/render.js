@@ -139,7 +139,13 @@
       if (j.kind === 'shot') {
         const lx = R.cx(prev, res.land.r, res.land.c), ly = TOP + R.cy(res.land.r);
         if (snd) snd.sfx('land');
-        if (res.laser) this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 520, x: lx, y: ly, h: res.laser.h });
+        if (res.laser) {
+          /* 光束穿過被打掉的每一顆泡泡中心（縱向會隨蜂巢交錯而左右微彎） */
+          const pts = (res.popped || []).filter(p => p.how === 'laser').map(p => [R.cx(prev, p.r, p.c), TOP + R.cy(p.r)]);
+          pts.push([lx, ly]);
+          pts.sort((a, b) => res.laser.h ? a[0] - b[0] : a[1] - b[1]);
+          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 520, x: lx, y: ly, h: res.laser.h, pts, pre: k });
+        }
         /* 爆開 */
         const lst = res.popped || [];
         let idx = 0, sx = 0, sy = 0, sn = 0, big = false;
@@ -350,19 +356,23 @@
           const thin = 0.07 + 0.09 * (1 - t);                       /* 核心半寬：越來越細 */
           const len = f.h ? ws.w : ws.h, c0 = f.h ? f.x : f.y;      /* 沿光束方向的起點 */
           const a0 = Math.max(0, c0 - len * e), a1 = Math.min(len, c0 + len * e);
-          const P = (u) => f.h ? [u, f.y] : [f.x, u];
-          const [x0, y0] = P(a0), [x1, y1] = P(a1);
+          const P = (u) => f.h ? [u, f.y + yoff] : [f.x, u + yoff];
+          /* 折線：兩端延伸到盤面邊緣，中間穿過每顆泡泡中心 */
+          const line = f.pts.filter(q => (f.h ? q[0] : q[1]) >= a0 && (f.h ? q[0] : q[1]) <= a1).map(q => [q[0], q[1] + yoff]);
+          const first = line.length ? line[0] : P(f.h ? f.x : f.y), last = line.length ? line[line.length - 1] : first;
+          const [x0, y0] = f.h ? [a0, first[1]] : [first[0], a0 + yoff], [x1, y1] = f.h ? [a1, last[1]] : [last[0], a1 + yoff];
+          const trace = () => { g.beginPath(); g.moveTo(x0, y0); for (const q of line) g.lineTo(q[0], q[1]); g.lineTo(x1, y1); };
           g.save(); g.lineCap = 'round';
           const gr = g.createLinearGradient(x0, y0, x1, y1);
           gr.addColorStop(0, 'rgba(70,150,255,0)'); gr.addColorStop(0.5, 'rgba(90,170,255,1)'); gr.addColorStop(1, 'rgba(70,150,255,0)');
           g.globalAlpha = fade * 0.35; g.strokeStyle = gr; g.lineWidth = thin * 7;
-          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          trace(); g.stroke();
           g.globalAlpha = fade * 0.6; g.lineWidth = thin * 3.2;
-          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          trace(); g.stroke();
           const gw = g.createLinearGradient(x0, y0, x1, y1);
           gw.addColorStop(0, 'rgba(255,255,255,0)'); gw.addColorStop(0.5, 'rgba(255,255,255,1)'); gw.addColorStop(1, 'rgba(255,255,255,0)');
           g.globalAlpha = fade; g.strokeStyle = gw; g.lineWidth = thin * 1.2;
-          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          trace(); g.stroke();
           /* 沿光束的閃爍小星點 */
           g.fillStyle = '#fff';
           for (let i = 0; i < 9; i++) {
