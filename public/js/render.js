@@ -345,12 +345,37 @@
           const x = f.x + Math.sin(tt * 9 + f.x) * 0.35;
           this.bubble(g, f.v, x, y, 1 - t * 0.2, 1 - clamp01((t - 0.5) / 0.5));
         } else if (f.k === 'beam') {
-          /* 雷射光束：橫向貫穿整個盤面寬、縱向貫穿整個盤面高，很快淡出 */
-          const w = (1 - t) * 1.1 + 0.15, ws = this.ws;
-          g.save(); g.globalAlpha = Math.min(1, (1 - t) * 1.6); g.lineCap = 'round';
-          const x0 = f.h ? 0 : f.x, x1 = f.h ? ws.w : f.x, y0 = f.h ? f.y : 0, y1 = f.h ? f.y : ws.h;
-          g.strokeStyle = '#7fd1ff'; g.lineWidth = w * 2.2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-          g.strokeStyle = '#fff'; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          /* 雷射光束：細而亮的光線，由射中處向兩端射出，中心白、外圍淡藍紫光暈，並有閃爍星點 */
+          const ws = this.ws, e = t < 0.18 ? t / 0.18 : 1, fade = t < 0.3 ? 1 : 1 - (t - 0.3) / 0.7;
+          const thin = 0.07 + 0.09 * (1 - t);                       /* 核心半寬：越來越細 */
+          const len = f.h ? ws.w : ws.h, c0 = f.h ? f.x : f.y;      /* 沿光束方向的起點 */
+          const a0 = Math.max(0, c0 - len * e), a1 = Math.min(len, c0 + len * e);
+          const P = (u) => f.h ? [u, f.y] : [f.x, u];
+          const [x0, y0] = P(a0), [x1, y1] = P(a1);
+          g.save(); g.lineCap = 'round';
+          const gr = g.createLinearGradient(x0, y0, x1, y1);
+          gr.addColorStop(0, 'rgba(70,150,255,0)'); gr.addColorStop(0.5, 'rgba(90,170,255,1)'); gr.addColorStop(1, 'rgba(70,150,255,0)');
+          g.globalAlpha = fade * 0.35; g.strokeStyle = gr; g.lineWidth = thin * 7;
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          g.globalAlpha = fade * 0.6; g.lineWidth = thin * 3.2;
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          const gw = g.createLinearGradient(x0, y0, x1, y1);
+          gw.addColorStop(0, 'rgba(255,255,255,0)'); gw.addColorStop(0.5, 'rgba(255,255,255,1)'); gw.addColorStop(1, 'rgba(255,255,255,0)');
+          g.globalAlpha = fade; g.strokeStyle = gw; g.lineWidth = thin * 1.2;
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          /* 沿光束的閃爍小星點 */
+          g.fillStyle = '#fff';
+          for (let i = 0; i < 9; i++) {
+            const u = a0 + (a1 - a0) * ((i + 0.5 + Math.sin(i * 7.3) * 0.3) / 9);
+            const off = Math.sin(i * 5.1 + t * 9) * 0.35, [px, py] = P(u);
+            g.globalAlpha = fade * (0.5 + 0.5 * Math.sin(t * 22 + i * 2));
+            this.star(g, f.h ? px : px + off, f.h ? py + off : py, 0.16 + 0.12 * ((i * 37) % 3) / 2);
+          }
+          /* 射中處的圓形閃光 */
+          g.globalAlpha = fade; const fr = 0.5 + 0.9 * (1 - fade);
+          const rg = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, fr * 1.6);
+          rg.addColorStop(0, 'rgba(255,255,255,.95)'); rg.addColorStop(1, 'rgba(140,200,255,0)');
+          g.fillStyle = rg; g.beginPath(); g.arc(f.x, f.y, fr * 1.6, 0, Math.PI * 2); g.fill();
           g.restore();
         } else if (f.k === 'spark') {
           g.save(); g.globalAlpha = 1 - t; g.fillStyle = '#fff'; this.star(g, f.x, f.y, 0.5 + t * 1.5); g.restore();
