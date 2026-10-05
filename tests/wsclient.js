@@ -75,4 +75,22 @@ function attachMatch(c) {
 const boardHashes = m => m.boards.map(b => Rules.boardHash(b));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-module.exports = { client, attachMatch, boardHashes, wait };
+/** 等每個客戶端都追上伺服器（seq 相同）再比對盤面。
+ * 伺服器一直在推進（電腦射擊、時間事件），直接比「當下」會撞到還在路上的 ev，偶爾就會不一致。
+ * 追上的那一刻在同一段同步程式裡比對，中間不會有新事件插進來。
+ * getSrv() 回傳伺服器的對局物件；回傳 null 代表對局已結束、沒有東西可比 → 視為通過。 */
+async function boardsMatchServer(clients, getSrv, ms) {
+  const end = Date.now() + (ms || 3000);
+  while (Date.now() < end) {
+    const srv = getSrv();
+    if (!srv) return true;
+    if (clients.every(c => c.m && c.m.seq === srv.seq)) {
+      const want = JSON.stringify(boardHashes(srv));
+      return clients.every(c => JSON.stringify(boardHashes(c.m)) === want);
+    }
+    await wait(5);
+  }
+  return false;
+}
+
+module.exports = { client, attachMatch, boardHashes, boardsMatchServer, wait };

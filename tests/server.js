@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { createServer } = require('../server.js');
 const Match = require('../public/js/match.js');
 const MatchSnap = require('../public/js/matchsnap.js');
-const { client, attachMatch, boardHashes, wait } = require('./wsclient.js');
+const { client, attachMatch, boardHashes, boardsMatchServer, wait } = require('./wsclient.js');
 
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
@@ -160,8 +160,8 @@ async function lobby(base, tag, patch, withSpec) {
   ok(ea.filter(e => e.e === 'shot').length === 12 && hub.counters.shotsDropped === 1, '冷卻中的第二發被丟棄、其餘 12 發全數接受');
   ok(ea.some(e => e.e === 'swap' && e.s === 1), 'swap 事件廣播');
   ok(ea.filter(e => e.e === 'shot').every(e => (e.s === 0 && e.t < 6000) || e.s === 1) && A.all('ev').every(m => typeof m.mt === 'number'), '事件帶 s／a／t，ev 批次帶 mt');
-  const room = [...hub._rooms.values()][0], srv = room.match.m;
-  ok(JSON.stringify(boardHashes(A.m)) === JSON.stringify(boardHashes(srv)) && JSON.stringify(boardHashes(S.m)) === JSON.stringify(boardHashes(srv)), '三個客戶端重播出的盤面雜湊 = 伺服器的');
+  const room = [...hub._rooms.values()][0], srvM = () => room.match && room.match.m;
+  ok(await boardsMatchServer([A, B, S], srvM), '三個客戶端重播出的盤面雜湊 = 伺服器的');
 
   await wait(2200);
   ok(A.stats.hashes >= 1 && B.stats.hashes >= 1 && A.stats.mismatch + B.stats.mismatch + S.stats.mismatch === 0, 'hash{seq,h} 定期送達且對得上（A ' + A.stats.hashes + ' 次、B ' + B.stats.hashes + ' 次）');
@@ -172,7 +172,7 @@ async function lobby(base, tag, patch, withSpec) {
   const before = B.stats.syncs;
   await B.waitFor(() => B.stats.syncs > before, 4500).catch(() => {});
   ok(B.stats.mismatch >= 1 && B.stats.syncs > before, '盤面被弄壞 → 下一次 hash 對帳發現 → resync → 收到 sync');
-  ok(JSON.stringify(boardHashes(B.m)) === JSON.stringify(boardHashes(room.match.m)), 'sync 後 B 的盤面與伺服器一致');
+  ok(await boardsMatchServer([B], srvM), 'sync 後 B 的盤面與伺服器一致');
   const sync = B.last('sync');
   ok(sync.snap && sync.snap.cfg && Array.isArray(sync.snap.boards) && 'seq' in sync.snap && 'pending' in sync.snap && 'reachedAt' in sync.snap
     && 'lastAttacker' in sync.snap && 'left' in sync.snap && 'gid' in sync.snap && 'over' in sync.snap && 'result' in sync.snap, 'sync.snap 欄位齊全');
@@ -181,15 +181,15 @@ async function lobby(base, tag, patch, withSpec) {
   const L = attachMatch(client(base, tag + '-key-l-0001', '晚到')); await L.open; await L.waitFor('rooms');
   L.send({ type: 'join', room: id, as: 'spectator' });
   await L.waitFor('sync');
-  ok(L.slot === -1 && L.last('start').slot === -1 && JSON.stringify(boardHashes(L.m)) === JSON.stringify(boardHashes(room.match.m)), '中途加入的觀戰者收到 start＋sync，盤面與伺服器一致');
+  ok(L.slot === -1 && L.last('start').slot === -1 && await boardsMatchServer([L], srvM), '中途加入的觀戰者收到 start＋sync，盤面與伺服器一致');
   A.send({ type: 'shot', a: 7000 }); await wait(250);
-  ok(JSON.stringify(boardHashes(L.m)) === JSON.stringify(boardHashes(A.m)), '中途觀戰者之後跟著事件走，仍與玩家一致');
+  ok(await boardsMatchServer([L, A], srvM), '中途觀戰者之後跟著事件走，仍與玩家一致');
 
   /* 斷線重連：B 掉線 1 秒後帶同一個 key 回來 */
   B.ws.close(); await wait(400);
   const B2 = attachMatch(client(base, tag + '-key-b-0001', '乙')); await B2.open;
   await B2.waitFor('sync');
-  ok(B2.slot === 1 && JSON.stringify(boardHashes(B2.m)) === JSON.stringify(boardHashes(room.match.m)), '玩家斷線重連：回到原本的 slot，收到 start＋sync');
+  ok(B2.slot === 1 && await boardsMatchServer([B2], srvM), '玩家斷線重連：回到原本的 slot，收到 start＋sync');
 
   /* 離場 */
   B2.send({ type: 'leave' });
@@ -262,8 +262,8 @@ async function lobby(base, tag, patch, withSpec) {
     await wait(2300);
     ok(P.stats.hashes >= 1 && P.stats.mismatch === 0 && W.stats.mismatch === 0, 'hash 對帳全部一致（P ' + P.stats.hashes + ' 次）');
     const room2 = [...fast.hub._rooms.values()].find(x => x.id === rid);
-    /* 盤面若已因清光／時間到而結束，伺服器會釋放 match，此時只比對還在的部分 */
-    ok(!room2 || !room2.match || !P.m || JSON.stringify(boardHashes(P.m)) === JSON.stringify(boardHashes(room2.match.m)), '客戶端重播的盤面 = 伺服器（含電腦盤面）');
+    /* 盤面若已因清光／時間到而結束，伺服器會釋放 match，此時沒有東西可比 */
+    ok(await boardsMatchServer([P, W], () => room2 && room2.match && room2.match.m), '客戶端重播的盤面 = 伺服器（含電腦盤面）');
     P.send({ type: 'leave' }); await wait(250);
     ok(W.last('closed') && !fast.hub._rooms.has(rid), '唯一的真人離開 → 房間關閉、觀戰者收到 closed');
     const nEv = W.count('ev'), nShots = fast.hub.counters.shots;
