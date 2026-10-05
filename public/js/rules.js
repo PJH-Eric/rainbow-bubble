@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { starR: 1, laser: 0.05, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.16, star: 0.06, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { starR: 1, laser: 0.05, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.10, star: 0.08, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { starR: 2, laser: 0.06, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.10, star: 0.10, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { starR: 3, laser: 0.06, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.09, star: 0.10, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { starR: 1, laser: 0.05, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.05, star: 0.05, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { starR: 1, laser: 0.05, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.05, star: 0.05, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { starR: 2, laser: 0.045, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.045, star: 0.045, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { starR: 2, laser: 0.04, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.04, star: 0.04, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -319,8 +319,8 @@
   }
 
   /* ---------- 消除結算 ---------- */
-  /* 星星標記：被消除或掉落時，以星星泡泡為中心炸掉周圍幾圈（幼幼班、簡單 1 圈；普通 2 圈；困難 3 圈；可連鎖）。
-   * 圈數用六角格的「格距」算：1 圈 = 貼身 6 顆、2 圈 = 18 顆、3 圈 = 36 顆。 */
+  /* 星星標記：被消除或掉落時，以星星泡泡為中心炸掉周圍幾圈（幼幼班、簡單 1 圈；普通、困難 2 圈；可連鎖）。
+   * 圈數用六角格的「格距」算：1 圈 = 貼身 6 顆、2 圈 = 18 顆。 */
   function hexDist(b, r0, c0, r1, c1) {
     const dr = Math.abs(r1 - r0), dx = Math.abs(cx(b, r1, c1) - cx(b, r0, c0)) / 2;
     return dr + Math.max(0, dx - dr / 2);
