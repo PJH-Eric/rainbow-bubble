@@ -397,6 +397,20 @@ test('結束後輸入被忽略；rematch：非房主自動準備好', () => {
   startIt(x);
   assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown');
 });
+test('再來一局：房主與其他真人都按了 → 直接開下一局；只有房主按則等對方準備好', () => {
+  const { x } = twoPlayers({ duration: 120000 });
+  startIt(x); x.run(3100); x.run(120200);
+  x.send('aaaaaaaa1', { type: 'rematch' });   /* 房主先按 */
+  x.run(1000);
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'room', 'B 還沒按，先等');
+  x.send('bbbbbbbb2', { type: 'rematch' });
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown', 'B 也按了 → 直接開始');
+  /* 第二局結束：B 先按、房主後按 */
+  x.run(3100); x.run(120200); x.send('bbbbbbbb2', { type: 'rematch' }); x.run(1000);
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'room');
+  x.send('aaaaaaaa1', { type: 'rematch' });
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown');
+});
 test('玩家中途離開：left{slot} ＋ Match.playerLeft；其他人繼續；全部離開 → 房間關閉', () => {
   const { x } = playing();
   x.send('bbbbbbbb2', { type: 'leave' });
@@ -581,9 +595,8 @@ test('電腦的全清與時間到會正常結束：result 含電腦排名（kind
   assert.deepStrictEqual(aiSlots(v).map(s => s.aiLevel), ['easy', 'hard']);
   assert(aiSlots(v).every(s => s.ready), '電腦席位自動準備好');
   assert.strictEqual(v.canStart, true);
-  x.send('aaaaaaaa1', { type: 'rematch' });
   x.clear();
-  startIt(x);
+  x.send('aaaaaaaa1', { type: 'rematch' });   /* 房主按再來一局、沒有其他真人 → 直接開下一局 */
   assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown');
   assert.strictEqual(x.last('aaaaaaaa1', 'start').cfg.players.filter(p => p.kind === 'ai').length, 2);
   x.run(3000 + 5000);

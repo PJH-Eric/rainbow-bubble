@@ -44,7 +44,7 @@
 .chat-form .btn { flex: none; white-space: nowrap; }
 .chat-form .btn .btn-label { white-space: nowrap; }
 .topbar > .chips { flex: none; justify-content: flex-end; }
-.action-row > .btn { min-width: 0; }
+.action-row > .btn { min-width: max-content; }
 .action-row .btn-label, .code-row .btn-label { white-space: nowrap; }
 
 /* ===== 教學：特別泡泡名稱一行、說明可換行 ===== */
@@ -83,3 +83,19 @@ button.seat.empty.can-add:active { transform: scale(.97); }
 button.seat.empty.can-add:focus-visible { outline: 3px solid #7ab8ff; outline-offset: 2px; }
 button.seat.empty.can-add .seat-plus { border-color: #8cc8f2; color: #3d9bff; background: #fff; }
 button.seat.empty.can-add .seat-name { color: #2a7fd0; font-weight: 900; }
+
+/* 大廳：房間列表放大，卡片排成「資訊在左、按鈕在右」 */
+.room-grid.lobby-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; }
+@media (max-width: 860px), (max-aspect-ratio: 1/1) { .room-grid.lobby-grid { grid-template-columns: minmax(0, 1fr); } }
+.lobby-grid > .card:last-child { padding: 18px 20px 20px; min-height: 340px; }
+.lobby-grid .room-item { flex-wrap: nowrap; gap: 14px; padding: 16px 18px; border-radius: 24px; margin-bottom: 12px; }
+.lobby-grid .room-item .info { flex: 1 1 auto; }
+.lobby-grid .room-item .name { font-size: 1.3rem; }
+.lobby-grid .room-item .info .chips { margin-top: 8px !important; gap: 6px; }
+.lobby-grid .room-item > .row { flex-direction: column; align-items: stretch; gap: 8px; }
+.lobby-grid .room-item > .row .btn { min-width: 92px; }
+@media (max-width: 520px) {
+  .lobby-grid .room-item { flex-wrap: wrap; }
+  .lobby-grid .room-item > .row { flex-direction: row; width: 100%; }
+  .lobby-grid .room-item > .row .btn { flex: 1; }
+}

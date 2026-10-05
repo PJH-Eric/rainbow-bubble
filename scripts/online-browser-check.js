@@ -343,7 +343,10 @@ async function ctxPage(browser, vp, tag) {
     ok(true, '電腦盤面自己在動（伺服器代打，已射出 ' + await s.evaluate(() => App.game.m.boards[1].shots) + ' 發）');
     await shot(s, 'game-ai-landscape');
     await s.getByRole('button', { name: '離開對局' }).click();
-    await s.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
+    /* 電腦偶爾很快清光盤面、對局先結束：這時按離開會直接回大廳，不會跳確認框 */
+    if (await s.waitForSelector('.dialog', { timeout: 4000 }).then(() => true, () => false)) {
+      await s.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
+    }
     await s.waitForSelector('[data-screen=lobby]');
     ok(true, '真人離開後回大廳房間列表（房間隨之關閉）');
 

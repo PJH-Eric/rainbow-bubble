@@ -526,3 +526,15 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .boards.l-two .opp-col .btag { position: static; order: -1; align-self: center; flex: none; max-width: 100%; }
   .boards.l-two .opp-col .board-wrap { position: relative; inset: auto; flex: 0 1 auto; width: 100%; aspect-ratio: var(--ar, 3 / 4); min-height: 0; }
 }
+
+/* 寬螢幕、3～4 人：自己的盤面照比例撐滿高度，對手欄緊貼在它旁邊，整組置中（不要中間留一大塊空） */
+@media (min-aspect-ratio: 5/4) {
+  .boards.l-main { grid-template-columns: auto auto; justify-content: center; column-gap: 22px; }
+  .boards.l-main .opp-col .bslot { flex: 1 1 0; }
+  .boards.l-main .opp-col .board-wrap { flex: 1 1 0; width: auto; align-self: center; }
+  .boards.l-main .bslot.mine { height: 100%; aspect-ratio: var(--ar, 3 / 4); max-width: 100%; }
+}
+@media (min-aspect-ratio: 5/4) and (max-height: 520px) {
+  .boards.l-main .opp-col .bt-name { max-width: 3.6em; }
+  .boards.l-main .opp-col .btag { gap: 4px; padding-right: 6px; }
+}

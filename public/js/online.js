@@ -294,8 +294,8 @@
               r.spectators ? pill('觀戰 ' + r.spectators, 'gray') : null, pill('房主 ' + r.host, 'gray'),
               pill((MODE_NAME[s.mode] || '') + '・' + (R.LEVEL_NAME[s.level] || ''), 'gray'))),
           h('div', { class: 'row', style: { gap: '8px' } },
-            r.joinable ? btn('加入', { cls: 'btn-mint btn-sm', onClick: () => joinRoom(r.id, 'player') }) : null,
-            s.allowSpectators === false ? null : btn('觀戰', { cls: 'btn-sky btn-sm', icon: 'eye', iconSize: 18, onClick: () => joinRoom(r.id, 'spectator') }))));
+            r.joinable ? btn('加入', { cls: 'btn-mint', onClick: () => joinRoom(r.id, 'player') }) : null,
+            s.allowSpectators === false ? null : btn('觀戰', { cls: 'btn-sky', icon: 'eye', iconSize: 18, onClick: () => joinRoom(r.id, 'spectator') }))));
       }
     });
 
@@ -351,7 +351,7 @@
     const el = U.screenBox('', h('div', { class: 'wrap' },
       U.topbar('跟別人玩', () => { Net.close(); App.banner(''); App.go('home'); }, ui.statusBox),
       ui.wakeBox, ui.noticeBox, ui.inviteBox,
-      ui.grid = h('div', { class: 'room-grid' },
+      ui.grid = h('div', { class: 'room-grid lobby-grid' },
         h('div', { class: 'col' }, ui.profileCard, ui.actionCard),
         h('section', { class: 'card' }, h('h3', null, '房間列表', h('span', { class: 'grow' }), refresh), ui.listBox))));
     ui.paintStatus(); ui.paintNotice(); ui.paintList(); ui.paintInvite();
