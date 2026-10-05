@@ -307,15 +307,17 @@
       s += '<ellipse cx="30" cy="25" rx="11" ry="6" transform="rotate(-38 30 25)" fill="#fff" opacity="0.9"/>';
       s += sparkle(78, 26, 9) + sparkle(24, 76, 6, 0.95) + sparkle(80, 72, 4.5, 0.85);
       s += '<circle cx="50" cy="50" r="43" fill="url(#' + p + 'rim)"/>';
-    } else if (kind === 'star') {
-      defs = goldDefs(p) + rg(p + 'core', 0.4, 0.3, 0.85, [[0, '#fffbd0'], [0.5, '#ffd84a'], [1, '#f59a14']]);
-      s += '<polygon points="' + starPts(50, 50, 48, 36, 12, -Math.PI / 2) + '" fill="#ff8a1c" stroke="#a84a00" stroke-width="3" stroke-linejoin="round"/>';
-      s += '<polygon points="' + starPts(50, 50, 44, 34, 12, -Math.PI / 2 + Math.PI / 12) + '" fill="#ffc43a" opacity="0.55"/>';
-      s += '<circle cx="50" cy="50" r="32" fill="url(#' + p + 'core)" stroke="#c76a00" stroke-width="3"/>';
-      s += '<polygon points="' + starPts(50, 52, 22, 9.5, 5) + '" fill="#ff7a1c" stroke="#a84a00" stroke-width="6" stroke-linejoin="round"/>';
-      s += '<polygon points="' + starPts(50, 52, 22, 9.5, 5) + '" fill="#fff" stroke="#fff" stroke-width="0.5" stroke-linejoin="round"/>';
-      s += '<ellipse cx="36" cy="33" rx="9" ry="5" transform="rotate(-38 36 33)" fill="#fff" opacity="0.85"/>';
-      s += sparkle(84, 18, 7) + sparkle(14, 80, 5.5);
+    } else if (kind === 'star') { // 星星泡泡：不是圓形！整顆就是一顆大金星（外形與所有圓泡泡不同），外圍有爆炸光環
+      defs = lg(p + 'body', 0.2, 0, 0.8, 1, [[0, '#fff7a8'], [0.5, '#ffcf1f'], [1, '#ff9a0a']]);
+      s += '<circle cx="50" cy="52" r="45" fill="#ffb347" opacity="0.38"/>';
+      s += '<circle cx="50" cy="52" r="45" fill="none" stroke="#ff7a1c" stroke-width="2.6" stroke-dasharray="3 6" stroke-linecap="round" opacity="0.85"/>';
+      var big = starPts(50, 53, 47, 22, 5);
+      s += '<polygon points="' + big + '" fill="#b84a00" stroke="#b84a00" stroke-width="10" stroke-linejoin="round"/>';
+      s += '<polygon points="' + big + '" fill="#fff" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>';
+      s += '<polygon points="' + big + '" fill="url(#' + p + 'body)" stroke="#ff8a00" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<polygon points="' + starPts(50, 54, 25, 12, 5) + '" fill="#fff3a0" stroke="#ffb41f" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>';
+      s += '<ellipse cx="38" cy="38" rx="7" ry="3.6" transform="rotate(-40 38 38)" fill="#fff" opacity="0.95"/>';
+      s += sparkle(86, 16, 8) + sparkle(12, 84, 6.5) + sparkle(88, 78, 5);
     } else if (kind === 'laser') { // 閃電泡泡：深藍泡泡＋中央大閃電＋上下左右四個箭頭（十字雷射）
       defs = rg(p + 'in', 0.4, 0.3, 0.9, [[0, '#8fb0ff'], [0.55, '#4a5fe0'], [1, '#262a8c']]) +
         rg(p + 'glow', 0.5, 0.5, 0.5, [[0, '#fff6a8', 0.9], [1, '#ffd23a', 0]]);
