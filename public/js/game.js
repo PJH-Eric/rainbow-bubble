@@ -2,7 +2,7 @@
  *
  * GameScreen 負責：
  *   - 版面：2 人左右等大；3～4 人自己的盤面大、其他人小；觀戰者全部等大
- *   - 輸入：點哪射哪／拖曳瞄準、鍵盤、換泡泡
+ *   - 輸入：點哪射哪／拖曳瞄準、鍵盤、交換泡泡（砲台右邊的 ⇄ 圖示按鈕，或 S 鍵）
  *   - 時鐘與事件：單機由瀏覽器當裁判（Match.input/tick + AI）；線上只送輸入、重播伺服器的事件
  *   - 左側資訊欄（摘要＋聊天室）、倒數、暫停、結算 overlay（再來一局／回到房間／回到首頁）
  */
@@ -113,9 +113,7 @@
       this.exitBtn = this.kind === 'solo'
         ? iconBtn('pause', '暫停', () => this.pauseMenu())
         : iconBtn('back', '離開對局', () => this.confirmExit());
-      this.swapBtn = this.spectator ? null : h('button', { type: 'button', class: 'btn btn-sky btn-sm swap-btn', 'aria-label': '換泡泡（S 鍵）', onClick: () => this.swap() },
-        h('span', { class: 'btn-ico', html: Art.icon('swap', 20) }), '換泡泡');
-      this.hud = h('div', { class: 'hud' }, this.sideBtn, this.exitBtn, h('div', { class: 'hud-mid' }, this.timerEl, this.modeEl), this.swapBtn,
+      this.hud = h('div', { class: 'hud' }, this.sideBtn, this.exitBtn, h('div', { class: 'hud-mid' }, this.timerEl, this.modeEl),
         this.spectator ? h('span', { class: 'pill sun' }, '觀戰中') : null);
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
       this.overlay = h('div', { class: 'g-overlay', 'aria-live': 'assertive' });
@@ -187,8 +185,8 @@
         h('div', { class: 'stat' }, h('b', null, mine.maxCombo), h('span', null, '最高連擊')),
         m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageOut), h('span', null, '送出')) : null,
         m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageIn), h('span', null, '收到')) : null));
-      this.sumEl.appendChild(h('div', { class: 'side-keys muted small' },
-        h('span', null, '瞄準 '), root.UI.keycap('←'), root.UI.keycap('→'), h('span', null, ' 發射 '), root.UI.keycap('空白'), h('span', null, ' 換 '), root.UI.keycap('S')));
+      this.sumEl.appendChild(h('div', { class: 'side-keys muted small keyline' },
+        h('span', null, '瞄準 ', root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, '發射 ', root.UI.keycap('空白')), h('span', null, '交換 ', root.UI.keycap('S'))));
     }
 
     /* ---------- 輸入 ---------- */
@@ -401,15 +399,15 @@
         actions: [
           btn('繼續玩', { cls: 'btn-pink', icon: 'play', onClick: () => mo.close() }),
           btn('重新開始', { cls: 'btn-sky', icon: 'refresh', onClick: () => { mo.close(true); resume(); this.o.onAgain(); } }),
-          btn('回到首頁', { cls: 'btn-ghost', icon: 'home', onClick: () => { mo.close(true); resume(); this.o.onHome(); } })
+          btn('離開（回到房間）', { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
         ]
       });
     }
     confirmExit() {
-      if (this.over) return this.o.onHome();
+      if (this.over) return this.o.onExit();
       root.UI.confirmBox({
         title: '要離開對局嗎？', text: this.spectator ? '離開後就不再觀戰囉。' : '現在離開，這一局就算你放棄囉。', ok: '離開', cancel: '繼續玩',
-        onOk: () => this.o.onHome()
+        onOk: () => this.o.onExit()
       });
     }
 
@@ -435,16 +433,38 @@
       root.Sound.sfx(win ? 'win' : 'lose');
       this.overlay.textContent = '';
       if (!this.spectator) root.App.recordResult(this.kind, !!win);
-      const rows = ranks.map(x => h('div', { class: 'rank-row' + (x.rank === 1 ? ' win' : '') },
+      const maxCl = Math.max(1, ...ranks.map(x => x.cleared));
+      const acc = x => (x.shots ? Math.round((x.hits | 0) / x.shots * 100) : 0);
+      const rows = ranks.map(x => h('div', { class: 'rank-row' + (x.rank === 1 ? ' win' : '') + (x.s === this.slot ? ' me' : '') },
         h('span', { class: 'no' }, x.rank === 1 ? '🏆' : x.rank), avatar(x.dragon, 40),
-        h('span', { class: 'nm' }, x.name + (x.s === this.slot ? '（你）' : '') + (x.fullClear ? '・清光' : '') + (x.left ? '・已離開' : '')),
+        h('div', { class: 'rk-mid' },
+          h('span', { class: 'nm' }, x.name + (x.s === this.slot ? '（你）' : '') + (x.fullClear ? '・清光' : '') + (x.left ? '・已離開' : '')),
+          h('span', { class: 'rk-bar' }, h('i', { style: { width: Math.max(3, Math.round(x.cleared / maxCl * 100)) + '%' } })),
+          h('span', { class: 'rk-meta' }, ['發射 ' + x.shots, '命中 ' + acc(x) + '%', '連擊 ' + x.maxCombo].concat(this.cfg.mode === 'duel' ? ['送 ' + x.garbageOut + '／收 ' + x.garbageIn] : []).map(t => h('i', null, t)))),
         h('b', null, x.cleared + ' 顆')));
+      /* 我的（或冠軍的）戰績卡 */
+      const who = (me || ranks[0]);
+      const sec = Math.round((r.t || 0) / 1000);
+      const tile = (ico, big, label) => h('div', { class: 'stat-tile' }, h('div', { class: 'st-ico' }, ico), h('b', null, big), h('span', null, label));
+      const tiles = [
+        tile('🫧', who.cleared, '清除泡泡'),
+        tile('🎯', acc(who) + '%', '命中率'),
+        tile('🔥', who.maxCombo, '最高連擊'),
+        tile('💥', who.best | 0, '單發最多'),
+        tile('🍂', who.dropN | 0, '掉落清除'),
+        tile('⏱', Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'), '對局時間')
+      ];
+      if (who.rains) tiles.push(tile('🌧', who.rains, '泡泡雨'));
+      if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, '送出 / 收到'));
+      const stats = h('div', { class: 'stat-grid', 'aria-label': (this.spectator ? ranks[0].name : '你') + '的戰績' }, tiles);
       const dragon = this.spectator ? ranks[0].dragon : this.cfg.players[this.slot].dragon;
       const card = h('div', { class: 'dialog result-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': '結算' },
         h('div', { class: 'big-result' },
           h('img', { class: 'result-dragon', alt: '', src: Art.svgUrl(Art.dragonSVG(dragon, win || this.spectator ? 'cheer' : 'sad')) }),
           h('div', { class: 'head' }, head),
           h('div', { class: 'muted small' }, r.reason === 'clear' ? '有人把泡泡全部清光啦！' : r.reason === 'left' ? '其他人都離開了。' : '時間到！')),
+        h('div', { class: 'stat-title' }, this.spectator ? ranks[0].name + ' 的戰績' : (me && me.rank === 1 ? '你的戰績' : '你的戰績')),
+        stats,
         h('div', { class: 'rank' }, rows),
         h('div', { class: 'result-actions' },
           btn('再來一局', { cls: 'btn-pink btn-lg', icon: 'refresh', onClick: () => this.o.onAgain() }),

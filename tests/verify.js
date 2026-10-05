@@ -137,14 +137,15 @@ t('觸底會被泡泡雨沖掉最底下 3 列，之後有保護', () => {
   assert(b.protect > 0);
   assert(R.lowestRow(b) < R.LINE_ROW, '沖掉之後不該再碰到底線');
 });
-t('普通難度：連續沒消除會下降一列，幼幼班不會', () => {
+t('下壓：普通以上連續沒消除會下降一列，幼幼班不會', () => {
   const run = lv => {
     const b = R.newBoard({ seed: 9, level: lv });
     let desc = 0;
     for (let i = 0; i < 40; i++) { const res = R.applyShot(b, 4000 + (i % 7) * 1500); if (res.descended) desc++; if (R.bubbleCount(b) === 0) break; }
     return desc;
   };
-  assert(run('baby') === 0 && run('easy') === 0);
+  assert(run('baby') === 0, '幼幼班不會下降');
+  assert(run('normal') > 0 && run('hard') >= run('normal'), '普通以上會下降，困難更頻繁');
 });
 t('送泡泡量表與倍率', () => {
   assert.strictEqual(R.attackFor(3, 10, 1), 0);

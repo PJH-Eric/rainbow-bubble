@@ -2,7 +2,7 @@
  * Sound.config = { bgm, bgmVol, sfx, sfxVol }（由 app.js 與設定同步）
  * Sound.unlock()    第一次使用者手勢時呼叫（瀏覽器規定）
  * Sound.sfx(name)   click shoot bounce land pop drop swap warn splash rain combo star win lose count go error
- * Sound.bgm(themeKey|null)  播放／停止背景音樂（a～f 對應六個主題的調性）
+ * Sound.bgm(themeKey|null)  播放／停止背景音樂（a～g 對應七個主題的調性）
  */
 (function (root) {
   'use strict';
@@ -92,7 +92,7 @@
   };
 
   /* ---------- 背景音樂：輕快的五聲音階琶音＋低音，依主題換調性與速度 ---------- */
-  const KEYS = { a: [262, 100, 0], b: [294, 110, 1], c: [330, 104, 2], d: [247, 96, 3], e: [220, 84, 4], f: [277, 92, 5] };
+  const KEYS = { a: [262, 100, 0], b: [294, 110, 1], c: [330, 104, 2], d: [247, 96, 3], e: [220, 84, 4], f: [277, 92, 5], g: [233, 80, 2] };
   const PATTERNS = [
     [0, 2, 4, 2, 5, 4, 2, 1], [0, 4, 2, 4, 7, 5, 4, 2], [2, 4, 5, 4, 2, 1, 0, 1],
     [0, 1, 2, 4, 2, 1, 0, 2], [4, 5, 7, 5, 4, 2, 4, 2], [0, 2, 1, 4, 2, 5, 4, 2]

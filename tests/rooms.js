@@ -428,6 +428,235 @@ test('三人對局：一人離開、另兩人仍繼續（沒有提早結束）',
   assert(!g.m.over && g.m.left[2]);
 });
 
+console.log('\n電腦席位（單機與線上共用 ai.js）');
+/** 房主 A 單人開房，加 n 個電腦（levels 指定） */
+function soloRoom(levels, patch) {
+  const x = setup(); x.join('aaaaaaaa1', 'A');
+  x.send('aaaaaaaa1', { type: 'create', name: 'A', roomName: 'AI房' });
+  const id = x.room('aaaaaaaa1').id;
+  x.send('aaaaaaaa1', { type: 'settings', patch: Object.assign({ layout: 'checker', level: 'hard', duration: 120000 }, patch || {}) });
+  (levels || []).forEach(l => x.send('aaaaaaaa1', { type: 'addAI', level: l }));
+  return { x, id };
+}
+const aiSlots = v => v.seats.filter(s => s.kind === 'ai');
+const shotsOf = (x, key, slot) => x.all(key, 'ev').flatMap(m => m.evs).filter(e => e.e === 'shot' && (slot == null || e.s === slot));
+const roomOf = x => [...x.hub._rooms.values()][0];
+
+test('房主加入／換等級／移除電腦；非房主與對局中無效；名稱像單機「花花・電腦」、龍不重複', () => {
+  const { x, id } = soloRoom();
+  x.join('bbbbbbbb2', 'B', 'cloud'); x.send('bbbbbbbb2', { type: 'join', room: id, dragon: 'cloud' });
+  x.send('bbbbbbbb2', { type: 'addAI', level: 'hard' });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 0, '非房主不能加');
+  x.send('aaaaaaaa1', { type: 'addAI', level: 'hard' });
+  x.send('aaaaaaaa1', { type: 'addAI', level: 'nope' });
+  x.send('aaaaaaaa1', { type: 'addAI' });
+  const v = x.room('aaaaaaaa1');
+  const ais = aiSlots(v);
+  assert.strictEqual(ais.length, 2);
+  assert.deepStrictEqual(ais.map(s => s.aiLevel), ['hard', 'easy'], '非法等級／沒給等級 → easy');
+  assert(ais.every(s => /・電腦$/.test(s.name) && s.ready && s.connected && s.pid === null && s.kind === 'ai'));
+  assert.strictEqual(new Set(v.seats.map(s => s.dragon)).size, 4, '四個席位的龍都不同');
+  assert.strictEqual(v.humans, 2); assert.strictEqual(v.ais, 2);
+  x.send('bbbbbbbb2', { type: 'setAI', seat: ais[0].i, level: 'baby' });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1'))[0].aiLevel, 'hard', '非房主不能改等級');
+  x.send('aaaaaaaa1', { type: 'setAI', seat: ais[0].i, level: 'baby' });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1'))[0].aiLevel, 'baby');
+  x.send('aaaaaaaa1', { type: 'setAI', seat: ais[0].i, level: 'god' });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1'))[0].aiLevel, 'baby');
+  x.send('aaaaaaaa1', { type: 'setAI', seat: 0, level: 'hard' });   /* 真人席位不是電腦 */
+  assert.strictEqual(x.room('aaaaaaaa1').seats[0].kind, 'human');
+  x.send('bbbbbbbb2', { type: 'removeAI', seat: ais[0].i });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 2);
+  x.send('aaaaaaaa1', { type: 'removeAI', seat: 0 });            /* 不能用 removeAI 踢真人／自己 */
+  assert.strictEqual(x.room('aaaaaaaa1').seats[0].kind, 'human');
+  x.send('aaaaaaaa1', { type: 'removeAI', seat: ais[0].i });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 1);
+  assert.strictEqual(x.room('aaaaaaaa1').seats[ais[0].i].kind, 'empty');
+  x.send('aaaaaaaa1', { type: 'kick', seat: aiSlots(x.room('aaaaaaaa1'))[0].i });   /* kick 只對真人 */
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 1);
+});
+test('席位上限 4：真人＋電腦合計；滿了 addAI 回 full、邀請／加入者變觀戰；移除電腦後可入座', () => {
+  const { x, id } = soloRoom(['easy', 'easy']);
+  x.join('bbbbbbbb2', 'B'); x.send('bbbbbbbb2', { type: 'join', room: id });
+  assert.strictEqual(x.room('bbbbbbbb2').you.role, 'player');
+  x.send('aaaaaaaa1', { type: 'addAI', level: 'hard' });
+  assert.strictEqual(x.last('aaaaaaaa1', 'error').code, 'full');
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 2);
+  x.send('aaaaaaaa1', { type: 'invite', role: 'player' });
+  const tok = x.last('aaaaaaaa1', 'invite').token;
+  x.join('cccccccc3', 'C');
+  x.send('cccccccc3', { type: 'inviteInfo', room: id, token: tok });
+  const info = x.last('cccccccc3', 'inviteInfo');
+  assert(info.full && info.willSpectate && info.players === 4);
+  x.send('cccccccc3', { type: 'join', room: id, token: tok });
+  assert.strictEqual(x.room('cccccccc3').you.role, 'spectator');
+  x.send('cccccccc3', { type: 'sit' });
+  assert.strictEqual(x.last('cccccccc3', 'error').code, 'full');
+  x.send('aaaaaaaa1', { type: 'removeAI', seat: aiSlots(x.room('aaaaaaaa1'))[0].i });
+  x.send('cccccccc3', { type: 'sit' });
+  assert.strictEqual(x.room('cccccccc3').you.role, 'player');
+  /* 大廳卡片：players 含電腦、humans／ais 分開 */
+  x.advance(20);
+  const card = x.hub.listRooms()[0];
+  assert.strictEqual(card.players, 4); assert.strictEqual(card.humans, 3); assert.strictEqual(card.ais, 1); assert.strictEqual(card.joinable, false);
+});
+test('人數上限也算電腦：maxPlayers 不能低於「真人＋電腦」；max=2 時只能加 1 個電腦', () => {
+  const { x } = soloRoom();
+  x.send('aaaaaaaa1', { type: 'settings', patch: { maxPlayers: 2 } });
+  x.send('aaaaaaaa1', { type: 'addAI' }); x.send('aaaaaaaa1', { type: 'addAI' });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 1);
+  assert.strictEqual(x.last('aaaaaaaa1', 'error').code, 'full');
+  x.send('aaaaaaaa1', { type: 'settings', patch: { maxPlayers: 4 } });
+  x.send('aaaaaaaa1', { type: 'addAI' }); x.send('aaaaaaaa1', { type: 'addAI' });
+  x.send('aaaaaaaa1', { type: 'settings', patch: { maxPlayers: 2 } });
+  assert.strictEqual(x.last('aaaaaaaa1', 'error').code, 'max');
+  assert.strictEqual(x.room('aaaaaaaa1').max, 4);
+});
+test('開始條件：1 真人 + 0 電腦不行；1 真人 + 1 電腦直接能開（電腦自動準備）；對局中不能加電腦', () => {
+  const { x } = soloRoom();
+  startIt(x); assert.strictEqual(x.last('aaaaaaaa1', 'error').code, 'few');
+  x.send('aaaaaaaa1', { type: 'addAI', level: 'normal' });
+  assert.strictEqual(x.room('aaaaaaaa1').canStart, true);
+  startIt(x);
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown');
+  x.send('aaaaaaaa1', { type: 'addAI' }); x.send('aaaaaaaa1', { type: 'removeAI', seat: 1 });
+  assert.strictEqual(aiSlots(x.room('aaaaaaaa1')).length, 1);
+});
+test('start：cfg.players 帶 kind／aiLevel／名字，slot 依席位順序；電腦席位 view 帶 slot', () => {
+  const { x } = soloRoom(['baby', 'hard']);
+  startIt(x);
+  const st = x.last('aaaaaaaa1', 'start');
+  assert.strictEqual(st.slot, 0);
+  assert.deepStrictEqual(st.cfg.players.map(p => p.kind), ['human', 'ai', 'ai']);
+  assert.deepStrictEqual(st.cfg.players.map(p => p.aiLevel || null), [null, 'baby', 'hard']);
+  assert(st.cfg.players.slice(1).every(p => /・電腦$/.test(p.name)));
+  const v = x.room('aaaaaaaa1');
+  assert.deepStrictEqual(v.seats.filter(s => s.kind !== 'empty').map(s => s.slot), [0, 1, 2]);
+});
+test('倒數中電腦不動；開打後電腦用 ev 射擊（s = 電腦 slot），客戶端重播的雜湊與 seq 都一致', () => {
+  const { x } = soloRoom(['hard', 'hard'], { mode: 'duel' });
+  startIt(x);
+  x.run(2900);
+  assert.strictEqual(x.all('aaaaaaaa1', 'ev').length, 0, '倒數期間不動');
+  x.run(30000);
+  const g = roomOf(x).match;
+  const sh = shotsOf(x, 'aaaaaaaa1');
+  assert(sh.some(e => e.s === 1) && sh.some(e => e.s === 2) && !sh.some(e => e.s === 0), '兩個電腦都有射、人類沒動');
+  assert(x.hub.counters.shots >= 20);
+  const client = Match.create(g.cfg);
+  for (const msg of x.all('aaaaaaaa1', 'ev')) for (const ev of msg.evs) Match.apply(client, ev);
+  assert.deepStrictEqual(client.boards.map(Rules.boardHash), g.m.boards.map(Rules.boardHash));
+  assert.strictEqual(client.seq, g.m.seq);
+  for (const h of x.all('aaaaaaaa1', 'hash')) assert.strictEqual(h.h.length, 3);
+  /* 重連同步：snapshot 還原也一致，且保留 aiLevel */
+  const re = MatchSnap.restoreAll(MatchSnap.snapshotAll(g.m));
+  assert.deepStrictEqual(re.boards.map(Rules.boardHash), g.m.boards.map(Rules.boardHash));
+  assert.deepStrictEqual(re.players.map(p => p.aiLevel), [null, 'hard', 'hard']);
+});
+test('電腦也守 SHOT_CD；難度有差：hard 比 baby 射得多；人類與電腦可同時輸入', () => {
+  const a = soloRoom(['baby'], { duration: 300000 }), b = soloRoom(['hard'], { duration: 300000 });
+  for (const r of [a, b]) { startIt(r.x); r.x.run(3000 + 40000); }
+  const sa = shotsOf(a.x, 'aaaaaaaa1', 1), sb = shotsOf(b.x, 'aaaaaaaa1', 1);
+  assert(sb.length > sa.length * 1.5, 'hard ' + sb.length + ' vs baby ' + sa.length);
+  for (let i = 1; i < sb.length; i++) assert(sb[i].t - sb[i - 1].t >= 250, '電腦射擊間隔 < SHOT_CD');
+  b.x.send('aaaaaaaa1', { type: 'shot', a: 9000 });
+  assert(shotsOf(b.x, 'aaaaaaaa1', 0).length >= 1);
+});
+test('可重現：同樣的亂數與時間流程，電腦射出的事件序列完全相同', () => {
+  const log = () => { const { x } = soloRoom(['hard', 'normal'], { mode: 'duel' }); startIt(x); x.run(25000); return JSON.stringify(x.all('aaaaaaaa1', 'ev').map(m => m.evs)); };
+  const l1 = log();
+  assert(l1.length > 100);
+  assert.strictEqual(l1, log());
+});
+test('電腦的全清與時間到會正常結束：result 含電腦排名（kind:ai）；回房間後電腦席位保留、等級不變、再開一局', () => {
+  const { x } = soloRoom(['easy', 'hard'], { duration: 120000 });
+  startIt(x); x.run(3000 + 121000);
+  const res = x.last('aaaaaaaa1', 'result');
+  assert(res && res.result.ranks.length === 3);
+  assert.strictEqual(res.result.ranks.filter(r => r.kind === 'ai').length, 2);
+  assert.deepStrictEqual(res.result.ranks.filter(r => r.kind === 'ai').map(r => r.aiLevel).sort(), ['easy', 'hard']);
+  x.run(1000);
+  const v = x.room('aaaaaaaa1');
+  assert.strictEqual(v.phase, 'room');
+  assert.deepStrictEqual(aiSlots(v).map(s => s.aiLevel), ['easy', 'hard']);
+  assert(aiSlots(v).every(s => s.ready), '電腦席位自動準備好');
+  assert.strictEqual(v.canStart, true);
+  x.send('aaaaaaaa1', { type: 'rematch' });
+  x.clear();
+  startIt(x);
+  assert.strictEqual(x.room('aaaaaaaa1').phase, 'countdown');
+  assert.strictEqual(x.last('aaaaaaaa1', 'start').cfg.players.filter(p => p.kind === 'ai').length, 2);
+  x.run(3000 + 5000);
+  assert(shotsOf(x, 'aaaaaaaa1').some(e => e.s === 1 || e.s === 2), '第二局電腦照樣射');
+});
+test('房主離開（有電腦在）→ 房主交給下一位真人，不會交給電腦；踢人只對真人', () => {
+  const { x, id } = soloRoom(['normal']);
+  x.join('bbbbbbbb2', 'B'); x.send('bbbbbbbb2', { type: 'join', room: id });
+  x.send('aaaaaaaa1', { type: 'leave' });
+  const v = x.room('bbbbbbbb2');
+  assert(v.you.host && v.seats[v.hostSeat].kind === 'human' && v.seats[v.hostSeat].pid === v.you.pid);
+  assert.strictEqual(aiSlots(v).length, 1);
+  assert.strictEqual(x.hub._rooms.size, 1, '還有真人，房間還在');
+  x.send('bbbbbbbb2', { type: 'addAI' });   /* 新房主可以繼續加 */
+  assert.strictEqual(aiSlots(x.room('bbbbbbbb2')).length, 2);
+});
+test('對局中房主離開：交棒給另一位真人，電腦繼續射；剩一位真人時對局不會提早結束', () => {
+  const { x, id } = soloRoom(['hard'], { mode: 'duel' });
+  x.join('bbbbbbbb2', 'B'); x.send('bbbbbbbb2', { type: 'join', room: id }); x.send('bbbbbbbb2', { type: 'ready', value: true });
+  startIt(x); x.run(8000);
+  x.send('aaaaaaaa1', { type: 'leave' });
+  const g = roomOf(x).match;
+  assert(g.m.left[0] && !g.m.over);
+  assert(x.room('bbbbbbbb2').you.host);
+  x.clear(); x.run(10000);
+  assert(shotsOf(x, 'bbbbbbbb2', 1).length >= 3, '電腦（席位 1）在真人剩一位時仍在射擊');
+  assert(!roomOf(x).match.m.over);
+  /* 跑完時間：正常結束，排名含電腦 */
+  x.run(120000);
+  const res = x.last('bbbbbbbb2', 'result');
+  assert(res && (res.result.reason === 'time' || res.result.reason === 'clear'), '正常結束（時間到或電腦全清），不是 left：' + (res && res.result.reason));
+});
+test('最後一位真人離開：房間立刻關閉、邀請失效、觀戰者收到 closed，之後完全沒有電腦事件', () => {
+  const { x, id } = soloRoom(['hard', 'hard'], { mode: 'duel' });
+  x.send('aaaaaaaa1', { type: 'invite', role: 'player' });
+  const tok = x.last('aaaaaaaa1', 'invite').token;
+  x.join('spectat01'); x.send('spectat01', { type: 'join', room: id, as: 'spectator' });
+  startIt(x); x.run(3000 + 12000);
+  assert(shotsOf(x, 'spectat01').length > 0);
+  const shotsBefore = x.hub.counters.shots;
+  x.send('aaaaaaaa1', { type: 'leave' });
+  assert.strictEqual(x.hub._rooms.size, 0);
+  assert(x.last('spectat01', 'closed'));
+  assert.strictEqual(x.room('spectat01'), null);
+  x.clear();
+  x.run(30000);
+  assert.strictEqual(x.hub.counters.shots, shotsBefore, '關房後電腦不再射擊');
+  assert.strictEqual([...x.inbox.values()].flat().filter(m => m.type !== 'rooms').length, 0, '關房後沒有任何廣播（大廳列表更新除外）');
+  x.join('cccccccc3'); x.send('cccccccc3', { type: 'join', room: id, token: tok });
+  assert.strictEqual(x.last('cccccccc3', 'joinFailed').reason, 'closed');
+});
+test('唯一的真人斷線超時 → 房間關閉（電腦與觀戰者不算人），沒有殘留計時', () => {
+  const { x, id } = soloRoom(['normal']);
+  x.join('spectat01'); x.send('spectat01', { type: 'join', room: id, as: 'spectator' });
+  startIt(x); x.run(6000);
+  x.hub.disconnect('aaaaaaaa1');
+  x.run(10000);
+  assert.strictEqual(x.hub._rooms.size, 1, '30 秒寬限內房間還在、電腦繼續');
+  x.run(25000);
+  assert.strictEqual(x.hub._rooms.size, 0);
+  assert(x.last('spectat01', 'closed'));
+  const n = x.hub.counters.shots; x.clear(); x.run(20000);
+  assert.strictEqual(x.hub.counters.shots, n); assert.strictEqual([...x.inbox.values()].flat().filter(m => m.type !== 'rooms').length, 0);
+});
+test('結束後電腦不再動（backToRoom 清掉 brain）；房間裡只有電腦也不會偷偷開局', () => {
+  const { x } = soloRoom(['hard'], { duration: 120000 });
+  startIt(x); x.run(3000 + 121000 + 1000);
+  const n = x.hub.counters.shots; x.clear(); x.run(10000);
+  assert.strictEqual(x.hub.counters.shots, n);
+  assert.strictEqual(x.all('aaaaaaaa1', 'ev').length, 0);
+  assert.strictEqual(x.hub.roomView([...x.hub._rooms.values()][0], 'aaaaaaaa1').phase, 'room');
+});
+
 console.log('\n在線人數');
 test('stats 與 presence 格式', () => {
   const { x } = twoPlayers();

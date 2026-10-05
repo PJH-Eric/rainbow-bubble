@@ -224,6 +224,53 @@ async function lobby(base, tag, patch, withSpec) {
   const s2 = await f.A.waitFor(m => m.type === 'start' && m !== f.A.msgs.find(x => x.type === 'start'), 2000).catch(() => null);
   ok(s2 && s2.cfg.seed !== f.A.msgs.find(x => x.type === 'start').cfg.seed, '再來一局：新的 start、新的 seed');
   for (const c of [f.A, f.B]) c.close();
+
+  console.log('\n線上加入電腦（1 真人 + 2 電腦，加速時鐘 ×40）');
+  {
+    const P = attachMatch(client(fbase, tag + '-key-p-0001', '單人')), W = attachMatch(client(fbase, tag + '-key-w-0001', '旁觀'));
+    await Promise.all([P.open, W.open]); await P.waitFor('rooms');
+    P.send({ type: 'create', roomName: '電腦房', name: '單人' });
+    await P.waitFor('joined'); await P.waitRoom();
+    const rid = P.room.id;
+    P.send({ type: 'settings', patch: { mode: 'duel', level: 'hard', layout: 'checker', duration: 300000 } });
+    W.send({ type: 'join', room: rid, as: 'spectator' }); await W.waitFor('joined');
+    P.send({ type: 'start' }); await wait(150);
+    ok(P.last('error') && P.last('error').code === 'few', '只有 1 位真人、沒有電腦：不能開始');
+    P.send({ type: 'addAI', level: 'normal' }); P.send({ type: 'addAI', level: 'hard' });
+    await P.waitFor(m => m.type === 'room' && m.room.seats.filter(x => x.kind === 'ai').length === 2, 2000);
+    const ais = P.room.seats.filter(x => x.kind === 'ai');
+    ok(ais.length === 2 && ais.every(a => a.ready && /・電腦$/.test(a.name)) && ais[0].aiLevel === 'normal' && ais[1].aiLevel === 'hard', '房主加入 2 個電腦：等級、名稱、自動準備好');
+    await W.waitFor(m => m.type === 'room' && m.room.seats.filter(x => x.kind === 'ai').length === 2, 2000).catch(() => null);
+    ok(W.room && W.room.seats.filter(x => x.kind === 'ai').length === 2, '觀戰者也看得到電腦席位');
+    P.send({ type: 'addAI' });                 /* 第 3 個電腦：湊滿 4 席 */
+    await wait(100);
+    P.send({ type: 'addAI' });
+    await P.waitFor(m => m.type === 'error' && m.code === 'full', 2000).catch(() => null);
+    ok(P.room.seats.filter(x => x.kind !== 'empty').length === 4 && P.last('error').code === 'full', '加滿 4 席之後再加 → full');
+    P.send({ type: 'removeAI', seat: P.room.seats.findIndex(x => x.kind === 'ai' && x.aiLevel === 'normal') });
+    await wait(150);
+    P.send({ type: 'start' });
+    const st = await P.waitFor('start');
+    ok(st.slot === 0 && st.cfg.players.map(p => p.kind).join() === 'human,ai,ai' && st.cfg.players[1].aiLevel === 'hard' && st.cfg.players[2].aiLevel === 'easy', 'start.cfg.players 帶 kind／aiLevel（移除 normal 後剩 hard 與預設 easy）');
+    await wait(300);
+    let shotsAi = 0;
+    for (let i = 0; i < 100 && shotsAi < 15; i++) { await wait(100); shotsAi = evsOf(P).filter(e => e.e === 'shot' && e.s > 0).length; }
+    ok(shotsAi >= 15, '電腦的射擊以一般 shot 事件送達（s = 電腦 slot），共 ' + shotsAi + ' 發');
+    ok(JSON.stringify(evsOf(P)) === JSON.stringify(evsOf(W)), '真人與觀戰者收到相同的事件串');
+    P.send({ type: 'shot', a: 9000 }); await wait(200);
+    ok(evsOf(P).some(e => e.e === 'shot' && e.s === 0), '真人照樣能射擊，與電腦並存');
+    await wait(2300);
+    ok(P.stats.hashes >= 1 && P.stats.mismatch === 0 && W.stats.mismatch === 0, 'hash 對帳全部一致（P ' + P.stats.hashes + ' 次）');
+    const room2 = [...fast.hub._rooms.values()].find(x => x.id === rid);
+    /* 盤面若已因清光／時間到而結束，伺服器會釋放 match，此時只比對還在的部分 */
+    ok(!room2 || !room2.match || !P.m || JSON.stringify(boardHashes(P.m)) === JSON.stringify(boardHashes(room2.match.m)), '客戶端重播的盤面 = 伺服器（含電腦盤面）');
+    P.send({ type: 'leave' }); await wait(250);
+    ok(W.last('closed') && !fast.hub._rooms.has(rid), '唯一的真人離開 → 房間關閉、觀戰者收到 closed');
+    const nEv = W.count('ev'), nShots = fast.hub.counters.shots;
+    await wait(1500);
+    ok(W.count('ev') === nEv && fast.hub.counters.shots === nShots, '關房之後電腦沒有再射擊（無殘留計時）');
+    P.close(); W.close();
+  }
   fast.server.close();
 
   for (const c of [A, B, S]) c.close();

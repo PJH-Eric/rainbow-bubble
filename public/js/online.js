@@ -19,14 +19,18 @@
     banned: '你已被請出這個房間，不能再加入。',
     spec_full: '觀戰席已經滿了。',
     spec_off: '這個房間不開放觀戰。',
-    full: '玩家席位已經滿了。',
+    full: '席位已經滿了（真人和電腦合計最多 4 位）。',
     max: '人數上限不能比目前坐著的人還少。',
-    few: '至少要 2 位玩家才能開始。',
+    few: '至少要 2 位才能開始，可以按「加入電腦」。',
     offline: '有玩家斷線了，等他回來再開始。',
     notready: '還有玩家沒有按「準備好」。'
   };
   const PHASE = { room: '等待中', countdown: '倒數中', playing: '對戰中' };
   const PHASE_CLS = { room: 'mint', countdown: 'sun', playing: 'pink' };
+  /* 與單機（app.js）同一份電腦等級說明 */
+  const AI_HINT = { baby: '慢慢來、常亂射', easy: '偶爾失手', normal: '穩穩消除', hard: '又快又準' };
+  const AI_LEVELS = (root.AI && root.AI.LEVEL_ORDER) || ['baby', 'easy', 'normal', 'hard'];
+  const AI_DD = AI_LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: AI_HINT[k] }));
   const MODE_NAME = { race: '各自比賽', duel: '送泡泡對打' };
   const FOCUS_SEL = 'button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -166,6 +170,13 @@
       App.go('room');
     },
     toRoom() { if (!App.room) return App.go('lobby'); App.go('room'); },
+    /** 離開對局：放棄這一局，回到大廳的房間列表 */
+    abandonToLobby() {
+      Net.send({ type: 'leave' });
+      this.clearRoom();
+      App.banner('');
+      App.go('lobby');
+    },
     leaveToHome() {
       Net.send({ type: 'leave' });
       this.clearRoom();
@@ -279,7 +290,7 @@
           h('div', { class: 'info' },
             h('div', { class: 'name' }, r.name),
             h('div', { class: 'chips', style: { marginTop: '4px' } },
-              pill('代號 ' + r.id, 'gray'), pill(PHASE[r.phase] || r.phase, PHASE_CLS[r.phase] || 'gray'), pill(r.players + '/' + r.max + ' 人'),
+              pill('代號 ' + r.id, 'gray'), pill(PHASE[r.phase] || r.phase, PHASE_CLS[r.phase] || 'gray'), pill(r.players + '/' + r.max + ' 位'), r.ais ? pill('🤖 電腦 ' + r.ais) : null,
               r.spectators ? pill('觀戰 ' + r.spectators, 'gray') : null, pill('房主 ' + r.host, 'gray'),
               pill((MODE_NAME[s.mode] || '') + '・' + (R.LEVEL_NAME[s.level] || ''), 'gray'))),
           h('div', { class: 'row', style: { gap: '8px' } },
@@ -314,9 +325,9 @@
         if (!App.store.nickname || !App.store.nickname.trim()) { App.store.nickname = U.myName(); U.save(); }
         const prof = App.profileEditor({ onChange: syncProfile });
         put(card, 
-          h('h3', null, '你被邀請加入「' + i.name + '」'),
+          h('h3', { class: 'invite-h' }, h('span', null, '你被邀請加入「'), h('span', { class: 'invite-nm' }, i.name), h('span', null, '」')),
           h('div', { class: 'chips', style: { margin: '6px 0 10px' } },
-            pill('代號 ' + i.room, 'gray'), pill(PHASE[i.phase] || i.phase, PHASE_CLS[i.phase] || 'gray'), pill(i.players + '/' + i.max + ' 人'),
+            pill('代號 ' + i.room, 'gray'), pill(PHASE[i.phase] || i.phase, PHASE_CLS[i.phase] || 'gray'), pill(i.players + '/' + i.max + ' 位'),
             pill(spec ? '你會是觀戰者' : '你會是玩家', spec ? 'sun' : 'mint')),
           why ? h('p', { class: 'hint', style: { marginBottom: '8px' } }, why) : null,
           h('p', { class: 'muted small', style: { marginBottom: '8px' } }, '先確認自己的暱稱，按「加入」才會進房間。' + (spec ? '觀戰者可以看整場比賽，也能聊天。' : '')),
@@ -365,7 +376,7 @@
         field('人數上限', stepper({ label: '人數上限', min: 2, max: 4, value: max, fmt: v => v + ' 人', onChange: v => { max = v; } })),
         field('公開房間', toggle({ label: '公開房間（出現在大廳列表）', value: pub, onChange: v => { pub = v; } })),
         field('允許觀戰', toggle({ label: '允許觀戰', value: spec, onChange: v => { spec = v; } })),
-        h('p', { class: 'muted small' }, '建立後可以調整地圖與時間，再用邀請連結叫朋友來。')),
+        h('p', { class: 'muted small' }, '建立後可調整地圖與時間，再傳連結邀朋友。')),
       actions: [btn('取消', { cls: 'btn-ghost', onClick: () => m.close() }),
         btn('建立', {
           cls: 'btn-pink', icon: 'check', onClick: () => {
@@ -444,6 +455,15 @@
         box.appendChild(h('div', { class: 'seat empty' }, h('div', { class: 'seat-line' }, h('span', { class: 'seat-name' }, '空位（等朋友來）'))));
         continue;
       }
+      if (s.kind === 'ai') {
+        const rm = host && lobby ? root.UI.iconBtn('close', '移除 ' + s.name, () => Net.send({ type: 'removeAI', seat: s.i }), 'sm') : null;
+        const tags = h('div', { class: 'seat-tags' }, pill('🤖 電腦'));
+        if (host && lobby) tags.appendChild(root.UI.dropdown({ label: s.name + ' 的難度', cls: 'lvl sm', options: AI_DD, value: s.aiLevel, onChange: v => Net.send({ type: 'setAI', seat: s.i, level: v }) }));
+        else tags.appendChild(pill(R.LEVEL_NAME[s.aiLevel] || s.aiLevel, 'mint'));
+        box.appendChild(h('div', { class: 'seat ai', 'data-kind': 'ai' },
+          h('div', { class: 'seat-line' }, avatar(s.dragon, 40), h('span', { class: 'seat-name', title: s.name }, s.name), rm), tags));
+        continue;
+      }
       const mine = s.i === you.seat;
       const tags = h('div', { class: 'seat-tags' });
       if (s.i === r.hostSeat) tags.appendChild(pill('房主', 'sun'));
@@ -456,6 +476,27 @@
       box.appendChild(h('div', { class: 'seat' + (mine ? ' me' : '') + (s.connected ? '' : ' away') },
         h('div', { class: 'seat-line' }, avatar(s.dragon, 40), h('span', { class: 'seat-name' }, s.name), kick), tags));
     }
+    if (host && lobby) {
+      const used = r.seats.filter(x => x.kind !== 'empty').length;
+      const full = used >= r.max;
+      const why = full ? '席位已滿（' + used + '/' + r.max + '），' + (r.seats.some(x => x.kind === 'ai') ? '先移除一位電腦' : '先調高人數上限或請人離開') : '可以加電腦陪玩，最多湊滿 ' + r.max + ' 位';
+      box.appendChild(h('div', { class: 'ai-add' },
+        btn('加入電腦', { cls: 'btn-sky btn-sm', icon: 'robot', iconSize: 20, disabled: full, title: why, aria: full ? '加入電腦（' + why + '）' : '加入電腦', onClick: aiPicker }),
+        h('span', { class: 'ai-why muted small' }, why)));
+    }
+  }
+
+  /** 房主按「加入電腦」：挑一個等級（自訂選單，不是瀏覽器原生的） */
+  function aiPicker() {
+    const m = modal({
+      title: '加入電腦', cls: 'dialog-sm',
+      content: h('div', { class: 'ai-pick' }, h('p', { class: 'muted small ai-pick-tip' }, '選一個等級，之後還能在席位上改。'),
+        AI_DD.map(o => h('button', {
+          type: 'button', class: 'ai-pick-opt', 'data-level': o.v,
+          onClick: () => { if (root.Sound) root.Sound.sfx('click'); m.close(); Net.send({ type: 'addAI', level: o.v }); }
+        }, h('b', null, o.label), h('small', null, o.hint)))),
+      actions: [btn('取消', { cls: 'btn-ghost', onClick: () => m.close() })]
+    });
   }
 
   function paintSpectators(box) {
@@ -476,7 +517,7 @@
     if (!lobby) {
       rows.appendChild(h('p', { class: 'muted' }, r.phase === 'countdown' ? '馬上開始了！' : '對局進行中…'));
     } else if (you.role === 'player' && you.host) {
-      const why = filled < 2 ? '至少要 2 位玩家，快用邀請連結叫朋友來！' : (!r.canStart ? '還有人沒按「準備好」或斷線了。' : '大家都準備好了！');
+      const why = filled < 2 ? '至少要 2 位，用邀請連結叫朋友來，或按「加入電腦」！' : (!r.canStart ? '還有人沒按「準備好」或斷線了。' : (r.seats.some(x => x.kind === 'ai') ? '準備好了！電腦會自動就緒。' : '大家都準備好了！'));
       rows.appendChild(btn('開始遊戲', { cls: 'btn-pink btn-lg btn-block', icon: 'play', iconSize: 24, disabled: !r.canStart, onClick: () => Net.send({ type: 'start' }) }));
       rows.appendChild(h('p', { class: 'muted small' }, why));
     } else if (you.role === 'player') {
@@ -518,7 +559,7 @@
     box.appendChild(h('div', { class: 'row', style: { margin: '8px 0' } },
       btn('玩家連結', { cls: 'btn-sky btn-sm', icon: 'link', iconSize: 18, onClick: () => Net.send({ type: 'invite', role: 'player' }) }),
       btn('觀戰連結', { cls: 'btn-sun btn-sm', icon: 'eye', iconSize: 18, onClick: () => Net.send({ type: 'invite', role: 'spectator' }) })));
-    if (!invs.length) { box.appendChild(h('p', { class: 'muted small' }, '還沒有有效的連結。按上面的按鈕產生一條。')); return; }
+    if (!invs.length) { box.appendChild(h('p', { class: 'muted small' }, '還沒有連結，按上面的按鈕產生。')); return; }
     const list = h('div', { class: 'col tight invite-list' });
     for (const iv of invs) {
       const url = inviteLink(iv.token);
@@ -551,7 +592,7 @@
       wakeSecs = s === 'waking' ? (detail || 0) : 0;
       if (!inOnlineScreen()) { if (!App.replaced) App.banner(''); return; }
       if (!App.replaced) {
-        if (s === 'waking') App.banner('伺服器正在睡醒，約需 30～90 秒…（已等 ' + (detail || 0) + ' 秒）', true);
+        if (s === 'waking') App.banner('伺服器睡醒中…已等 ' + (detail || 0) + ' 秒', true);
         else if (s === 'connecting') App.banner('連線中…', true);
         else if (s === 'retrying') App.banner('連線中斷，正在重新連線…', true);
         else if (s === 'offline') App.banner('連不上伺服器，稍後自動重試', true);

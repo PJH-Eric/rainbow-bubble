@@ -8,7 +8,7 @@ const path = require('path');
 const { chromium } = require('/opt/npm-tools/node_modules/playwright');
 
 const ROOT = path.join(__dirname, '..');
-const PORT = 3199;
+const PORT = Number(process.env.OB_PORT) || 3199;
 const BASE = 'http://127.0.0.1:' + PORT;
 let fails = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
@@ -203,12 +203,16 @@ async function ctxPage(browser, vp, tag) {
     if (await b.locator('.result-card').count()) {
       console.log('    （這局有人先清光盤面，已提早結算；B 改按結算畫面的「回到首頁」）');
       await b.locator('.result-card').getByRole('button', { name: '回到首頁', exact: true }).click();
+      await b.waitForSelector('[data-screen=home]', { timeout: 5000 });
+      ok(true, 'B 從結算畫面回到首頁');
     } else {
       await b.getByRole('button', { name: '離開對局' }).click();
       await b.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
     }
-    await b.waitForSelector('[data-screen=home]', { timeout: 5000 });
-    ok(true, 'B 離開對局回到首頁');
+    if (!(await b.locator('[data-screen=home]').count())) {
+      await b.waitForSelector('[data-screen=lobby]', { timeout: 5000 });
+      ok(true, 'B 離開對局回到大廳房間列表');
+    }
     console.log('    （等候 2 分鐘賽程結束…）');
     await a.waitForSelector('.result-card', { timeout: 160000 });
     await s.waitForSelector('.result-card', { timeout: 15000 });
@@ -257,7 +261,7 @@ async function ctxPage(browser, vp, tag) {
     console.log('代碼加入／列表觀戰／對局中關房');
     const code2 = (await a.locator('.room-meta .pill').first().textContent()).replace('代號', '').trim();
     await b.setViewportSize(LAND); await s.setViewportSize(LAND);
-    await btn(b, '跟別人玩').click();
+    if (!(await b.locator('[data-screen=lobby]').count())) await btn(b, '跟別人玩').click();   /* B 中途離開後本來就在大廳 */
     await b.waitForSelector('.status:not(.bad):not(.warn)', { timeout: 15000 });
     await b.locator('input[aria-label="房間代碼"]').fill(code2.toLowerCase());
     ok(await b.locator('input[aria-label="房間代碼"]').inputValue() === code2, '房間代碼輸入自動轉大寫');
@@ -275,7 +279,7 @@ async function ctxPage(browser, vp, tag) {
     await wait(1500);
     await a.getByRole('button', { name: '離開對局' }).click();
     await a.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
-    await a.waitForSelector('[data-screen=home]');
+    await a.waitForSelector('[data-screen=lobby]');
     ok(await s.locator('.game').count() === 1, '還有一位玩家時觀戰者繼續看');
     await b.getByRole('button', { name: '離開對局' }).click();
     await b.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
@@ -284,6 +288,64 @@ async function ctxPage(browser, vp, tag) {
     await btn(s, '回到大廳').click();
     await s.waitForSelector('[data-screen=lobby]');
     ok(true, '觀戰者回到大廳');
+
+    /* ---- 10. 線上加入電腦 ---- */
+    console.log('線上加入電腦');
+    await s.setViewportSize(LAND);
+    await btn(s, '建立房間').click();
+    await btn(s, '建立').click();
+    await s.waitForSelector('[data-screen=room]');
+    await s.waitForFunction(() => document.querySelector('.room-head h2').textContent !== '進入房間中…');
+    const code3 = (await s.locator('.room-meta .pill').first().textContent()).replace('代號', '').trim();
+    ok(await btn(s, '開始遊戲').isDisabled(), '只有 1 位真人時開始鈕停用');
+    ok(await btn(s, '加入電腦').isEnabled(), '房主看得到可按的「加入電腦」');
+    await btn(s, '加入電腦').click();
+    await s.waitForSelector('.ai-pick');
+    ok(await s.locator('.ai-pick-opt').count() === 4 && await s.locator('.ai-pick-opt[data-level=hard] small').textContent() === '又快又準', '電腦等級選單有 4 個等級與說明（非原生 select）');
+    await s.locator('.ai-pick-opt[data-level=hard]').click();
+    await s.waitForSelector('.seat.ai');
+    ok(await s.locator('.seat.ai').count() === 1 && /・電腦/.test(await s.locator('.seat.ai .seat-name').textContent()) && (await s.locator('.seat.ai .seat-tags').textContent()).includes('🤖'), '席位出現電腦：名字「・電腦」＋🤖 標記');
+    ok((await s.locator('.seat.ai .dd-cur').textContent()).trim() === '困難', '房主的電腦席位有等級選單，顯示「困難」');
+    ok(await btn(s, '開始遊戲').isEnabled(), '1 位真人 + 1 位電腦就能開始（電腦自動準備）');
+    await shot(s, 'room-ai-landscape');
+    /* 另一位玩家用代碼加入：電腦席位唯讀 */
+    if (!(await b.locator('[data-screen=lobby]').count())) await btn(b, '跟別人玩').click();
+    await b.waitForSelector('.status:not(.bad):not(.warn)', { timeout: 15000 });
+    await b.locator('input[aria-label="房間代碼"]').fill(code3);
+    await btn(b, '加入').click();
+    await b.waitForSelector('[data-screen=room]');
+    await b.waitForFunction(() => document.querySelectorAll('.seat:not(.empty)').length === 3);
+    ok(await b.locator('.seat.ai').count() === 1 && (await b.locator('.seat.ai .seat-tags').textContent()).includes('困難'), '非房主看得到電腦席位與等級（唯讀）');
+    ok(await b.locator('.seat.ai .dd').count() === 0 && await b.locator('.seat.ai .icon-btn').count() === 0 && await b.getByRole('button', { name: '加入電腦' }).count() === 0, '非房主沒有換等級／移除／加入電腦的控制項');
+    await b.setViewportSize(PORT_VP); await wait(300);
+    await shot(b, 'room-ai-portrait');
+    ok((await overflowX(b)).scroll <= 1, '含電腦席位的房間 390 寬沒有橫向溢出 ' + JSON.stringify(await overflowX(b)));
+    await b.setViewportSize(LAND);
+    /* 加到滿：2 真人 + 1 電腦 → 再加 1 個 → 滿 4 位，按鈕停用且有原因 */
+    await btn(s, '加入電腦').click();
+    await s.locator('.ai-pick-opt[data-level=baby]').click();
+    await s.waitForFunction(() => document.querySelectorAll('.seat.ai').length === 2);
+    ok(await s.locator('.ai-add .btn').isDisabled() && /席位已滿/.test(await s.locator('.ai-why').textContent()), '席位滿了：「加入電腦」停用並說明原因');
+    await s.locator('.seat.ai').last().getByRole('button', { name: /^移除 / }).click();
+    await s.waitForFunction(() => document.querySelectorAll('.seat.ai').length === 1);
+    ok(await s.locator('.ai-add .btn').isEnabled(), '移除一個電腦後又可以加入');
+    /* b 離開、1 真人 + 1 電腦開局 */
+    await btn(b, '離開房間').click();
+    await b.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
+    await b.waitForSelector('[data-screen=lobby]');
+    await s.waitForFunction(() => document.querySelectorAll('.seat:not(.empty)').length === 2);
+    await btn(s, '開始遊戲').click();
+    await s.waitForSelector('.game', { timeout: 10000 });
+    await wait(3600);
+    ok(await s.locator('.bslot').count() === 2, '對局畫面有 2 塊盤面（我 + 電腦）');
+    ok((await s.locator('.bslot .bt-name').allTextContents()).some(t => t.includes('🤖')), 'HUD 的電腦名字帶 🤖');
+    await s.waitForFunction(() => App.game && App.game.m && App.game.m.boards[1].shots >= 3, null, { timeout: 15000 });
+    ok(true, '電腦盤面自己在動（伺服器代打，已射出 ' + await s.evaluate(() => App.game.m.boards[1].shots) + ' 發）');
+    await shot(s, 'game-ai-landscape');
+    await s.getByRole('button', { name: '離開對局' }).click();
+    await s.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();
+    await s.waitForSelector('[data-screen=lobby]');
+    ok(true, '真人離開後回大廳房間列表（房間隨之關閉）');
 
     ok(errors.length === 0, '沒有 pageerror／console error' + (errors.length ? '：\n      ' + errors.join('\n      ') : ''));
   } catch (e) {

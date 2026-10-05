@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { cols: 8,  colors: [1, 2, 4],          descend: 0, rainbow: 0.07, star: 0,    mult: 0.5,  warnMs: 2500, rows: [6, 7] },
-    easy:   { cols: 8,  colors: [1, 2, 3, 4, 5],    descend: 0, rainbow: 0.05, star: 0,    mult: 0.75, warnMs: 2000, rows: [6, 8] },
-    normal: { cols: 10, colors: [1, 2, 3, 4, 5, 6, 7],    descend: 8, rainbow: 0.04, star: 0.03, mult: 1,    warnMs: 1500, rows: [6, 9] },
-    hard:   { cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9], descend: 6, rainbow: 0.04, star: 0.03, mult: 1,    warnMs: 1500, rows: [7, 10] }
+    baby:   { cols: 9,  colors: [1, 2, 4],          descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { cols: 10, colors: [1, 2, 3, 4, 5],    descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { cols: 12, colors: [1, 2, 3, 4, 5, 6, 7],    descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -123,7 +123,9 @@
     const r1 = rand01(b.queueSeed, idx * 3 + 1);
     const r2 = rand01(b.queueSeed, idx * 3 + 2);
     const present = presentColors(b);
-    const pool = present.length ? present : b.colors;
+    /* wild：難度越高，越常出現盤面上沒有的顏色（要靠交換或繞路消） */
+    const wild = b.cfg.wild > 0 && rand01(b.queueSeed, idx * 3 + 3) < b.cfg.wild;
+    const pool = (wild || !present.length) ? b.colors : present;
     const color = pool[Math.floor(r2 * pool.length) % pool.length];
     if (r1 < b.cfg.rainbow) return { k: 'rainbow', c: 0 };
     if (r1 < b.cfg.rainbow + b.cfg.star) return { k: 'star', c: 0 };
@@ -139,7 +141,7 @@
     const b = {
       level, cfg, cols, parity: 0, rows: [], colors: cfg.colors.slice(),
       seed: opt.seed >>> 0, queueSeed: hash2(opt.seed, 99), shots: 0, miss: 0, cleared: 0, combo: 0,
-      maxCombo: 0, descents: 0, rains: 0, protect: 0, fullClear: false, layoutId: '', layoutName: '', garbageIn: 0, garbageOut: 0,
+      maxCombo: 0, hits: 0, best: 0, dropN: 0, descents: 0, rains: 0, protect: 0, fullClear: false, layoutId: '', layoutName: '', garbageIn: 0, garbageOut: 0,
       cur: { k: 'n', c: 1 }, nxt: { k: 'n', c: 1 }
     };
     const Layouts = root.Layouts || (typeof require === 'function' ? require('./layouts.js') : null);
@@ -441,6 +443,7 @@
     res.dropped = st.dropped;
     res.gained = st.gained;
     b.cleared += st.gained;
+    if (st.gained > 0) { b.hits++; b.dropN += st.dropped.length; if (st.gained > b.best) b.best = st.gained; }
     b.shots++;
     if (b.protect > 0) b.protect--;
     if (st.gained > 0) { b.combo++; b.miss = 0; if (b.combo > b.maxCombo) b.maxCombo = b.combo; }
@@ -524,7 +527,7 @@
   function snapshot(b) {
     return {
       level: b.level, cols: b.cols, parity: b.parity, rows: b.rows.map(r => r.slice()), colors: b.colors.slice(), seed: b.seed,
-      queueSeed: b.queueSeed, shots: b.shots, miss: b.miss, cleared: b.cleared, combo: b.combo, maxCombo: b.maxCombo,
+      queueSeed: b.queueSeed, shots: b.shots, miss: b.miss, cleared: b.cleared, combo: b.combo, maxCombo: b.maxCombo, hits: b.hits, best: b.best, dropN: b.dropN,
       descents: b.descents, rains: b.rains, protect: b.protect, fullClear: b.fullClear, layoutId: b.layoutId, layoutName: b.layoutName,
       garbageIn: b.garbageIn, garbageOut: b.garbageOut, cur: b.cur, nxt: b.nxt, qIdx: b.qIdx
     };

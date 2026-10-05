@@ -20,7 +20,7 @@
   function cfgOf(m) {
     return {
       mode: m.mode, level: m.level, seed: m.seed >>> 0, layoutId: m.layoutId, themeId: m.themeId, duration: m.duration,
-      players: m.players.map(p => ({ name: p.name, dragon: p.dragon, kind: p.kind }))
+      players: m.players.map(p => (p.kind === 'ai' ? { name: p.name, dragon: p.dragon, kind: p.kind, aiLevel: p.aiLevel } : { name: p.name, dragon: p.dragon, kind: p.kind }))
     };
   }
 

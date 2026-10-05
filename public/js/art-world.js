@@ -1,5 +1,5 @@
 /* 彩虹泡泡砲 — art-world.js
- * 泡泡、特殊物件、發射器、六套背景、標誌、介面圖示（全部是程式產生的向量 SVG 字串）
+ * 泡泡、特殊物件、發射器、七套背景、標誌、介面圖示（全部是程式產生的向量 SVG 字串）
  * 介面：Art.COLORS / bubbleSVG / specialBubbleSVG / cannonSVG / THEMES / themeBgSVG / logoSVG / icon
  * 規則：不用外部資源、不用 foreignObject、不用 CSS 變數；每張 SVG 的 id 都帶唯一前綴。
  */
@@ -96,7 +96,8 @@
     candy: { 1: 'lollipop', 2: 'cookie', 3: 'wrapped', 4: 'icecream', 5: 'cupcake', 6: 'donut', 7: 'popsicle', 8: 'cherry', 9: 'choco' },
     forest: { 1: 'mushroom', 2: 'sun', 3: 'leaf', 4: 'drop', 5: 'butterfly', 6: 'fox', 7: 'pine', 8: 'flower', 9: 'acorn' },
     night: { 1: 'rocket', 2: 'star', 3: 'ufo', 4: 'planet', 5: 'moon', 6: 'comet', 7: 'sparkle', 8: 'alien', 9: 'asteroid' },
-    ocean: { 1: 'octopus', 2: 'fish', 3: 'turtle', 4: 'whale', 5: 'jellyfish', 6: 'starfish', 7: 'seahorse', 8: 'shell', 9: 'anchor' }
+    ocean: { 1: 'octopus', 2: 'fish', 3: 'turtle', 4: 'whale', 5: 'jellyfish', 6: 'starfish', 7: 'seahorse', 8: 'shell', 9: 'anchor' },
+    sunmoon: { 1: 'lantern', 2: 'sun', 3: 'firefly', 4: 'prism', 5: 'crescentstar', 6: 'sunrise', 7: 'bulb', 8: 'cloudsun', 9: 'eclipse' }
   };
   // 粗線條（外框層 + 白色層）與細節線
   function thick(d, w) { return { o: '<path d="' + d + '" fill="none" stroke-width="' + (w || 10) + '"/>', f: '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="' + ((w || 10) - 5.5) + '"/>' }; }
@@ -146,6 +147,19 @@
     turtle: function (m, k) { return { shapes: '<ellipse cx="50" cy="55" rx="23" ry="21"/><circle cx="50" cy="26" r="9"/><circle cx="28" cy="38" r="6.5"/><circle cx="72" cy="38" r="6.5"/><circle cx="28" cy="71" r="6.5"/><circle cx="72" cy="71" r="6.5"/><path d="M50 76 L50 86" stroke-width="5"/>', extraF: '<polygon points="50,45 59,51 59,61 50,67 41,61 41,51" fill="none" stroke="' + k + '" stroke-width="3" stroke-linejoin="round"/>' + dot(46, 24, 2.2, k) + dot(54, 24, 2.2, k) }; },
     whale: function (m, k) { var t = many(['M44 38 V28', 'M44 30 Q38 24 33 26', 'M44 30 Q50 24 55 26'], 8); return { shapes: '<ellipse cx="42" cy="58" rx="26" ry="18"/><path d="M62 58 Q76 56 76 42 Q84 50 91 44 Q92 62 66 68Z" stroke-linejoin="round"/>', extraO: t.o, extraF: t.f + dot(27, 54, 3.4, k) + ln('M30 66 Q42 72 54 66', k, 2.6) }; },
     jellyfish: function (m, k) { var t = many(['M33 52 Q28 61 33 67 T33 82', 'M44 53 Q39 62 44 68 T44 84', 'M56 53 Q61 62 56 68 T56 84', 'M67 52 Q72 61 67 67 T67 82'], 7); return { shapes: '<path d="M24 52 A26 26 0 0 1 76 52Z"/>', extraO: t.o, extraF: t.f + dot(41, 43, 3.4, k) + dot(59, 43, 3.4, k) }; },
+    lantern: function (m, k) { var t = many(['M50 31 V21', 'M50 74 V86'], 7);
+      return { shapes: '<ellipse cx="50" cy="52" rx="24" ry="19"/><path d="M38 31 H62 V37 H38Z M40 68 H60 V74 H40Z" stroke-linejoin="round"/>', extraO: t.o, extraF: t.f + ln('M50 34 V70 M38 36 Q32 52 38 68 M62 36 Q68 52 62 68', k, 2.4) + dot(50, 86, 3.2, k) }; },
+    firefly: function (m, k) { var wing = '<ellipse cx="35" cy="42" rx="11" ry="6.5" transform="rotate(-35 35 42)"/><ellipse cx="65" cy="42" rx="11" ry="6.5" transform="rotate(35 65 42)"/>';
+      return { shapes: wing + '<circle cx="50" cy="30" r="8"/><ellipse cx="50" cy="48" rx="9" ry="11"/><circle cx="50" cy="69" r="13"/>', extraF: '<circle cx="50" cy="69" r="10" fill="#ffe84a" stroke="' + k + '" stroke-width="2.4"/>' + ln('M32 70 H25 M68 70 H75 M36 82 L30 87 M64 82 L70 87', '#e8a82a', 3) + dot(46, 29, 2, k) + dot(54, 29, 2, k) + ln('M45 23 L41 17 M55 23 L59 17', k, 2.2) }; },
+    prism: function (m, k) { return { shapes: '<path d="M50 22 L78 72 H22Z" stroke-linejoin="round"/>', extraF: ln('M10 58 L40 52', k, 3) + ln('M60 50 L90 38', '#ff5c7a', 3.4) + ln('M62 56 L91 50', '#ffb020', 3.4) + ln('M63 62 L90 62', '#46d37f', 3.4) + ln('M62 68 L88 74', '#4aa8ff', 3.4) + ln('M50 34 L36 60', lighten(m, 0.5), 3) }; },
+    crescentstar: function (m, k) { return { shapes: '<path d="' + moonPath(42, 54, 27, 56, 46, 22) + '"/><polygon points="' + starPts(72, 32, 13, 5.6, 5) + '" stroke-linejoin="round"/>', extraF: dot(34, 56, 2.2, k) + ln('M31 66 Q36 70 40 67', k, 2.2) }; },
+    sunrise: function (m, k) { var r = [], i, a; for (i = 0; i < 5; i++) { a = (-150 + i * 30) * Math.PI / 180; r.push('M' + n2(50 + Math.cos(a) * 30) + ' ' + n2(66 + Math.sin(a) * 30) + ' L' + n2(50 + Math.cos(a) * 39) + ' ' + n2(66 + Math.sin(a) * 39)); }
+      var t = many(r.concat(['M14 70 H86']), 8); return { shapes: '<path d="M27 70 A23 23 0 0 1 73 70Z"/>', extraO: t.o, extraF: t.f + ln('M38 80 H62', k, 3) + ln('M44 87 H56', k, 2.6) + dot(44, 61, 2.4, k) + dot(56, 61, 2.4, k) }; },
+    bulb: function (m, k) { return { shapes: '<circle cx="50" cy="41" r="21"/><path d="M41 55 H59 L57 70 H43Z" stroke-linejoin="round"/><rect x="41" y="70" width="18" height="6" rx="2"/><rect x="44" y="76" width="12" height="6" rx="3"/>', extraF: ln('M43 56 L46 44 L50 51 L54 44 L57 56', k, 2.6) + ln('M41 62 H59 M42 67 H58', k, 2) + '<circle cx="42" cy="34" r="3.4" fill="' + lighten(m, 0.55) + '"/>' }; },
+    cloudsun: function (m, k) { var cl = '<ellipse cx="45" cy="66" rx="27" ry="12"/><circle cx="34" cy="58" r="12"/><circle cx="53" cy="54" r="14"/>', i, a, r = '';
+      for (i = 0; i < 8; i++) { a = i * Math.PI / 4; r += 'M' + n2(66 + Math.cos(a) * 15) + ' ' + n2(32 + Math.sin(a) * 15) + ' L' + n2(66 + Math.cos(a) * 20) + ' ' + n2(32 + Math.sin(a) * 20); }
+      return { shapes: cl + '<circle cx="66" cy="32" r="12"/>', extraF: '<circle cx="66" cy="32" r="10" fill="#ffd23a" stroke="' + k + '" stroke-width="2.2"/>' + ln(r, '#e8a82a', 3) + '<g fill="#fff" stroke="' + k + '" stroke-width="2.6">' + cl + '</g><path d="M26 66 H64" stroke="#fff" stroke-width="5" stroke-linecap="round"/>' + dot(40, 62, 2.4, k) + dot(52, 62, 2.4, k) + ln('M42 68 Q46 71 50 68', k, 2.2) }; },
+    eclipse: function (m, k) { return { shapes: '<circle cx="50" cy="53" r="28"/><path d="M76 20 Q77 27 84 28 Q77 29 76 36 Q75 29 68 28 Q75 27 76 20Z"/>', extraF: '<circle cx="50" cy="53" r="19" fill="' + k + '"/><path d="M33 47 A19 19 0 0 1 47 35" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>' + dot(24, 70, 2.2, k) + dot(30, 79, 1.8, k) }; },
     seahorse: function (m, k) { var t = thick('M52 40 Q38 52 50 62 Q60 70 50 78 Q42 82 38 74', 15); return { shapes: '<circle cx="54" cy="32" r="12"/><path d="M62 30 L80 33 L64 40Z" stroke-linejoin="round"/><path d="M42 36 L34 30 L40 44Z" stroke-linejoin="round"/>', extraO: t.o, extraF: t.f + dot(56, 29, 3.2, k) + ln('M45 52 Q52 56 47 62', k, 2.2) }; }
   };
   function pattern(shape, main) {
@@ -354,7 +368,8 @@
     { id: 2, name: '糖果山', sky: ['#ffbfe0', '#fff2fa'], frame: ['#ff9ccb', '#d9569a'], boardFill: 'rgba(255,255,255,0.76)', boardLine: '#ff9ccb', accent: '#c06bff', music: 'c', set: 'candy' },
     { id: 3, name: '童話森林', sky: ['#bdeecb', '#fbffe0'], frame: ['#9bd47a', '#4d8f3c'], boardFill: 'rgba(255,255,250,0.76)', boardLine: '#8cc66b', accent: '#ffa63c', music: 'd', set: 'forest' },
     { id: 4, name: '星星夜空', sky: ['#252a7a', '#8a6ee0'], frame: ['#b9a6ff', '#5a46b8'], boardFill: 'rgba(255,255,255,0.86)', boardLine: '#a58cf5', accent: '#ffd23a', music: 'e', set: 'night' },
-    { id: 5, name: '海底世界', sky: ['#62d6f5', '#1a7ec6'], frame: ['#7fe0ee', '#2a8fb8'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#6cc8e6', accent: '#ff7a6b', music: 'f', set: 'ocean' }
+    { id: 5, name: '海底世界', sky: ['#62d6f5', '#1a7ec6'], frame: ['#7fe0ee', '#2a8fb8'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#6cc8e6', accent: '#ff7a6b', music: 'f', set: 'ocean' },
+    { id: 6, name: '日月光', sky: ['#ffdf94', '#cdb9f6'], frame: ['#ffd77a', '#b8793a'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#e3b45e', accent: '#9a6bff', music: 'g', set: 'sunmoon' }
   ];
 
   // ───────────── 5. 背景共用裝飾 ─────────────
@@ -464,7 +479,7 @@
       '<g fill="#fff" opacity="0.6"><circle cx="0" cy="-12" r="2.4"/><circle cx="11" cy="-3" r="2.4"/><circle cx="7" cy="9" r="2.4"/><circle cx="-7" cy="9" r="2.4"/><circle cx="-11" cy="-3" r="2.4"/></g></g>';
   }
 
-  // ───────────── 6. 六套背景 ─────────────
+  // ───────────── 6. 七套背景 ─────────────
   function bg0(p) {   // 彩虹草原
     var r = rng(11), s = '', i, rc = ['#ff6b8a', '#ffa64d', '#ffd84a', '#5fd98a', '#58b2ff', '#b088ff'];
     var defs = lg(p + 'sky', 0, 0, 0, 1, [[0, '#8fd6ff'], [1, '#eafaff']]) + rg(p + 'sun', 0.5, 0.5, 0.5, [[0, '#fff6b0', 1], [0.45, '#ffe680', 0.55], [1, '#ffe680', 0]]);
@@ -606,7 +621,59 @@
     return '<defs>' + defs + '</defs>' + s;
   }
 
-  var BGS = [bg0, bg1, bg2, bg3, bg4, bg5];
+  function bg6(p) {   // 日月光：日出日落同框
+    var s = '', i, r = rng(66), defs =
+      lg(p + 'sky', 0, 0, 0, 1, [[0, '#ffd98a'], [0.42, '#ffd0b4'], [0.75, '#cdb9f6'], [1, '#b19be8']]) +
+      rg(p + 'sun', 0.5, 0.5, 0.5, [[0, '#fff6b0', 1], [0.4, '#ffe680', 0.55], [1, '#ffe680', 0]]) +
+      rg(p + 'moon', 0.5, 0.5, 0.5, [[0, '#f4eeff', 0.85], [0.5, '#d9ccff', 0.4], [1, '#d9ccff', 0]]) +
+      lg(p + 'bs', 0, 0, 1, 1, [[0, '#fff3b0', 0.55], [1, '#fff3b0', 0]]) +
+      lg(p + 'bm', 1, 0, 0, 1, [[0, '#f0e8ff', 0.5], [1, '#f0e8ff', 0]]) +
+      lg(p + 'h1', 0, 0, 0, 1, [[0, '#a98fe0'], [1, '#8f78d0']]) +
+      lg(p + 'h2', 0, 0, 0, 1, [[0, '#8a73cc'], [1, '#6f5ab8']]);
+    s += '<rect width="1600" height="900" fill="url(#' + p + 'sky)"/>';
+    // 柔光束（只在兩側斜射，中央留白）
+    s += '<polygon points="170,150 40,0 330,0 700,640 420,640" fill="url(#' + p + 'bs)"/>';
+    s += '<polygon points="1430,170 1300,0 1590,0 1280,640 1080,640" fill="url(#' + p + 'bm)"/>';
+    // 太陽 + 光芒
+    s += '<circle cx="190" cy="165" r="170" fill="url(#' + p + 'sun)"/>';
+    var rays = '';
+    for (i = 0; i < 12; i++) {
+      var a = i * Math.PI / 6, a2 = a + 0.1, a3 = a - 0.1;
+      rays += '<polygon points="' + n2(190 + Math.cos(a) * 118) + ',' + n2(165 + Math.sin(a) * 118) + ' ' + n2(190 + Math.cos(a2) * 78) + ',' + n2(165 + Math.sin(a2) * 78) + ' ' + n2(190 + Math.cos(a3) * 78) + ',' + n2(165 + Math.sin(a3) * 78) + '" />';
+    }
+    s += '<g fill="#ffd23a" stroke="#ffb02e" stroke-width="3" stroke-linejoin="round" opacity="0.95">' + rays + '</g>';
+    s += '<circle cx="190" cy="165" r="64" fill="#ffe36a" stroke="#ffc83a" stroke-width="5"/>';
+    s += '<circle cx="168" cy="160" r="5" fill="#a85a00"/><circle cx="212" cy="160" r="5" fill="#a85a00"/><path d="M172 182 Q190 198 208 182" fill="none" stroke="#a85a00" stroke-width="5" stroke-linecap="round"/><circle cx="154" cy="178" r="9" fill="#ff9a8a" opacity="0.55"/><circle cx="226" cy="178" r="9" fill="#ff9a8a" opacity="0.55"/>';
+    // 月亮（睡著的臉）
+    s += '<circle cx="1400" cy="190" r="160" fill="url(#' + p + 'moon)"/>';
+    s += '<path d="' + moonPath(1400, 190, 82, 1442, 166, 70) + '" fill="#fff7d2" stroke="#e3c97a" stroke-width="4"/>';
+    s += '<path d="M1371 188 Q1379 196 1387 188" fill="none" stroke="#a07a30" stroke-width="4" stroke-linecap="round"/><path d="M1368 214 Q1378 224 1388 214" fill="none" stroke="#a07a30" stroke-width="4" stroke-linecap="round"/><circle cx="1362" cy="206" r="7" fill="#ff9a8a" opacity="0.55"/>';
+    s += '<text x="1452" y="266" font-family=\'' + FONT + '\' font-size="30" font-weight="900" fill="#fff" opacity="0.85">z</text><text x="1480" y="238" font-family=\'' + FONT + '\' font-size="22" font-weight="900" fill="#fff" opacity="0.7">z</text>';
+    // 閃爍星點（月亮側、避開中央）
+    for (i = 0; i < 26; i++) {
+      var x = 1000 + r() * 590, y = 20 + r() * 520, rad = 1.6 + r() * 3;
+      if (x > 1000 && x < 1230 && y > 80) continue;
+      s += i % 3 === 0 ? '<polygon points="' + starPts(n2(x), n2(y), n2(rad * 3.4), n2(rad * 1.3), 4, 0) + '" fill="#fffbe0" opacity="0.9"/>' : '<circle cx="' + n2(x) + '" cy="' + n2(y) + '" r="' + n2(rad) + '" fill="#fff" opacity="0.8"/>';
+    }
+    for (i = 0; i < 12; i++) s += sparkle(n2(30 + r() * 560), n2(260 + r() * 330), n2(7 + r() * 9), 0.7);
+    s += cloud(330, 330, 0.9, '#fff3e6', 0.9) + cloud(1280, 380, 0.85, '#efe6ff', 0.9) + cloud(120, 470, 0.65, '#fff3e6', 0.85) + cloud(1500, 520, 0.6, '#efe6ff', 0.85) + cloud(800, 90, 0.7, '#fff', 0.45);
+    // 丘陵剪影
+    s += '<path d="' + wave(690, 36, 210, 0.7, 900, 16) + '" fill="url(#' + p + 'h1)"/>';
+    s += '<path d="' + wave(770, 30, 260, 2.4, 900, 16) + '" fill="url(#' + p + 'h2)"/>';
+    s += '<path d="' + wave(845, 18, 200, 4.1, 900, 16) + '" fill="#5d4aa6"/>';
+    // 兩側小樹剪影與小提燈
+    for (i = 0; i < 6; i++) {
+      var tx = i < 3 ? 70 + i * 120 : 1260 + (i - 3) * 120, ty = 790 + (i % 2) * 40, ts = 0.5 + (i % 3) * 0.15;
+      s += '<g transform="translate(' + tx + ' ' + ty + ') scale(' + ts + ')"><rect x="-6" y="-30" width="12" height="40" fill="#4a3a90"/><circle cy="-70" r="46" fill="#52409a"/><circle cx="-30" cy="-44" r="28" fill="#52409a"/><circle cx="30" cy="-44" r="28" fill="#52409a"/></g>';
+    }
+    for (i = 0; i < 8; i++) {
+      var fx = n2(i % 2 ? 40 + r() * 360 : 1200 + r() * 360), fy = n2(560 + r() * 230);
+      s += '<circle cx="' + fx + '" cy="' + fy + '" r="14" fill="#ffe84a" opacity="0.22"/><circle cx="' + fx + '" cy="' + fy + '" r="3.4" fill="#fff3a0"/>';
+    }
+    return '<defs>' + defs + '</defs>' + s;
+  }
+
+  var BGS = [bg0, bg1, bg2, bg3, bg4, bg5, bg6];
   Art.themeBgSVG = function (themeId) {
     var id = (themeId >= 0 && themeId < BGS.length) ? themeId : 0;
     return svgWrap('0 0 1600 900', BGS[id]('bg' + id + '-'), 'preserveAspectRatio="xMidYMid slice"');

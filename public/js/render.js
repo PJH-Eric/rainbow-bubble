@@ -15,9 +15,10 @@
   const ease = t => (t < 0 ? 0 : t > 1 ? 1 : 1 - Math.pow(1 - t, 3));
   const clamp01 = t => (t < 0 ? 0 : t > 1 ? 1 : t);
 
+  const PAD = 0.85;                 /* 盤面內側留白（世界單位）：泡泡和外框之間不擠 */
   function worldSize(cols) {
     const sy = R.cy(R.LINE_ROW + 1.5);
-    return { w: 2 * cols, h: TOP + sy + 2.9, shooterY: TOP + sy };
+    return { w: 2 * cols, h: TOP + sy + 2.9, shooterY: TOP + sy, pad: PAD };
   }
 
   class BoardView {
@@ -58,13 +59,14 @@
       const cw = this.el.clientWidth || (p && p.clientWidth) || 300, ch = this.el.clientHeight || (p && p.clientHeight) || 400;
       const dpr = Math.min(2.5, root.devicePixelRatio || 1);
       const ws = worldSize(this.cols);
-      const sc = Math.min(cw / ws.w, ch / ws.h);
-      const pw = Math.max(40, Math.floor(ws.w * sc)), ph = Math.max(40, Math.floor(ws.h * sc));
+      const fw = ws.w + 2 * ws.pad, fh = ws.h + 2 * ws.pad;
+      const sc = Math.min(cw / fw, ch / fh);
+      const pw = Math.max(40, Math.floor(fw * sc)), ph = Math.max(40, Math.floor(fh * sc));
       if (!force && this._w === pw && this._h === ph && this.dpr === dpr) return;
       this._w = pw; this._h = ph; this.dpr = dpr;
       this.canvas.style.width = pw + 'px'; this.canvas.style.height = ph + 'px';
       this.canvas.width = Math.round(pw * dpr); this.canvas.height = Math.round(ph * dpr);
-      this.scale = (pw * dpr) / ws.w; this.ws = ws;
+      this.scale = (pw * dpr) / fw; this.ws = ws;
     }
 
     /* ---------- 事件進場（controller 在 Match.apply 之後呼叫） ---------- */
@@ -184,20 +186,24 @@
     /* ---------- 輸入座標 ---------- */
     toWorld(clientX, clientY) {
       const r = this.canvas.getBoundingClientRect();
-      return { x: (clientX - r.left) / r.width * this.ws.w, y: (clientY - r.top) / r.height * this.ws.h };
+      const fw = this.ws.w + 2 * this.ws.pad, fh = this.ws.h + 2 * this.ws.pad;
+      return { x: (clientX - r.left) / r.width * fw - this.ws.pad, y: (clientY - r.top) / r.height * fh - this.ws.pad };
     }
     /** 回傳點擊資訊：{ angle(百分之一度), swap, inside } */
     hit(clientX, clientY) {
       const w = this.toWorld(clientX, clientY);
       const s = R.shooterPos(this.live);
       const sy = TOP + s.y;
-      const nx = s.x + 4.4, ny = sy + 0.5;
-      if (Math.hypot(w.x - nx, w.y - ny) < 1.6) return { swap: true, inside: true };
+      const sp = this.swapPos(s, sy);
+      if (w.x >= sp.x - 0.2 && w.x <= sp.x + sp.w + 0.2 && w.y >= sp.y - 0.3 && w.y <= sp.y + sp.h + 0.3) return { swap: true, inside: true };
+      if (Math.hypot(w.x - sp.nx, w.y - sp.ny) < 1.6) return { swap: true, inside: true };
       let dx = w.x - s.x, dy = sy - w.y;
       if (dy < 0.4) dy = 0.4;
       const a = Math.atan2(dy, dx) * 18000 / Math.PI;
       return { angle: R.clampAngle(a), swap: false, inside: true };
     }
+    /** 「交換泡泡」按鈕：夾在發射台與下一顆泡泡中間的小長方形、只用圖示 */
+    swapPos(s, sy) { return { x: s.x + 2.85, y: sy - 0.3, w: 1.6, h: 1.6, nx: s.x + 6.95, ny: sy + 0.5 }; }
     setAim(a) { this.aim = R.clampAngle(a); }
 
     /* ---------- 畫面 ---------- */
@@ -208,7 +214,7 @@
       const g = this.ctx, sc = this.scale, ws = this.ws;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      g.setTransform(sc, 0, 0, sc, 0, 0);
+      g.setTransform(sc, 0, 0, sc, ws.pad * sc, ws.pad * sc);
       const th = this.theme;
       /* 震動 */
       let shx = 0, shy = 0;
@@ -231,30 +237,31 @@
       this.drawShooter(g, now);
       this.drawFlight(g, now);
       this.drawTexts(g, now);
-      if (this.dim) { g.fillStyle = 'rgba(40,30,70,.25)'; g.fillRect(-1, -1, ws.w + 2, ws.h + 2); }
+      if (this.dim) { g.fillStyle = 'rgba(40,30,70,.25)'; g.fillRect(-ws.pad - 1, -ws.pad - 1, ws.w + 2 * ws.pad + 2, ws.h + 2 * ws.pad + 2); }
     }
 
     drawPanel(g, now) {
       const ws = this.ws, th = this.theme, b = this.live;
       g.save();
       const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
-      rr(0.05, 0.05, ws.w - 0.1, ws.h - 0.1, 0.9);
+      const P = ws.pad;
+      rr(0.05 - P, 0.05 - P, ws.w + 2 * P - 0.1, ws.h + 2 * P - 0.1, 1.1);
       g.fillStyle = th.boardFill; g.fill();
       g.lineWidth = 0.22; g.strokeStyle = th.boardLine; g.stroke();
       /* 天花板 */
-      const gr = g.createLinearGradient(0, 0, 0, TOP);
+      const gr = g.createLinearGradient(0, -P, 0, TOP);
       gr.addColorStop(0, th.frame[1]); gr.addColorStop(1, th.frame[0]);
-      g.save(); rr(0.05, 0.05, ws.w - 0.1, ws.h - 0.1, 0.9); g.clip();
-      g.fillStyle = gr; g.fillRect(0, 0, ws.w, TOP - 0.55);
-      g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(0, 0.1, ws.w, 0.18);
+      g.save(); rr(0.05 - P, 0.05 - P, ws.w + 2 * P - 0.1, ws.h + 2 * P - 0.1, 1.1); g.clip();
+      g.fillStyle = gr; g.fillRect(-P, -P, ws.w + 2 * P, TOP + P - 0.55);
+      g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(-P, 0.1 - P, ws.w + 2 * P, 0.18);
       /* 底線 */
       const ly = TOP + R.cy(R.LINE_ROW) - 1;
       const low = R.lowestRow(b);
       const danger = low >= R.LINE_ROW - 2;
       g.setLineDash([0.5, 0.4]); g.lineWidth = 0.14;
       g.strokeStyle = danger ? 'rgba(255,70,90,' + (0.55 + 0.4 * Math.sin(now / 150)) + ')' : 'rgba(255,255,255,.85)';
-      g.beginPath(); g.moveTo(0.4, ly); g.lineTo(ws.w - 0.4, ly); g.stroke(); g.setLineDash([]);
-      g.fillStyle = 'rgba(80,60,130,.08)'; g.fillRect(0, ly + 0.1, ws.w, ws.h);
+      g.beginPath(); g.moveTo(0.4 - P * 0.5, ly); g.lineTo(ws.w - 0.4 + P * 0.5, ly); g.stroke(); g.setLineDash([]);
+      g.fillStyle = 'rgba(80,60,130,.08)'; g.fillRect(-P, ly + 0.1, ws.w + 2 * P, ws.h + P);
       g.restore();
       g.restore();
     }
@@ -423,15 +430,21 @@
         g.restore();
         /* 下一顆 */
         const bump = clamp01((performance.now() - this.swapBump) / 220);
-        const nx = s.x + 4.4, ny = sy + 0.5;
+        const sp = this.swapPos(s, sy), nx = sp.nx, ny = sp.ny;
         g.save();
+        /* 下一顆：發射台右邊 */
         g.fillStyle = 'rgba(255,255,255,.7)'; g.strokeStyle = this.theme.boardLine; g.lineWidth = 0.12;
         g.beginPath(); g.arc(nx, ny, 1.45, 0, 7); g.fill(); g.stroke();
         this.item(g, b.nxt, nx, ny, 0.72 + 0.2 * Math.sin(bump * Math.PI));
+        /* 交換按鈕：發射台與下一顆之間，小長方形＋圖示（⇄） */
         if (this.mine) {
-          g.strokeStyle = '#7a5cc0'; g.lineWidth = 0.13; g.lineCap = 'round';
-          g.beginPath(); g.arc(nx, ny, 1.0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
-          g.beginPath(); g.moveTo(nx + 0.9, ny - 0.45); g.lineTo(nx + 1.0, ny - 1.05); g.lineTo(nx + 0.4, ny - 0.95); g.stroke();
+          const down = clamp01((performance.now() - this.swapBump) / 220);
+          g.fillStyle = 'rgba(255,255,255,.94)'; g.strokeStyle = '#f0b24a'; g.lineWidth = 0.2;
+          g.beginPath(); g.roundRect ? g.roundRect(sp.x, sp.y, sp.w, sp.h, 0.5) : g.rect(sp.x, sp.y, sp.w, sp.h); g.fill(); g.stroke();
+          const cx0 = sp.x + sp.w / 2, cy0 = sp.y + sp.h / 2, hw = 0.46, ah = 0.22;
+          g.strokeStyle = down < 1 ? '#ff7eb6' : '#6a46b8'; g.lineWidth = 0.2; g.lineCap = 'round'; g.lineJoin = 'round';
+          g.beginPath(); g.moveTo(cx0 - hw, cy0 - 0.3); g.lineTo(cx0 + hw, cy0 - 0.3); g.moveTo(cx0 + hw - ah, cy0 - 0.3 - ah); g.lineTo(cx0 + hw, cy0 - 0.3); g.lineTo(cx0 + hw - ah, cy0 - 0.3 + ah); g.stroke();
+          g.beginPath(); g.moveTo(cx0 + hw, cy0 + 0.3); g.lineTo(cx0 - hw, cy0 + 0.3); g.moveTo(cx0 - hw + ah, cy0 + 0.3 - ah); g.lineTo(cx0 - hw, cy0 + 0.3); g.lineTo(cx0 - hw + ah, cy0 + 0.3 + ah); g.stroke();
         }
         g.restore();
         if (b.protect > 0) {

@@ -5,7 +5,7 @@
   const R = root.Rules, Art = root.Art, AI = root.AI, Layouts = root.Layouts;
   const $ = id => document.getElementById(id);
 
-  const LEVEL_HINT = { baby: '3 種泡泡、有提示、不會下壓', easy: '5 種泡泡、不會下壓', normal: '7 種泡泡、有星星泡泡', hard: '9 種泡泡、下壓更快' };
+  const LEVEL_HINT = { baby: '3 種泡泡、有提示、不會下壓', easy: '5 種泡泡、偶爾會下壓、會出現陌生色', normal: '7 種泡泡、星星泡泡、陌生色變多', hard: '9 種泡泡、下壓最快、常出現陌生色' };
   const LEVEL_DD = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: LEVEL_HINT[k] }));
   const LEVEL_OPTS = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k] }));
   const AI_HINT = { baby: '慢慢來、常亂射', easy: '偶爾失手', normal: '穩穩消除', hard: '又快又準' };
@@ -87,7 +87,7 @@
 
   /* ---------- 教學（純圖文，看得懂就好） ---------- */
   App.screens.help = function () {
-    const fig = (key, label) => h('div', { class: 'help-item' }, img(key.startsWith('s:') ? Art.specialBubbleSVG(key.slice(2)) : Art.bubbleSVG(+key.split(':')[1], { mod: +key.split(':')[2] || 0 }), 'help-bub', 56), h('span', null, label));
+    const fig = (key, label) => h('div', { class: 'help-item' }, img(key.startsWith('s:') ? Art.specialBubbleSVG(key.slice(2)) : Art.bubbleSVG(+key.split(':')[1], { mod: +key.split(':')[2] || 0 }), 'help-bub', 56), h('span', { class: 'help-txt' }, h('b', null, label.split('：')[0]), h('small', null, label.split('：')[1] || '')));
     return screenBox('', h('div', { class: 'wrap' },
       topbar('怎麼玩', () => go('home')),
       h('div', { class: 'help-grid' },
@@ -95,8 +95,8 @@
           h('p', null, '用彩虹砲發射泡泡，3 顆以上同顏色的泡泡碰在一起就會「啵」地消失！'),
           h('p', { class: 'muted small', style: { marginTop: '6px' } }, '時間到的時候，消得最多的贏；有人把泡泡全部清光，也是他贏！')),
         h('section', { class: 'card' }, h('h3', null, '怎麼射'),
-          h('p', null, '平板與手機：點哪裡，泡泡就飛向哪裡。點右下角的小泡泡可以「換泡泡」。'),
-          h('p', { style: { margin: '6px 0' } }, '電腦鍵盤：瞄準 ', keycap('←'), keycap('→'), '　發射 ', keycap('空白', 'wide'), '　換泡泡 ', keycap('S')),
+          h('p', null, '平板與手機：點哪裡，泡泡就飛向哪裡。點砲台右邊的小長方形「⇄」按鈕，可以換下一顆。'),
+          h('p', { class: 'keyline', style: { margin: '6px 0' } }, h('span', null, '電腦鍵盤：'), h('span', null, '瞄準 ', keycap('←'), keycap('→')), h('span', null, '發射 ', keycap('空白', 'wide')), h('span', null, '交換泡泡 ', keycap('S'))),
           h('p', { class: 'muted small' }, '泡泡會彈牆壁喔！跟著虛線瞄準就對了。'))),
       h('section', { class: 'card' }, h('h3', null, '特別的泡泡'),
         h('div', { class: 'help-items' },
@@ -203,7 +203,7 @@
       ai[i + 1] = so.aiLevels[i];
     }
     const seed = Math.floor(Math.random() * 4294967296) >>> 0;
-    let themeId = so.theme === 'random' ? Math.floor(Math.random() * 6) : (+so.theme | 0);
+    let themeId = so.theme === 'random' ? Math.floor(Math.random() * Art.THEMES.length) : (+so.theme | 0);
     let duration = so.duration;
     if (so.opponents === 0 && so.level === 'baby') duration = 0;
     const mode = so.opponents === 0 ? 'race' : so.mode;
@@ -217,6 +217,7 @@
       kind: p.kind, cfg: p.cfg, slot: p.slot, ai: p.ai, t0Wall: p.t0Wall, serverNow: p.serverNow, goIn: p.goIn,
       onAgain: () => (p.kind === 'solo' ? App.startSolo() : root.Online.again()),
       onRoom: () => (p.kind === 'solo' ? go('solo') : root.Online.toRoom()),
+      onExit: () => (p.kind === 'solo' ? go('solo') : root.Online.abandonToLobby()),
       onHome: () => (p.kind === 'solo' ? go('home') : root.Online.leaveToHome())
     });
     App.game = gs;
@@ -261,7 +262,7 @@
     const b = $('banner');
     b.textContent = '';
     if (!text) return;
-    b.appendChild(h('div', { class: 'banner' }, busy ? h('span', { class: 'spin', html: Art.icon('refresh', 18) }) : null, text));
+    b.appendChild(h('div', { class: 'banner' }, busy ? h('span', { class: 'spin', html: Art.icon('refresh', 18) }) : null, h('span', { class: 'banner-txt' }, text)));
   };
 
   /* ---------- 返回鍵（Android／瀏覽器） ---------- */

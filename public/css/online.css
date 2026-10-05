@@ -46,3 +46,30 @@
 .topbar > .chips { flex: none; justify-content: flex-end; }
 .action-row > .btn { min-width: 0; }
 .action-row .btn-label, .code-row .btn-label { white-space: nowrap; }
+
+/* ===== 教學：特別泡泡名稱一行、說明可換行 ===== */
+.help-txt { display: grid; min-width: 0; }
+.help-txt b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.help-txt small { font-size: .88rem; font-weight: 700; color: var(--ink2); }
+.invite-h { display: flex; min-width: 0; white-space: nowrap; }
+.invite-h > span { flex: none; }
+.invite-h > .invite-nm { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== 電腦席位（房主可加入／移除／換等級；其他人唯讀） ===== */
+.seat.ai { background: #f1fbf6; box-shadow: 0 4px 0 #bfeedb; }
+.seat.ai .seat-tags { align-items: center; flex-wrap: nowrap; min-width: 0; }
+.seat.ai .seat-tags .pill { flex: 0 0 auto; }
+.seat.ai .dd { min-width: 0; flex: 0 1 auto; }
+.seat.ai .dd .dd-cur { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ai-add { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
+.ai-add .btn { flex: none; }
+.ai-add .btn .btn-label { white-space: nowrap; }
+.ai-add .ai-why { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-pick { display: grid; gap: 8px; min-width: 0; }
+.ai-pick-tip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-pick-opt { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; min-height: 52px; padding: 8px 14px; font: inherit; text-align: left; cursor: pointer; color: #5a3d8a; background: #d8fbe9; border: 3px solid #5a3d8a; border-radius: 16px; box-shadow: 3px 3px 0 #5a3d8a; }
+.ai-pick-opt:hover { background: #bff5d9; }
+.ai-pick-opt:active { transform: translate(3px, 3px); box-shadow: none; }
+.ai-pick-opt b { flex: none; font-weight: 900; white-space: nowrap; }
+.ai-pick-opt small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--ink2); }
+@media (max-width: 420px) { .ai-add { flex-wrap: wrap; } .ai-add .ai-why { flex-basis: 100%; } }

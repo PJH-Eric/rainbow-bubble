@@ -103,7 +103,7 @@
       const b = m.boards[i];
       return {
         s: i, name: p.name, dragon: p.dragon, kind: p.kind, aiLevel: p.aiLevel, cleared: b.cleared, fullClear: b.fullClear,
-        shots: b.shots, maxCombo: b.maxCombo, garbageOut: b.garbageOut, garbageIn: b.garbageIn, left: m.left[i], reachedAt: m.reachedAt[i]
+        shots: b.shots, hits: b.hits | 0, best: b.best | 0, dropN: b.dropN | 0, rains: b.rains | 0, maxCombo: b.maxCombo, garbageOut: b.garbageOut, garbageIn: b.garbageIn, left: m.left[i], reachedAt: m.reachedAt[i]
       };
     });
     rows.sort((x, y) => (y.fullClear - x.fullClear) || (x.left - y.left) || (y.cleared - x.cleared) || (x.reachedAt - y.reachedAt) || (x.s - y.s));
@@ -118,7 +118,7 @@
   function endMatch(m, t, reason) {
     if (m.over) return [];
     const rank = ranking(m);
-    const ev = { e: 'end', t, result: { reason, ranks: rank, winner: rank[0].s, mode: m.mode, layoutName: m.boards[0].layoutName } };
+    const ev = { e: 'end', t, result: { reason, t: Math.round(t || 0), ranks: rank, winner: rank[0].s, mode: m.mode, layoutName: m.boards[0].layoutName } };
     apply(m, ev);
     return [{ ev, res: null }];
   }
