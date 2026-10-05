@@ -97,7 +97,7 @@
     forest: { 1: 'mushroom', 2: 'sun', 3: 'leaf', 4: 'drop', 5: 'butterfly', 6: 'fox', 7: 'pine', 8: 'flower', 9: 'acorn' },
     night: { 1: 'rocket', 2: 'star', 3: 'ufo', 4: 'planet', 5: 'moon', 6: 'comet', 7: 'sparkle', 8: 'alien', 9: 'asteroid' },
     ocean: { 1: 'octopus', 2: 'fish', 3: 'turtle', 4: 'whale', 5: 'jellyfish', 6: 'starfish', 7: 'seahorse', 8: 'shell', 9: 'anchor' },
-    sunmoon: { 1: 'lantern', 2: 'sun', 3: 'firefly', 4: 'prism', 5: 'crescentstar', 6: 'sunrise', 7: 'bulb', 8: 'cloudsun', 9: 'eclipse' }
+    sunmoon: { 1: 'bloodmoon', 2: 'sunray', 3: 'aurora', 4: 'fullmoon', 5: 'crescent', 6: 'dawn', 7: 'ringplanet', 8: 'sharpstar', 9: 'solarecl' }
   };
   // 粗線條（外框層 + 白色層）與細節線
   function thick(d, w) { return { o: '<path d="' + d + '" fill="none" stroke-width="' + (w || 10) + '"/>', f: '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="' + ((w || 10) - 5.5) + '"/>' }; }
@@ -108,6 +108,20 @@
   var G = {
     crab: function (m, k) { var t = many(['M32 64 L20 74', 'M68 64 L80 74', 'M37 70 L31 82', 'M63 70 L69 82']);
       return { shapes: '<ellipse cx="50" cy="56" rx="22" ry="15"/><circle cx="27" cy="38" r="9"/><circle cx="73" cy="38" r="9"/><path d="M32 50 L28 42 M68 50 L72 42" stroke-width="5"/>', extraO: t.o, extraF: t.f + dot(43, 53, 3.6, k) + dot(57, 53, 3.6, k) + ln('M44 62 Q50 67 56 62', k) }; },
+    sunray: function (m, k) { var r = [], i, a, L; for (i = 0; i < 16; i++) { a = i * Math.PI / 8; L = i % 2 ? 29 : 36; r.push('M' + n2(50 + Math.cos(a) * 22) + ' ' + n2(50 + Math.sin(a) * 22) + ' L' + n2(50 + Math.cos(a) * L) + ' ' + n2(50 + Math.sin(a) * L)); }
+      var t = many(r, 7.5); return { shapes: '<circle cx="50" cy="50" r="15"/>', extraO: t.o, extraF: t.f + '<circle cx="50" cy="50" r="10.5" fill="none" stroke="' + m + '" stroke-width="1.6" opacity="0.55"/>' }; },
+    fullmoon: function (m, k) { return { shapes: '<circle cx="50" cy="50" r="29"/>', extraF: '<g fill="' + k + '" opacity="0.5"><ellipse cx="41" cy="40" rx="9" ry="7" transform="rotate(-20 41 40)"/><ellipse cx="60" cy="58" rx="8" ry="6"/><circle cx="62" cy="38" r="4.4"/><circle cx="38" cy="62" r="3.6"/><circle cx="50" cy="50" r="2.6"/><circle cx="68" cy="50" r="2"/><circle cx="31" cy="50" r="2.2"/></g>' }; },
+    crescent: function (m, k) { return { shapes: '<path d="' + moonPath(48, 52, 30, 63, 42, 25) + '"/>', extraF: '<polygon points="' + starPts(75, 27, 6, 2, 4, 0) + '" fill="#fff" stroke="' + k + '" stroke-width="1.4"/>' + '<polygon points="' + starPts(70, 70, 4, 1.4, 4, 0) + '" fill="#fff" stroke="' + k + '" stroke-width="1"/>' }; },
+    dawn: function (m, k) { var r = [], i, a; for (i = 0; i < 7; i++) { a = (-180 + 15 + i * 25) * Math.PI / 180; r.push('M' + n2(50 + Math.cos(a) * 25) + ' ' + n2(62 + Math.sin(a) * 25) + ' L' + n2(50 + Math.cos(a) * (i % 2 ? 33 : 38)) + ' ' + n2(62 + Math.sin(a) * (i % 2 ? 33 : 38))); }
+      var t = many(r.concat(['M12 64 H88']), 7); return { shapes: '<path d="M32 62 A18 18 0 0 1 68 62Z"/>', extraO: t.o, extraF: t.f + ln('M30 73 H70', '#fff', 3) + ln('M38 80 H62', '#fff', 2.6) + ln('M44 86 H56', '#fff', 2.2) }; },
+    ringplanet: function (m, k) { var rg = 'rotate(-22 50 52)';
+      return { shapes: '<circle cx="50" cy="52" r="0.1"/>', extraO: '<ellipse cx="50" cy="52" rx="37" ry="11" transform="' + rg + '" fill="none" stroke-width="9"/>', extraF: '<ellipse cx="50" cy="52" rx="37" ry="11" transform="' + rg + '" fill="none" stroke="#fff" stroke-width="3.4"/><circle cx="50" cy="52" r="19" fill="#fff" stroke="' + k + '" stroke-width="2.4"/><path d="M33 47 Q50 52 67 45 M32 58 Q50 62 68 55" fill="none" stroke="' + m + '" stroke-width="2" opacity="0.6"/><g transform="' + rg + '"><path d="M13 52 A37 11 0 0 0 87 52" fill="none" stroke="' + k + '" stroke-width="6.4"/><path d="M13 52 A37 11 0 0 0 87 52" fill="none" stroke="#fff" stroke-width="3.4"/></g>' }; },
+    sharpstar: function (m, k) { return { shapes: '<polygon points="' + starPts(50, 53, 36, 11, 5) + '" stroke-linejoin="miter"/>', extraF: ln('M50 53 L50 22 M50 53 L79 44 M50 53 L68 80 M50 53 L32 80 M50 53 L21 44', m, 1.3).replace('stroke-linecap="round"', 'opacity="0.45" stroke-linecap="round"') }; },
+    aurora: function (m, k) { var t = many(['M12 72 Q30 28 50 52 T88 30', 'M12 88 Q30 50 50 72 T88 52'], 11);
+      return { shapes: '<polygon points="' + starPts(22, 24, 7, 2.4, 4, 0) + '"/><polygon points="' + starPts(60, 16, 4.5, 1.6, 4, 0) + '"/><polygon points="' + starPts(82, 14, 3.5, 1.2, 4, 0) + '"/>', extraO: t.o, extraF: t.f }; },
+    solarecl: function (m, k) { var r = [], i, a; for (i = 0; i < 16; i++) { a = i * Math.PI / 8; r.push('M' + n2(50 + Math.cos(a) * 28) + ' ' + n2(50 + Math.sin(a) * 28) + ' L' + n2(50 + Math.cos(a) * (i % 2 ? 34 : 40)) + ' ' + n2(50 + Math.sin(a) * (i % 2 ? 34 : 40))); }
+      var t = many(r, 6.5); return { shapes: '<circle cx="50" cy="50" r="24"/>', extraO: t.o, extraF: t.f + '<circle cx="50" cy="50" r="19" fill="' + k + '"/><circle cx="35" cy="35" r="4.6" fill="#fff"/>' + ln('M31 31 L39 39 M39 31 L31 39', '#fff', 1.2) }; },
+    bloodmoon: function (m, k) { return { shapes: '<circle cx="50" cy="50" r="29"/>', extraF: '<circle cx="50" cy="50" r="25.5" fill="' + k + '"/><path d="' + moonPath(50, 50, 25.5, 66, 66, 24) + '" fill="#fff"/><g fill="#fff" opacity="0.35"><circle cx="58" cy="44" r="3"/><circle cx="62" cy="58" r="2.2"/><circle cx="48" cy="60" r="2.6"/></g>' }; },
     sun: function (m, k) { var r = [], i, a; for (i = 0; i < 8; i++) { a = i * Math.PI / 4; r.push('M' + n2(50 + Math.cos(a) * 22) + ' ' + n2(53 + Math.sin(a) * 22) + ' L' + n2(50 + Math.cos(a) * 29) + ' ' + n2(53 + Math.sin(a) * 29)); }
       var t = many(r, 9); return { shapes: '<circle cx="50" cy="53" r="16"/>', extraO: t.o, extraF: t.f + dot(45, 50, 2.6, k) + dot(55, 50, 2.6, k) + ln('M44 58 Q50 63 56 58', k, 2.6) }; },
     palm: function (m, k) { var s = '', i, a = [-78, -42, 0, 42, 78], t = thick('M50 46 Q56 64 48 82', 11);
@@ -369,7 +383,7 @@
     { id: 3, name: '童話森林', sky: ['#bdeecb', '#fbffe0'], frame: ['#9bd47a', '#4d8f3c'], boardFill: 'rgba(255,255,250,0.76)', boardLine: '#8cc66b', accent: '#ffa63c', music: 'd', set: 'forest' },
     { id: 4, name: '星星夜空', sky: ['#252a7a', '#8a6ee0'], frame: ['#b9a6ff', '#5a46b8'], boardFill: 'rgba(255,255,255,0.86)', boardLine: '#a58cf5', accent: '#ffd23a', music: 'e', set: 'night' },
     { id: 5, name: '海底世界', sky: ['#62d6f5', '#1a7ec6'], frame: ['#7fe0ee', '#2a8fb8'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#6cc8e6', accent: '#ff7a6b', music: 'f', set: 'ocean' },
-    { id: 6, name: '日月光', sky: ['#ffdf94', '#cdb9f6'], frame: ['#ffd77a', '#b8793a'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#e3b45e', accent: '#9a6bff', music: 'g', set: 'sunmoon' }
+    { id: 6, name: '日月光', sky: ['#2c2a7a', '#f08a4c'], frame: ['#ffd36a', '#a8672a'], boardFill: 'rgba(255,252,244,0.84)', boardLine: '#e0a850', accent: '#ff8a3c', music: 'g', set: 'sunmoon' }
   ];
 
   // ───────────── 5. 背景共用裝飾 ─────────────
@@ -621,55 +635,107 @@
     return '<defs>' + defs + '</defs>' + s;
   }
 
-  function bg6(p) {   // 日月光：日出日落同框
-    var s = '', i, r = rng(66), defs =
-      lg(p + 'sky', 0, 0, 0, 1, [[0, '#ffd98a'], [0.42, '#ffd0b4'], [0.75, '#cdb9f6'], [1, '#b19be8']]) +
-      rg(p + 'sun', 0.5, 0.5, 0.5, [[0, '#fff6b0', 1], [0.4, '#ffe680', 0.55], [1, '#ffe680', 0]]) +
-      rg(p + 'moon', 0.5, 0.5, 0.5, [[0, '#f4eeff', 0.85], [0.5, '#d9ccff', 0.4], [1, '#d9ccff', 0]]) +
-      lg(p + 'bs', 0, 0, 1, 1, [[0, '#fff3b0', 0.55], [1, '#fff3b0', 0]]) +
-      lg(p + 'bm', 1, 0, 0, 1, [[0, '#f0e8ff', 0.5], [1, '#f0e8ff', 0]]) +
-      lg(p + 'h1', 0, 0, 0, 1, [[0, '#a98fe0'], [1, '#8f78d0']]) +
-      lg(p + 'h2', 0, 0, 0, 1, [[0, '#8a73cc'], [1, '#6f5ab8']]);
+  function bg6(p) {   // 日月光：寫實黃昏——夕陽、滿月、星空、雲層、遠山、海面
+    var s = '', i, j, r = rng(606), HZ = 640, SX = 340, SY = 548, MX = 1385, MY = 165;
+    var defs =
+      lg(p + 'sky', 0, 0, 0, 1, [[0, '#141a52'], [0.16, '#2c2a7a'], [0.34, '#6d3a8c'], [0.5, '#c4506f'], [0.66, '#f08a4c'], [0.8, '#ffc77a'], [1, '#ffe6a6']]) +
+      rg(p + 'sg', 0.5, 0.5, 0.5, [[0, '#fff4c8', 1], [0.12, '#ffe09a', 0.9], [0.35, '#ffa850', 0.45], [0.7, '#ff7a45', 0.14], [1, '#ff7a45', 0]]) +
+      rg(p + 'sc', 0.5, 0.5, 0.5, [[0, '#ffffff', 1], [0.55, '#fff6d0', 1], [0.85, '#ffe39a', 0.9], [1, '#ffd070', 0]]) +
+      rg(p + 'mh', 0.5, 0.5, 0.5, [[0.25, '#dfe4ff', 0.5], [0.5, '#b8c4ff', 0.2], [1, '#9aa8ff', 0]]) +
+      rg(p + 'mb', 0.4, 0.36, 0.66, [[0, '#fffdf4'], [0.6, '#efe9da'], [0.9, '#cfc8bb'], [1, '#a9a395']]) +
+      rg(p + 'mt', 0.5, 0.5, 0.5, [[0.7, '#000', 0], [1, '#10122e', 0.5]]) +
+      rg(p + 'fl', 0.5, 0.5, 0.5, [[0, '#fff0c0', 0.5], [0.6, '#ffc880', 0.18], [1, '#ffc880', 0]]) +
+      lg(p + 'ray', 0.5, 1, 0.5, 0, [[0, '#ffe2a0', 0.4], [1, '#ffe2a0', 0]]) +
+      lg(p + 'sea', 0, 0, 0, 1, [[0, '#f6b878'], [0.12, '#c9708a'], [0.45, '#5a3f84'], [1, '#1c1c4e']]) +
+      lg(p + 'glit', 0, 0, 0, 1, [[0, '#fff0b8', 0.75], [1, '#ffb868', 0.05]]) +
+      lg(p + 'cl', 0, 0, 0, 1, [[0, '#ffd6a8'], [0.5, '#f0a0a0'], [1, '#7a4a8c']]) +
+      lg(p + 'cn', 0, 0, 0, 1, [[0, '#a98cd0'], [1, '#4a3a86']]) +
+      lg(p + 'm1', 0, 0, 0, 1, [[0, '#d9889e'], [1, '#f2a890']]) +
+      lg(p + 'm2', 0, 0, 0, 1, [[0, '#8c5c94'], [1, '#c0708c']]) +
+      lg(p + 'm3', 0, 0, 0, 1, [[0, '#3a2a62'], [1, '#5a3a72']]) +
+      '<filter id="' + p + 'bl" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="9"/></filter>' +
+      '<filter id="' + p + 'bl2" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="22"/></filter>' +
+      '<filter id="' + p + 'bs" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter>' +
+      '<filter id="' + p + 'mf" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="7" result="n"/>' +
+      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.41  0 0 0 0 0.46  0 0 0 1.9 -0.78" result="t"/><feComposite in="t" in2="SourceAlpha" operator="in"/></filter>' +
+      '<filter id="' + p + 'cf" x="0" y="0" width="1" height="1"><feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="2" seed="3" result="n"/>' +
+      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.34  0 0 0 0 0.38  0 0 0 2.4 -1.25" result="t"/><feComposite in="t" in2="SourceAlpha" operator="in"/></filter>' +
+      '<clipPath id="' + p + 'mc"><circle cx="' + MX + '" cy="' + MY + '" r="74"/></clipPath>';
     s += '<rect width="1600" height="900" fill="url(#' + p + 'sky)"/>';
-    // 柔光束（只在兩側斜射，中央留白）
-    s += '<polygon points="170,150 40,0 330,0 700,640 420,640" fill="url(#' + p + 'bs)"/>';
-    s += '<polygon points="1430,170 1300,0 1590,0 1280,640 1080,640" fill="url(#' + p + 'bm)"/>';
-    // 太陽 + 光芒
-    s += '<circle cx="190" cy="165" r="170" fill="url(#' + p + 'sun)"/>';
+    // 星空（愈靠地平線愈淡）
+    for (i = 0; i < 170; i++) {
+      var x = r() * 1600, y = Math.pow(r(), 1.3) * 430, op = Math.max(0, 0.95 * (1 - y / 440)) * (0.35 + r() * 0.65), rad = r() < 0.08 ? 1.9 : 0.6 + r() * 1.0;
+      if (op < 0.06) continue;
+      s += '<circle cx="' + n2(x) + '" cy="' + n2(y) + '" r="' + n2(rad) + '" fill="' + (r() < 0.2 ? '#ffe6c8' : '#e8eeff') + '" opacity="' + n2(op) + '"/>';
+    }
+    // 月暈 + 月亮
+    s += '<circle cx="' + MX + '" cy="' + MY + '" r="260" fill="url(#' + p + 'mh)"/>';
+    s += '<circle cx="' + MX + '" cy="' + MY + '" r="74" fill="url(#' + p + 'mb)"/>';
+    s += '<circle cx="' + MX + '" cy="' + MY + '" r="74" fill="#fff" filter="url(#' + p + 'mf)" opacity="0.9"/>';
+    s += '<g clip-path="url(#' + p + 'mc)">' +
+      '<g fill="#7d7a86" opacity="0.38" filter="url(#' + p + 'bs)"><ellipse cx="1362" cy="140" rx="22" ry="17"/><ellipse cx="1398" cy="128" rx="17" ry="13"/><ellipse cx="1376" cy="178" rx="26" ry="14" transform="rotate(-18 1376 178)"/><ellipse cx="1420" cy="168" rx="14" ry="11"/></g>' +
+      '<g fill="none" stroke="#6f6c78" stroke-width="1.3" opacity="0.45"><circle cx="1424" cy="206" r="9"/><circle cx="1350" cy="204" r="6.5"/><circle cx="1408" cy="132" r="5"/><circle cx="1332" cy="168" r="4"/></g>' +
+      '<g fill="#8a8794" opacity="0.4"><circle cx="1424" cy="206" r="8"/><circle cx="1350" cy="204" r="5.5"/><circle cx="1442" cy="170" r="4"/><circle cx="1388" cy="226" r="4.5"/></g>' +
+      '<g stroke="#fffdf4" stroke-width="1.4" opacity="0.35"><path d="M1424 206 L1478 250 M1424 206 L1396 262 M1424 206 L1470 168"/></g></g>';
+    s += '<circle cx="' + MX + '" cy="' + MY + '" r="74" fill="url(#' + p + 'mt)"/>';
+    // 夕陽光暈、光芒
+    s += '<circle cx="' + SX + '" cy="' + SY + '" r="520" fill="url(#' + p + 'sg)"/>';
     var rays = '';
-    for (i = 0; i < 12; i++) {
-      var a = i * Math.PI / 6, a2 = a + 0.1, a3 = a - 0.1;
-      rays += '<polygon points="' + n2(190 + Math.cos(a) * 118) + ',' + n2(165 + Math.sin(a) * 118) + ' ' + n2(190 + Math.cos(a2) * 78) + ',' + n2(165 + Math.sin(a2) * 78) + ' ' + n2(190 + Math.cos(a3) * 78) + ',' + n2(165 + Math.sin(a3) * 78) + '" />';
+    for (i = 0; i < 9; i++) {
+      var ang = -165 + i * 18 + (r() - 0.5) * 6, wd = 14 + r() * 26;
+      rays += '<polygon transform="translate(' + SX + ' ' + SY + ') rotate(' + n2(ang + 90) + ')" points="-3,0 3,0 ' + n2(wd) + ',-760 ' + n2(-wd) + ',-760" fill="url(#' + p + 'ray)" opacity="' + n2(0.12 + r() * 0.16) + '"/>';
     }
-    s += '<g fill="#ffd23a" stroke="#ffb02e" stroke-width="3" stroke-linejoin="round" opacity="0.95">' + rays + '</g>';
-    s += '<circle cx="190" cy="165" r="64" fill="#ffe36a" stroke="#ffc83a" stroke-width="5"/>';
-    s += '<circle cx="168" cy="160" r="5" fill="#a85a00"/><circle cx="212" cy="160" r="5" fill="#a85a00"/><path d="M172 182 Q190 198 208 182" fill="none" stroke="#a85a00" stroke-width="5" stroke-linecap="round"/><circle cx="154" cy="178" r="9" fill="#ff9a8a" opacity="0.55"/><circle cx="226" cy="178" r="9" fill="#ff9a8a" opacity="0.55"/>';
-    // 月亮（睡著的臉）
-    s += '<circle cx="1400" cy="190" r="160" fill="url(#' + p + 'moon)"/>';
-    s += '<path d="' + moonPath(1400, 190, 82, 1442, 166, 70) + '" fill="#fff7d2" stroke="#e3c97a" stroke-width="4"/>';
-    s += '<path d="M1371 188 Q1379 196 1387 188" fill="none" stroke="#a07a30" stroke-width="4" stroke-linecap="round"/><path d="M1368 214 Q1378 224 1388 214" fill="none" stroke="#a07a30" stroke-width="4" stroke-linecap="round"/><circle cx="1362" cy="206" r="7" fill="#ff9a8a" opacity="0.55"/>';
-    s += '<text x="1452" y="266" font-family=\'' + FONT + '\' font-size="30" font-weight="900" fill="#fff" opacity="0.85">z</text><text x="1480" y="238" font-family=\'' + FONT + '\' font-size="22" font-weight="900" fill="#fff" opacity="0.7">z</text>';
-    // 閃爍星點（月亮側、避開中央）
-    for (i = 0; i < 26; i++) {
-      var x = 1000 + r() * 590, y = 20 + r() * 520, rad = 1.6 + r() * 3;
-      if (x > 1000 && x < 1230 && y > 80) continue;
-      s += i % 3 === 0 ? '<polygon points="' + starPts(n2(x), n2(y), n2(rad * 3.4), n2(rad * 1.3), 4, 0) + '" fill="#fffbe0" opacity="0.9"/>' : '<circle cx="' + n2(x) + '" cy="' + n2(y) + '" r="' + n2(rad) + '" fill="#fff" opacity="0.8"/>';
+    s += '<g filter="url(#' + p + 'bs)">' + rays + '</g>';
+    // 遠雲層（天空中段，兩側）
+    function cloudBank(cx, cy, w, h, fillId, seed, op) {
+      var rr = rng(seed), o = '', k;
+      for (k = 0; k < 9; k++) {
+        var ex = cx + (rr() - 0.5) * w, ey = cy + (rr() - 0.5) * h * 0.7, erx = w * (0.12 + rr() * 0.16), ery = h * (0.28 + rr() * 0.3);
+        o += '<ellipse cx="' + n2(ex) + '" cy="' + n2(ey) + '" rx="' + n2(erx) + '" ry="' + n2(ery) + '"/>';
+      }
+      return '<g fill="url(#' + p + fillId + ')" opacity="' + op + '" filter="url(#' + p + 'bl)">' + o + '</g>';
     }
-    for (i = 0; i < 12; i++) s += sparkle(n2(30 + r() * 560), n2(260 + r() * 330), n2(7 + r() * 9), 0.7);
-    s += cloud(330, 330, 0.9, '#fff3e6', 0.9) + cloud(1280, 380, 0.85, '#efe6ff', 0.9) + cloud(120, 470, 0.65, '#fff3e6', 0.85) + cloud(1500, 520, 0.6, '#efe6ff', 0.85) + cloud(800, 90, 0.7, '#fff', 0.45);
-    // 丘陵剪影
-    s += '<path d="' + wave(690, 36, 210, 0.7, 900, 16) + '" fill="url(#' + p + 'h1)"/>';
-    s += '<path d="' + wave(770, 30, 260, 2.4, 900, 16) + '" fill="url(#' + p + 'h2)"/>';
-    s += '<path d="' + wave(845, 18, 200, 4.1, 900, 16) + '" fill="#5d4aa6"/>';
-    // 兩側小樹剪影與小提燈
-    for (i = 0; i < 6; i++) {
-      var tx = i < 3 ? 70 + i * 120 : 1260 + (i - 3) * 120, ty = 790 + (i % 2) * 40, ts = 0.5 + (i % 3) * 0.15;
-      s += '<g transform="translate(' + tx + ' ' + ty + ') scale(' + ts + ')"><rect x="-6" y="-30" width="12" height="40" fill="#4a3a90"/><circle cy="-70" r="46" fill="#52409a"/><circle cx="-30" cy="-44" r="28" fill="#52409a"/><circle cx="30" cy="-44" r="28" fill="#52409a"/></g>';
+    s += cloudBank(130, 300, 420, 70, 'cn', 11, 0.7) + cloudBank(1440, 400, 480, 80, 'cn', 12, 0.65) + cloudBank(820, 130, 520, 50, 'cn', 13, 0.35);
+    s += cloudBank(420, 470, 520, 60, 'cl', 14, 0.85) + cloudBank(1230, 520, 600, 66, 'cl', 15, 0.85) + cloudBank(60, 560, 300, 40, 'cl', 16, 0.8);
+    // 被夕陽照亮的雲底與細長雲絲
+    s += '<g filter="url(#' + p + 'bl)" opacity="0.85" fill="#ffb060"><ellipse cx="470" cy="500" rx="170" ry="9"/><ellipse cx="90" cy="582" rx="110" ry="7"/><ellipse cx="1180" cy="548" rx="150" ry="7" fill="#ff9a60"/></g>';
+    s += '<g filter="url(#' + p + 'bl)" opacity="0.5" fill="#ffe0b0"><ellipse cx="330" cy="420" rx="230" ry="6"/><ellipse cx="1400" cy="470" rx="200" ry="6"/><ellipse cx="1520" cy="330" rx="120" ry="5"/></g>';
+    // 太陽本體
+    s += '<circle cx="' + SX + '" cy="' + SY + '" r="150" fill="url(#' + p + 'fl)"/>';
+    s += '<circle cx="' + SX + '" cy="' + SY + '" r="46" fill="url(#' + p + 'sc)"/>';
+    // 鏡頭光斑（只在左側斜線上）
+    var fls = [[0.16, 22, 0.14], [0.3, 12, 0.18], [0.46, 34, 0.1], [0.62, 16, 0.14]];
+    for (i = 0; i < fls.length; i++) {
+      s += '<circle cx="' + n2(SX + 420 * fls[i][0]) + '" cy="' + n2(SY - 330 * fls[i][0]) + '" r="' + fls[i][1] + '" fill="#ffe2a8" opacity="' + fls[i][2] + '"/>';
     }
-    for (i = 0; i < 8; i++) {
-      var fx = n2(i % 2 ? 40 + r() * 360 : 1200 + r() * 360), fy = n2(560 + r() * 230);
-      s += '<circle cx="' + fx + '" cy="' + fy + '" r="14" fill="#ffe84a" opacity="0.22"/><circle cx="' + fx + '" cy="' + fy + '" r="3.4" fill="#fff3a0"/>';
+    // 山脈（三層大氣透視）：中央降低、兩側隆起；遠山在太陽處留谷
+    function ridge(base, amp, seed, fill, dip) {
+      var rr = rng(seed), pts = [], x, yv, d = 'M0 ' + HZ + ' ', ph1 = rr() * 6, ph2 = rr() * 6, ph3 = rr() * 6;
+      for (x = 0; x <= 1600; x += 16) {
+        var side = Math.min(1, Math.abs(x - 800) / 520), hh = (Math.sin(x / 130 + ph1) * 0.5 + Math.sin(x / 57 + ph2) * 0.3 + Math.sin(x / 23 + ph3) * 0.14 + 0.6) * amp * (0.15 + 0.85 * side);
+        yv = base - hh;
+        if (dip) yv += Math.max(0, 1 - Math.abs(x - SX) / 190) * 70;
+        d += 'L' + x + ' ' + n2(yv) + ' ';
+      }
+      return '<path d="' + d + 'L1600 ' + HZ + 'Z" fill="url(#' + p + fill + ')"/>';
     }
+    s += ridge(HZ - 6, 150, 21, 'm1', true);
+    s += ridge(HZ - 2, 120, 22, 'm2', false);
+    s += ridge(HZ + 4, 82, 23, 'm3', false);
+    // 海面與日光倒影
+    s += '<rect y="' + (HZ + 4) + '" width="1600" height="' + (900 - HZ) + '" fill="url(#' + p + 'sea)"/>';
+    s += '<polygon points="' + (SX - 34) + ',' + (HZ + 4) + ' ' + (SX + 34) + ',' + (HZ + 4) + ' ' + (SX + 120) + ',900 ' + (SX - 120) + ',900" fill="url(#' + p + 'glit)" filter="url(#' + p + 'bl)" opacity="0.7"/>';
+    for (i = 0; i < 70; i++) {
+      var gy = HZ + 8 + Math.pow(r(), 1.4) * (880 - HZ), spread = 30 + (gy - HZ) * 0.42, gx = SX + (r() - 0.5) * 2 * spread * (0.4 + r() * 0.6);
+      s += '<ellipse cx="' + n2(gx) + '" cy="' + n2(gy) + '" rx="' + n2(5 + r() * (10 + (gy - HZ) * 0.06)) + '" ry="' + n2(0.9 + r() * 1.2) + '" fill="#fff4cc" opacity="' + n2(0.35 + r() * 0.5) + '"/>';
+    }
+    // 月光在右側海面的淡淡倒影
+    for (i = 0; i < 18; i++) {
+      var my = HZ + 14 + r() * 230;
+      s += '<ellipse cx="' + n2(MX + (r() - 0.5) * 70) + '" cy="' + n2(my) + '" rx="' + n2(4 + r() * 9) + '" ry="1.1" fill="#dfe6ff" opacity="' + n2(0.12 + r() * 0.22) + '"/>';
+    }
+    // 近岸水平微光與暗角
+    s += '<rect y="' + (HZ + 4) + '" width="1600" height="3" fill="#ffd9a0" opacity="0.45"/>';
     return '<defs>' + defs + '</defs>' + s;
   }
 

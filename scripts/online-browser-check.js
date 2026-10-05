@@ -298,14 +298,14 @@ async function ctxPage(browser, vp, tag) {
     await s.waitForFunction(() => document.querySelector('.room-head h2').textContent !== '進入房間中…');
     const code3 = (await s.locator('.room-meta .pill').first().textContent()).replace('代號', '').trim();
     ok(await btn(s, '開始遊戲').isDisabled(), '只有 1 位真人時開始鈕停用');
-    ok(await btn(s, '加入電腦').isEnabled(), '房主看得到可按的「加入電腦」');
-    await btn(s, '加入電腦').click();
-    await s.waitForSelector('.ai-pick');
-    ok(await s.locator('.ai-pick-opt').count() === 4 && await s.locator('.ai-pick-opt[data-level=hard] small').textContent() === '又快又準', '電腦等級選單有 4 個等級與說明（非原生 select）');
-    await s.locator('.ai-pick-opt[data-level=hard]').click();
+    ok(await s.locator('.seat.empty.can-add').count() === 3, '房主的空位上直接有「加入電腦」可點（共 3 個空位）');
+    await s.locator('.seat.empty.can-add').first().click();
+    await s.waitForSelector('.seat.ai');
+    ok(await s.locator('.ai-pick').count() === 0 && await s.locator('.dialog').count() === 0, '點空位直接加入，沒有彈窗');
+    await s.waitForTimeout(100);
     await s.waitForSelector('.seat.ai');
     ok(await s.locator('.seat.ai').count() === 1 && /・電腦/.test(await s.locator('.seat.ai .seat-name').textContent()) && (await s.locator('.seat.ai .seat-tags').textContent()).includes('🤖'), '席位出現電腦：名字「・電腦」＋🤖 標記');
-    ok((await s.locator('.seat.ai .dd-cur').textContent()).trim() === '困難', '房主的電腦席位有等級選單，顯示「困難」');
+    ok((await s.locator('.seat.ai .dd-cur').textContent()).trim() === '簡單', '電腦席位有等級選單，預設跟房間難度「簡單」');
     ok(await btn(s, '開始遊戲').isEnabled(), '1 位真人 + 1 位電腦就能開始（電腦自動準備）');
     await shot(s, 'room-ai-landscape');
     /* 另一位玩家用代碼加入：電腦席位唯讀 */
@@ -315,20 +315,20 @@ async function ctxPage(browser, vp, tag) {
     await btn(b, '加入').click();
     await b.waitForSelector('[data-screen=room]');
     await b.waitForFunction(() => document.querySelectorAll('.seat:not(.empty)').length === 3);
-    ok(await b.locator('.seat.ai').count() === 1 && (await b.locator('.seat.ai .seat-tags').textContent()).includes('困難'), '非房主看得到電腦席位與等級（唯讀）');
+    ok(await b.locator('.seat.ai').count() === 1 && (await b.locator('.seat.ai .seat-tags').textContent()).includes('簡單'), '非房主看得到電腦席位與等級（唯讀）');
     ok(await b.locator('.seat.ai .dd').count() === 0 && await b.locator('.seat.ai .icon-btn').count() === 0 && await b.getByRole('button', { name: '加入電腦' }).count() === 0, '非房主沒有換等級／移除／加入電腦的控制項');
     await b.setViewportSize(PORT_VP); await wait(300);
     await shot(b, 'room-ai-portrait');
     ok((await overflowX(b)).scroll <= 1, '含電腦席位的房間 390 寬沒有橫向溢出 ' + JSON.stringify(await overflowX(b)));
     await b.setViewportSize(LAND);
     /* 加到滿：2 真人 + 1 電腦 → 再加 1 個 → 滿 4 位，按鈕停用且有原因 */
-    await btn(s, '加入電腦').click();
-    await s.locator('.ai-pick-opt[data-level=baby]').click();
+    await s.locator('.seat.empty.can-add').first().click();
     await s.waitForFunction(() => document.querySelectorAll('.seat.ai').length === 2);
-    ok(await s.locator('.ai-add .btn').isDisabled() && /席位已滿/.test(await s.locator('.ai-why').textContent()), '席位滿了：「加入電腦」停用並說明原因');
+    await s.waitForFunction(() => document.querySelectorAll('.seat.ai').length === 2);
+    ok(await s.locator('.seat.empty.can-add').count() === 0 && await s.locator('.seat:not(.empty)').count() === 4, '席位滿了：沒有空位，也就沒有可點的「加入電腦」');
     await s.locator('.seat.ai').last().getByRole('button', { name: /^移除 / }).click();
     await s.waitForFunction(() => document.querySelectorAll('.seat.ai').length === 1);
-    ok(await s.locator('.ai-add .btn').isEnabled(), '移除一個電腦後又可以加入');
+    ok(await s.locator('.seat.empty.can-add').count() === 1, '移除一個電腦後，空位上又可以點「加入電腦」');
     /* b 離開、1 真人 + 1 電腦開局 */
     await btn(b, '離開房間').click();
     await b.locator('.dialog').getByRole('button', { name: '離開', exact: true }).click();

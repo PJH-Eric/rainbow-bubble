@@ -21,7 +21,7 @@
     spec_off: '這個房間不開放觀戰。',
     full: '席位已經滿了（真人和電腦合計最多 4 位）。',
     max: '人數上限不能比目前坐著的人還少。',
-    few: '至少要 2 位才能開始，可以按「加入電腦」。',
+    few: '至少要 2 位才能開始，可以點空位加入電腦。',
     offline: '有玩家斷線了，等他回來再開始。',
     notready: '還有玩家沒有按「準備好」。'
   };
@@ -452,7 +452,15 @@
     const r = App.room, you = r.you, host = you.host, lobby = r.phase === 'room';
     for (const s of r.seats) {
       if (s.kind === 'empty') {
-        box.appendChild(h('div', { class: 'seat empty' }, h('div', { class: 'seat-line' }, h('span', { class: 'seat-name' }, '空位（等朋友來）'))));
+        if (host && lobby) {
+        /* 房主：直接點空位就加入一個電腦（等級跟房間難度一樣，之後可在席位上改） */
+        const lv = (r.settings && r.settings.level) || 'easy';
+        box.appendChild(h('button', { type: 'button', class: 'seat empty can-add', 'aria-label': '在這個空位加入電腦', title: '點一下，加入電腦',
+          onClick: () => { if (root.Sound) root.Sound.sfx('click'); Net.send({ type: 'addAI', level: lv }); } },
+          h('span', { class: 'seat-plus', 'aria-hidden': 'true' }, '＋'), h('span', { class: 'seat-name' }, '加入電腦'), h('small', { class: 'seat-wait' }, '或等朋友來')));
+      } else {
+        box.appendChild(h('div', { class: 'seat empty' }, h('span', { class: 'seat-plus', 'aria-hidden': 'true' }, '＋'), h('span', { class: 'seat-name' }, '空位'), h('small', { class: 'seat-wait' }, '等朋友來')));
+      }
         continue;
       }
       if (s.kind === 'ai') {
@@ -476,28 +484,8 @@
       box.appendChild(h('div', { class: 'seat' + (mine ? ' me' : '') + (s.connected ? '' : ' away') },
         h('div', { class: 'seat-line' }, avatar(s.dragon, 40), h('span', { class: 'seat-name' }, s.name), kick), tags));
     }
-    if (host && lobby) {
-      const used = r.seats.filter(x => x.kind !== 'empty').length;
-      const full = used >= r.max;
-      const why = full ? '席位已滿（' + used + '/' + r.max + '），' + (r.seats.some(x => x.kind === 'ai') ? '先移除一位電腦' : '先調高人數上限或請人離開') : '可以加電腦陪玩，最多湊滿 ' + r.max + ' 位';
-      box.appendChild(h('div', { class: 'ai-add' },
-        btn('加入電腦', { cls: 'btn-sky btn-sm', icon: 'robot', iconSize: 20, disabled: full, title: why, aria: full ? '加入電腦（' + why + '）' : '加入電腦', onClick: aiPicker }),
-        h('span', { class: 'ai-why muted small' }, why)));
-    }
   }
 
-  /** 房主按「加入電腦」：挑一個等級（自訂選單，不是瀏覽器原生的） */
-  function aiPicker() {
-    const m = modal({
-      title: '加入電腦', cls: 'dialog-sm',
-      content: h('div', { class: 'ai-pick' }, h('p', { class: 'muted small ai-pick-tip' }, '選一個等級，之後還能在席位上改。'),
-        AI_DD.map(o => h('button', {
-          type: 'button', class: 'ai-pick-opt', 'data-level': o.v,
-          onClick: () => { if (root.Sound) root.Sound.sfx('click'); m.close(); Net.send({ type: 'addAI', level: o.v }); }
-        }, h('b', null, o.label), h('small', null, o.hint)))),
-      actions: [btn('取消', { cls: 'btn-ghost', onClick: () => m.close() })]
-    });
-  }
 
   function paintSpectators(box) {
     const r = App.room;
@@ -517,7 +505,7 @@
     if (!lobby) {
       rows.appendChild(h('p', { class: 'muted' }, r.phase === 'countdown' ? '馬上開始了！' : '對局進行中…'));
     } else if (you.role === 'player' && you.host) {
-      const why = filled < 2 ? '至少要 2 位，用邀請連結叫朋友來，或按「加入電腦」！' : (!r.canStart ? '還有人沒按「準備好」或斷線了。' : (r.seats.some(x => x.kind === 'ai') ? '準備好了！電腦會自動就緒。' : '大家都準備好了！'));
+      const why = filled < 2 ? '至少要 2 位，用邀請連結叫朋友來，或點空位加入電腦！' : (!r.canStart ? '還有人沒按「準備好」或斷線了。' : (r.seats.some(x => x.kind === 'ai') ? '準備好了！電腦會自動就緒。' : '大家都準備好了！'));
       rows.appendChild(btn('開始遊戲', { cls: 'btn-pink btn-lg btn-block', icon: 'play', iconSize: 24, disabled: !r.canStart, onClick: () => Net.send({ type: 'start' }) }));
       rows.appendChild(h('p', { class: 'muted small' }, why));
     } else if (you.role === 'player') {
@@ -541,7 +529,7 @@
     };
     const filled = r.seats.filter(x => x.kind !== 'empty').length;
     if (edit) {
-      box.appendChild(App.rulesPanel(s, send, { noUnlimited: true }));
+      box.appendChild(App.rulesPanel(s, send));
       box.appendChild(field('人數上限', stepper({ label: '人數上限', min: Math.max(2, filled), max: 4, value: r.max, fmt: v => v + ' 人', onChange: v => send({ maxPlayers: v }) })));
       box.appendChild(field('公開房間', toggle({ label: '公開房間', value: s.publicRoom, onChange: v => send({ publicRoom: v }) })));
       box.appendChild(field('允許觀戰', toggle({ label: '允許觀戰', value: s.allowSpectators, onChange: v => send({ allowSpectators: v }) })));

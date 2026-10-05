@@ -67,6 +67,7 @@
       this.canvas.style.width = pw + 'px'; this.canvas.style.height = ph + 'px';
       this.canvas.width = Math.round(pw * dpr); this.canvas.height = Math.round(ph * dpr);
       this.scale = (pw * dpr) / fw; this.ws = ws;
+      this.el.style.setProperty('--ar', fw + ' / ' + fh);
     }
 
     /* ---------- 事件進場（controller 在 Match.apply 之後呼叫） ---------- */

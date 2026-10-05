@@ -61,15 +61,25 @@
 .seat.ai .seat-tags .pill { flex: 0 0 auto; }
 .seat.ai .dd { min-width: 0; flex: 0 1 auto; }
 .seat.ai .dd .dd-cur { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.ai-add { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 2px; }
-.ai-add .btn { flex: none; }
-.ai-add .btn .btn-label { white-space: nowrap; }
-.ai-add .ai-why { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ai-pick { display: grid; gap: 8px; min-width: 0; }
-.ai-pick-tip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ai-pick-opt { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; min-height: 52px; padding: 8px 14px; font: inherit; text-align: left; cursor: pointer; color: #5a3d8a; background: #d8fbe9; border: 3px solid #5a3d8a; border-radius: 16px; box-shadow: 3px 3px 0 #5a3d8a; }
-.ai-pick-opt:hover { background: #bff5d9; }
-.ai-pick-opt:active { transform: translate(3px, 3px); box-shadow: none; }
-.ai-pick-opt b { flex: none; font-weight: 900; white-space: nowrap; }
-.ai-pick-opt small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--ink2); }
-@media (max-width: 420px) { .ai-add { flex-wrap: wrap; } .ai-add .ai-why { flex-basis: 100%; } }
+
+/* 玩家席位：4 位排一排（窄螢幕 2×2），卡片直式置中，空位有「＋」圓圈 */
+.seats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 700px) { .seats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.seat { min-height: 150px; padding: 14px 10px 12px; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+.seat .seat-line { flex-direction: column; justify-content: center; align-items: center; gap: 6px; position: relative; }
+.seat .seat-line .avatar { width: 58px !important; height: 58px !important; }
+.seat .seat-line .seat-name { flex: none; max-width: 100%; font-size: 1rem; }
+.seat .seat-tags { justify-content: center; }
+.seat .seat-line .icon-btn { position: absolute; top: -26px; right: -6px; width: 34px; height: 34px; }
+.seat.empty { gap: 4px; }
+.seat.empty .seat-plus { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: 3px dashed #d8c8f3; color: #b9a2e6; font-size: 1.6rem; font-weight: 900; line-height: 1; }
+.seat.empty .seat-name { font-size: .95rem; color: var(--ink2); }
+.seat.empty .seat-wait { font-size: .75rem; font-weight: 700; color: var(--ink3); white-space: nowrap; }
+.seat.ai .seat-line .dd { max-width: 100%; }
+
+button.seat.empty.can-add { font: inherit; cursor: pointer; background: #f5fbff; border-color: #b8dcf5; transition: transform .12s, background .12s; }
+button.seat.empty.can-add:hover { background: #e9f6ff; }
+button.seat.empty.can-add:active { transform: scale(.97); }
+button.seat.empty.can-add:focus-visible { outline: 3px solid #7ab8ff; outline-offset: 2px; }
+button.seat.empty.can-add .seat-plus { border-color: #8cc8f2; color: #3d9bff; background: #fff; }
+button.seat.empty.can-add .seat-name { color: #2a7fd0; font-weight: 900; }

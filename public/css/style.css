@@ -435,8 +435,8 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 .big-count { font-size: clamp(5rem, 22vmin, 11rem); font-weight: 900; color: #fff; text-shadow: 0 8px 0 var(--pink-d), 0 14px 26px rgba(60, 20, 100, .4); animation: bigpop .9s ease-out both; }
 .big-count.go { color: #fff7a8; text-shadow: 0 8px 0 #e0a014, 0 14px 26px rgba(60, 20, 100, .4); font-size: clamp(3.5rem, 16vmin, 8rem); }
 @keyframes bigpop { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: .95; } }
-.result-mask { overflow-y: auto; overscroll-behavior: contain; position: absolute; inset: 0; background: rgba(60, 30, 100, .45); display: flex; align-items: center; justify-content: center; padding: 12px; animation: fade .25s; }
-.result-card { width: min(560px, 100%); margin: auto; flex: none; padding: 16px 18px 18px; }
+.result-mask { overflow-y: auto; overscroll-behavior: contain; position: absolute; inset: 0; background: rgba(60, 30, 100, .45); display: flex; align-items: flex-start; justify-content: center; padding: 12px; animation: fade .25s; }
+.result-card { width: min(560px, 100%); max-height: none; display: block; margin: auto; flex: none; padding: 16px 18px 18px; }
 .result-dragon { width: clamp(64px, 15vmin, 120px); height: auto; display: block; margin: -4px auto 0; animation: hop 1.4s ease-in-out infinite; }
 .result-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
 .result-actions .btn-lg { flex: 1 1 100%; }
@@ -450,27 +450,15 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .game-side { transition: transform .22s, visibility 0s; }
   .game-main { padding-left: calc(8px + var(--safe-l)); }
 }
-@media (max-aspect-ratio: 1/1) {
-  .boards.l-main { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: minmax(0, 3.2fr) minmax(0, 1fr); }
-  .boards.l-main .bslot.mine { grid-column: 1 / span 3; grid-row: 1; }
-  .boards.l-main .bslot.small { grid-row: 2; }
-  .boards.l-main.n3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .boards.l-main.n3 .bslot.mine { grid-column: 1 / span 2; }
-  .boards.l-main.n3 .bslot.mine { grid-row: 1; }
-  .boards.l-main.n3 .bslot.small { grid-row: 2; }
-}
-/* 桌機／平板橫向、3～4 人：自己的盤面佔左側整個高度，其他人在右邊排成一直列 */
-@media (min-aspect-ratio: 1/1) and (min-height: 540px) {
-  .boards.l-main { grid-auto-flow: row; grid-template-columns: minmax(0, 3.4fr) minmax(0, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); }
-  .boards.l-main.n3 { grid-template-rows: repeat(2, minmax(0, 1fr)); }
-  .boards.l-main .bslot.mine { grid-column: 1; grid-row: 1 / -1; }
-  .boards.l-main .bslot.small { grid-row: auto; grid-column: 2; }
-}
-/* 手機直向、2 人：對手在上方（較小），自己在下方（較大），避免兩個窄盤面並排 */
-@media (max-width: 600px) and (max-aspect-ratio: 1/1) {
-  .boards.l-two { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 2.4fr); gap: 8px; }
-  .boards.l-two .bslot.mine { grid-row: 2; }
-  .boards.l-two .bslot:not(.mine) { grid-row: 1; }
+/* 多人（3～4 人）：自己的盤面在左側佔滿高度，其他人固定排成右邊一直列（所有裝置、橫直向） */
+.boards.l-main { grid-auto-flow: row; grid-template-columns: minmax(0, 4.4fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.boards.l-main .bslot.mine { grid-column: 1; grid-row: 1; }
+.boards.l-main .opp-col { grid-column: 2; grid-row: 1; }
+/* 2 人：寬螢幕左右等寬；窄螢幕（手機／窄視窗／直向）改成自己在左、對手在右邊一直列 */
+@media (max-width: 760px), (max-aspect-ratio: 1/1) {
+  .boards.l-two { display: grid; grid-template-columns: minmax(0, 4.4fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 10px; }
+  .boards.l-two .bslot.mine { grid-column: 1; grid-row: 1; }
+  .boards.l-two .opp-col { grid-column: 2; grid-row: 1; }
 }
 @media (max-width: 560px) {
   .hud-mid .pill { display: none; }
@@ -512,3 +500,27 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 /* 側欄鍵盤提示：同一行放得下就不換行 */
 .side-keys.keyline { gap: 4px 8px; font-size: .78rem; }
 .side-keys .keycap { min-width: 1.7em; }
+
+/* 分段選項（時間、難度…）：一律同一行；放不下時縮小內距與字級，不換行 */
+.seg { flex-wrap: nowrap; max-width: 100%; }
+.seg-btn { flex: 1 1 auto; min-width: 0; padding-left: clamp(8px, 2.6vw, 16px); padding-right: clamp(8px, 2.6vw, 16px); font-size: clamp(.82rem, 3.4vw, 1rem); }
+.seg.small .seg-btn { padding-left: clamp(6px, 2vw, 10px); padding-right: clamp(6px, 2vw, 10px); }
+
+/* 結算卡：內容比畫面高時從頂端開始、可往下捲；手機直向把龍縮掉，盡量一屏放完 */
+@media (max-width: 600px) and (max-height: 900px) { .result-dragon { display: none; } .big-result { padding-top: 0; } .result-card { padding-top: 12px; } }
+
+/* 右邊直列的對手：名牌緊貼在自己盤面正上方，不要和盤面隔很遠 */
+.boards.l-main .bslot.small { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 3px; }
+.boards.l-main .bslot.small .btag { position: static; order: -1; align-self: center; flex: none; max-width: 100%; }
+
+/* 對手欄：從中間往上下排，間距小；寬螢幕雙人時不用這欄（維持左右等寬） */
+.opp-col { display: contents; }
+.boards.l-main .opp-col { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; min-height: 0; }
+.boards.l-main .opp-col .bslot { flex: 0 1 auto; min-height: 0; }
+.boards.l-main .opp-col .board-wrap { position: relative; inset: auto; flex: 0 1 auto; width: 100%; aspect-ratio: var(--ar, 3 / 4); min-height: 0; max-height: 100%; }
+@media (max-width: 760px), (max-aspect-ratio: 1/1) {
+  .boards.l-two .opp-col { display: flex; flex-direction: column; justify-content: center; min-width: 0; min-height: 0; }
+  .boards.l-two .opp-col .bslot { flex: 0 1 auto; min-height: 0; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 3px; }
+  .boards.l-two .opp-col .btag { position: static; order: -1; align-self: center; flex: none; max-width: 100%; }
+  .boards.l-two .opp-col .board-wrap { position: relative; inset: auto; flex: 0 1 auto; width: 100%; aspect-ratio: var(--ar, 3 / 4); min-height: 0; }
+}

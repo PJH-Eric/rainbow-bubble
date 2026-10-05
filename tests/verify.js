@@ -35,7 +35,7 @@ function angleTo(b, r, c) {
 
 console.log('規則：幾何');
 t('鄰居關係對稱（兩種 parity、三種欄數）', () => {
-  for (const cols of [8, 10, 12]) for (const parity of [0, 1]) {
+  for (const cols of [8, 10, 11, 12, 14, 16]) for (const parity of [0, 1]) {
     const b = { cols, parity, rows: [] };
     for (let r = 0; r < 10; r++) for (let c = 0; c < R.rowLen(b, r); c++) {
       for (const q of R.neighbors(b, r, c)) {
@@ -286,7 +286,7 @@ t('反應間隔：幼幼班最慢、困難最快', () => {
 console.log('地圖資料');
 t('版型數量與重採樣', () => {
   assert(L.PATTERNS.length >= 40 && L.FAMILIES.length >= 8);
-  for (const cols of [8, 10, 12]) for (const p of L.PATTERNS) {
+  for (const cols of [8, 10, 11, 12, 14, 16]) for (const p of L.PATTERNS) {
     const v = L.validate(L.resample(p.rows, cols), cols);
     assert(v.ok, `${p.id}@${cols}: ${v.problems}`);
   }

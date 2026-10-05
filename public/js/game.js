@@ -100,7 +100,10 @@
           h('span', { class: 'bt-name' }, p.name + (p.kind === 'ai' ? ' 🤖' : '')),
           h('span', { class: 'bt-n', 'data-n': s }, '0'));
         const slotEl = h('div', { class: 'bslot' + (s === this.slot ? ' mine' : '') + (mainLayout && idx > 0 ? ' small' : '') }, v.el, tag);
-        this.boardsEl.appendChild(slotEl);
+        if ((mainLayout || n === 2) && s !== this.slot) {
+          if (!this.oppCol) { this.oppCol = h('div', { class: 'opp-col' }); this.boardsEl.appendChild(this.oppCol); }
+          this.oppCol.appendChild(slotEl);
+        } else this.boardsEl.appendChild(slotEl);
         if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => v.resize()); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
       });
 

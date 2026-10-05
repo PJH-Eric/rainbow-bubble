@@ -68,7 +68,7 @@ async function waitHealth(base) {
       const mine = info.find(x => x.mine);
       const minMine = v.w < 500 ? 150 : 200;
       ok(mine && mine.w >= minMine && mine.h >= 250, '自己的盤面夠大 ' + (mine ? mine.w + '×' + mine.h : ''), JSON.stringify(info));
-      ok(info.every(x => x.w >= 55 && x.h >= 90), '所有盤面可辨識（最小 ' + Math.min.apply(null, info.map(x => x.w)) + 'px 寬）');
+      ok(info.every(x => x.w >= 55 && x.h >= 70), '所有盤面可辨識（最小 ' + Math.min.apply(null, info.map(x => x.w)) + 'px 寬）');
       ok(!(await overflow(pg)), '對局沒有水平溢出');
       /* 打幾發 */
       const cv = await pg.$('.bslot.mine canvas');

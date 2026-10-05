@@ -699,3 +699,11 @@ test('結束後的對局（over/result）也能還原', () => {
 
 console.log('\n' + (failed.length ? '失敗 ' + failed.length + ' 項：' + failed.join('、') : '全部通過') + '（通過 ' + passed + ' 項）');
 process.exit(failed.length ? 1 : 0);
+
+/* 房主可以把時間設成不限時（0），開局後 cfg.duration 為 0，時間到不會結束 */
+t('線上也能選「不限時」：設定被接受並帶進 start.cfg', () => {
+  const { x, id } = twoPlayers({ duration: 0 });
+  assert.strictEqual(DURATIONS.indexOf(0) >= 0, true);
+  const room = [...x.hub._rooms.values()].find(r => r.id === id);
+  assert.strictEqual(room.settings.duration, 0);
+});

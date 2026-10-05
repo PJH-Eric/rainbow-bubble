@@ -64,7 +64,7 @@ Layouts.list().forEach(function (e) { if (!e.id || !e.name) fail('list 項目缺
 
 // 各欄數壓力測試
 var minCells = { pattern: 999, family: 999 };
-[8, 10, 12].forEach(function (cols) {
+[8, 10, 11, 12, 14, 16].forEach(function (cols) {
   P.forEach(function (p) {
     for (var s = 1; s <= 200; s++) {
       var res = Layouts.resolve(p.id, { cols: cols, rng: mulberry32(s * 7919 + cols) });
