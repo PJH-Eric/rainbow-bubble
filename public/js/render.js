@@ -16,6 +16,8 @@
   const clamp01 = t => (t < 0 ? 0 : t > 1 ? 1 : t);
 
   const PAD = 0.85;                 /* 盤面內側留白（世界單位）：泡泡和外框之間不擠 */
+  const CANNON_K = 4.4 / 100;                 /* 砲台縮放：每個 sprite 單位 = 幾個格子單位 */
+  const MUZZLE_D = 104 * CANNON_K;            /* 轉軸到砲口的距離 */
   function worldSize(cols) {
     const sy = R.cy(R.LINE_ROW + 1.5);
     return { w: 2 * cols, h: TOP + sy + 2.9, shooterY: TOP + sy, pad: PAD };
@@ -79,6 +81,8 @@
         this.jobs.push({ kind: 'shot', ev, res, after: R.cloneBoard(this.live), t: ev.t });
         this.pose = 'shoot'; this.poseUntil = performance.now() + 260;
         this.reload = performance.now();
+        const pp = res.path;
+        if (pp && pp.length > 1) this.shotDir = Math.atan2(pp[1].y - pp[0].y, pp[1].x - pp[0].x);   /* 砲口噴焰用：實際飛出的方向 */
         if (snd) snd.sfx('shoot');
       } else if (ev.e === 'land' && ev.s === this.slot && res) {
         this.jobs.push({ kind: 'land', ev, res, after: R.cloneBoard(this.live) });
@@ -211,7 +215,7 @@
       return { angle: R.clampAngle(a), swap: false, inside: true };
     }
     /** 「交換泡泡」按鈕：夾在發射台與下一顆泡泡中間的小長方形、只用圖示 */
-    swapPos(s, sy) { return { x: s.x + 2.85, y: sy - 0.3, w: 1.6, h: 1.6, nx: s.x + 6.95, ny: sy + 0.5 }; }
+    swapPos(s, sy) { return { x: s.x + 2.6, y: sy - 0.5, w: 1.9, h: 1.9, nx: s.x + 6.3, ny: sy + 0.5 }; }
     setAim(a) { this.aim = R.clampAngle(a); }
 
     /* ---------- 畫面 ---------- */
@@ -459,20 +463,48 @@
       const ds = Math.min(5.4, ws.w * 0.34);
       const bounce = this.pose === 'cheer' ? Math.abs(Math.sin(now / 120)) * 0.5 : 0;
       if (dimg) g.drawImage(dimg, 0.2, sy - ds * 0.52 - bounce, ds, ds);
-      /* 砲 */
+      /* 砲：發射時整支砲管往後坐（後座力）再彈回，砲彈從管子裡滑出砲口，砲口噴出閃光與小煙 */
       const img = Art.sprite('cannon');
-      const k = 3.4 / 100;
+      const k = CANNON_K;
       const th = (90 - this.aim / 100) * Math.PI / 180;
+      const since = performance.now() - this.reload, reduceM = this.set().reduceMotion;
+      const rc = (!reduceM && since >= 0 && since < 300) ? since / 300 : 1;
+      const recoil = rc < 1 ? 0.95 * Math.sin(Math.min(1, rc / 0.22) * Math.PI / 2) * (rc < 0.22 ? 1 : Math.pow(1 - (rc - 0.22) / 0.78, 2)) : 0;
+      /* 還在管子裡的砲彈（飛出砲口前），要畫在砲管「下面」 */
+      const fl = this.flightState(performance.now());
+      if (fl && fl.dist < MUZZLE_D) this.item(g, fl.item, fl.x, fl.y, 1);
       g.save(); g.translate(s.x, sy); g.rotate(th);
+      g.translate(0, recoil);
+      if (rc < 1) g.scale(1 + 0.05 * (recoil / 0.95), 1 - 0.05 * (recoil / 0.95));
       if (img) g.drawImage(img, -50 * k, -110 * k, 100 * k, 160 * k);
       g.restore();
+      /* 砲口閃光與煙 */
+      if (!reduceM && since >= 40 && since < 380) {
+        const u = (since - 40) / 340, dir = this.shotDir == null ? th - Math.PI / 2 : this.shotDir;
+        const mx = s.x + Math.cos(dir) * MUZZLE_D, my = sy + Math.sin(dir) * MUZZLE_D;
+        g.save();
+        const fr = 0.6 + 1.6 * Math.sin(Math.min(1, u * 1.6) * Math.PI / 2);
+        g.globalAlpha = (1 - u) * 0.95; g.fillStyle = '#ff9f1c'; this.star(g, mx, my, fr);
+        g.fillStyle = '#ffe14a'; this.star(g, mx, my, fr * 0.72);
+        g.globalAlpha = (1 - u) * 0.95; g.fillStyle = '#ffffff'; this.star(g, mx, my, fr * 0.38);
+        for (let n = 0; n < 6; n++) {
+          const a2 = dir + (n - 2.5) * 0.42, r2 = 0.3 + u * (1.4 + (n % 3) * 0.35);
+          g.globalAlpha = (1 - u) * 0.75; g.fillStyle = n % 2 ? '#ffffff' : '#ffe9b8';
+          g.beginPath(); g.arc(mx + Math.cos(a2) * r2, my + Math.sin(a2) * r2, 0.28 * (1 - u * 0.5), 0, 7); g.fill();
+        }
+        g.globalAlpha = (1 - u) * 0.6; g.strokeStyle = '#fff'; g.lineWidth = 0.14;
+        g.beginPath(); g.arc(mx, my, 0.6 + u * 1.8, 0, 7); g.stroke();
+        g.restore();
+      }
       /* 手上的泡泡 */
-      const rel = clamp01((performance.now() - this.reload) / 160);
+      const rel = clamp01((performance.now() - this.reload - 90) / 160);
       if (!b.fullClear) {
         const sc2 = 0.4 + 0.6 * ease(rel);
-        g.save(); g.translate(s.x, sy);
-        this.item(g, b.cur, 0, 0, 0.92 * sc2);
-        g.restore();
+        if (rel > 0 || performance.now() - this.reload > 400) {
+          g.save(); g.translate(s.x, sy);
+          this.item(g, b.cur, 0, 0, 0.92 * sc2);
+          g.restore();
+        }
         /* 下一顆 */
         const bump = clamp01((performance.now() - this.swapBump) / 220);
         const sp = this.swapPos(s, sy), nx = sp.nx, ny = sp.ny;
@@ -481,16 +513,8 @@
         g.fillStyle = 'rgba(255,255,255,.7)'; g.strokeStyle = this.theme.boardLine; g.lineWidth = 0.12;
         g.beginPath(); g.arc(nx, ny, 1.45, 0, 7); g.fill(); g.stroke();
         this.item(g, b.nxt, nx, ny, 0.72 + 0.2 * Math.sin(bump * Math.PI));
-        /* 交換按鈕：發射台與下一顆之間，小長方形＋圖示（⇄） */
-        if (this.mine) {
-          const down = clamp01((performance.now() - this.swapBump) / 220);
-          g.fillStyle = 'rgba(255,255,255,.94)'; g.strokeStyle = '#f0b24a'; g.lineWidth = 0.2;
-          g.beginPath(); g.roundRect ? g.roundRect(sp.x, sp.y, sp.w, sp.h, 0.5) : g.rect(sp.x, sp.y, sp.w, sp.h); g.fill(); g.stroke();
-          const cx0 = sp.x + sp.w / 2, cy0 = sp.y + sp.h / 2, hw = 0.46, ah = 0.22;
-          g.strokeStyle = down < 1 ? '#ff7eb6' : '#6a46b8'; g.lineWidth = 0.2; g.lineCap = 'round'; g.lineJoin = 'round';
-          g.beginPath(); g.moveTo(cx0 - hw, cy0 - 0.3); g.lineTo(cx0 + hw, cy0 - 0.3); g.moveTo(cx0 + hw - ah, cy0 - 0.3 - ah); g.lineTo(cx0 + hw, cy0 - 0.3); g.lineTo(cx0 + hw - ah, cy0 - 0.3 + ah); g.stroke();
-          g.beginPath(); g.moveTo(cx0 + hw, cy0 + 0.3); g.lineTo(cx0 - hw, cy0 + 0.3); g.moveTo(cx0 - hw + ah, cy0 + 0.3 - ah); g.lineTo(cx0 - hw, cy0 + 0.3); g.lineTo(cx0 - hw + ah, cy0 + 0.3 + ah); g.stroke();
-        }
+        /* 交換按鈕：發射台與下一顆之間，立體圓角按鍵（底座＋按鍵面＋高光），按下去會下沉 */
+        if (this.mine) this.drawSwapBtn(g, sp, clamp01((performance.now() - this.swapBump) / 220));
         g.restore();
         if (b.protect > 0) {
           g.save(); g.font = '800 0.75px ' + FONT; g.textAlign = 'center'; g.fillStyle = '#3d9bff'; g.fillText('保護中 ' + b.protect, s.x, sy - 2.4); g.restore();
@@ -526,32 +550,68 @@
       }
     }
 
-    drawFlight(g, now) {
+    /** 目前飛行中的砲彈狀態：{ x, y, dist, item, t } 或 null */
+    flightState(now) {
       const j = this.job;
-      if (!j || j.kind !== 'shot') return;
+      if (!j || j.kind !== 'shot') return null;
       const t = clamp01((now - j.t0) / j.dur);
-      const d = j.len * ease(t * 0.6 + t * 0.4 * t) ;   /* 近乎等速，起步稍快 */
       const dist = j.len * t;
-      void d;
       const pts = j.res.path, cum = j.cum;
       let i = 1; while (i < pts.length - 1 && cum[i] < dist) i++;
       const a = pts[i - 1], b = pts[i], seg = cum[i] - cum[i - 1] || 1;
       const u = clamp01((dist - cum[i - 1]) / seg);
-      const x = a.x + (b.x - a.x) * u, y = TOP + a.y + (b.y - a.y) * u;
+      return { x: a.x + (b.x - a.x) * u, y: TOP + a.y + (b.y - a.y) * u, dist, item: j.res.item, t, i };
+    }
+
+    drawFlight(g, now) {
+      const j = this.job, f = this.flightState(now);
+      if (!f) return;
+      const pts = j.res.path, cum = j.cum, dist = f.dist;
       /* 碰牆聲 */
-      const bounces = Math.max(0, i - 1);
+      const bounces = Math.max(0, f.i - 1);
       if (bounces > j.bounced) { j.bounced = bounces; if (root.Sound && this.audio) root.Sound.sfx('bounce'); }
+      if (dist < MUZZLE_D) return;          /* 還在砲管裡：已在 drawShooter 裡畫在砲管下面 */
       /* 拖尾 */
       g.save();
       for (let k = 1; k <= 3; k++) {
-        const bd = dist - k * 1.3; if (bd < 0) break;
+        const bd = dist - k * 1.3; if (bd < MUZZLE_D) break;
         let ii = 1; while (ii < pts.length - 1 && cum[ii] < bd) ii++;
         const aa = pts[ii - 1], bb2 = pts[ii], sg = cum[ii] - cum[ii - 1] || 1, uu = clamp01((bd - cum[ii - 1]) / sg);
         g.globalAlpha = 0.28 - k * 0.07;
         this.item(g, j.res.item, aa.x + (bb2.x - aa.x) * uu, TOP + aa.y + (bb2.y - aa.y) * uu, 1 - k * 0.12);
       }
       g.restore();
-      this.item(g, j.res.item, x, y, 1);
+      this.item(g, j.res.item, f.x, f.y, 1);
+    }
+
+    /** 立體圓角按鍵 */
+    drawSwapBtn(g, sp, down) {
+      const pressed = down < 1, depth = pressed ? 0.08 : 0.3, off = pressed ? 0.22 : 0;
+      const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+      g.save();
+      /* 地面陰影 */
+      g.fillStyle = 'rgba(60,30,90,.22)'; rr(sp.x + 0.05, sp.y + 0.38, sp.w, sp.h, 0.6); g.fill();
+      /* 底座（深橘色，顯示厚度） */
+      rr(sp.x, sp.y + 0.3, sp.w, sp.h, 0.6); g.fillStyle = '#e0892a'; g.fill(); g.lineWidth = 0.16; g.strokeStyle = '#a85a14'; g.stroke();
+      /* 按鍵面 */
+      const fy = sp.y + off, fh = sp.h - (0.3 - depth) * 0.0;
+      const gr = g.createLinearGradient(0, fy, 0, fy + fh);
+      gr.addColorStop(0, pressed ? '#fff2c2' : '#ffffff'); gr.addColorStop(0.55, pressed ? '#ffdf86' : '#fff1bd'); gr.addColorStop(1, pressed ? '#ffc95a' : '#ffd877');
+      rr(sp.x, fy, sp.w, fh, 0.6); g.fillStyle = gr; g.fill(); g.lineWidth = 0.18; g.strokeStyle = '#f2a33a'; g.stroke();
+      /* 上緣高光與內框 */
+      g.globalAlpha = 0.85; g.strokeStyle = '#fff'; g.lineWidth = 0.12; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(sp.x + 0.45, fy + 0.2); g.lineTo(sp.x + sp.w - 0.45, fy + 0.2); g.stroke();
+      g.globalAlpha = 1;
+      /* ⇄ 圖示（白色外框＋紫色線） */
+      const cx0 = sp.x + sp.w / 2, cy0 = fy + sp.h / 2 - 0.02, hw = 0.5, ah = 0.24, dy = 0.3;
+      const arrows = () => {
+        g.beginPath(); g.moveTo(cx0 - hw, cy0 - dy); g.lineTo(cx0 + hw, cy0 - dy); g.moveTo(cx0 + hw - ah, cy0 - dy - ah); g.lineTo(cx0 + hw, cy0 - dy); g.lineTo(cx0 + hw - ah, cy0 - dy + ah); g.stroke();
+        g.beginPath(); g.moveTo(cx0 + hw, cy0 + dy); g.lineTo(cx0 - hw, cy0 + dy); g.moveTo(cx0 - hw + ah, cy0 + dy - ah); g.lineTo(cx0 - hw, cy0 + dy); g.lineTo(cx0 - hw + ah, cy0 + dy + ah); g.stroke();
+      };
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      g.strokeStyle = '#fff'; g.lineWidth = 0.4; arrows();
+      g.strokeStyle = pressed ? '#ff5fa8' : '#6a46b8'; g.lineWidth = 0.22; arrows();
+      g.restore();
     }
 
     drawTexts(g, now) {
