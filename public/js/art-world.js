@@ -363,19 +363,19 @@
     s += '<circle cx="24" cy="138" r="5.5" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="2"/>';
     s += '<circle cx="76" cy="138" r="5.5" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="2"/>';
     s += '<path d="M24 124 V152 M10 138 H38 M76 124 V152 M62 138 H90" stroke="' + ol + '" stroke-width="2" opacity="0.5"/>';
-    // 砲身
-    s += '<rect x="36" y="14" width="28" height="100" rx="6" fill="url(#' + p + 'wood)" stroke="' + ol + '" stroke-width="3.5"/>';
+    // 砲身（短胖款：砲口不會超過盤面的底線）
+    s += '<rect x="36" y="46" width="28" height="68" rx="6" fill="url(#' + p + 'wood)" stroke="' + ol + '" stroke-width="3.5"/>';
     // 彩虹條紋（砲身中段）
     for (i = 0; i < 6; i++) {
-      s += '<rect x="36" y="' + (36 + i * 7.5) + '" width="28" height="7.5" fill="' + rc[i] + '"/>';
+      s += '<rect x="36" y="' + (56 + i * 6.5) + '" width="28" height="6.5" fill="' + rc[i] + '"/>';
     }
-    s += '<rect x="36" y="36" width="28" height="45" fill="none" stroke="' + ol + '" stroke-width="2"/>';
-    s += '<path d="M42 20 V108" stroke="#fff" stroke-width="3" opacity="0.35" stroke-linecap="round"/>';
+    s += '<rect x="36" y="56" width="28" height="39" fill="none" stroke="' + ol + '" stroke-width="2"/>';
+    s += '<path d="M42 52 V108" stroke="#fff" stroke-width="3" opacity="0.35" stroke-linecap="round"/>';
     // 砲口環
-    s += '<rect x="31" y="6" width="38" height="16" rx="7" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="3.5"/>';
-    s += '<rect x="38" y="9" width="24" height="5" rx="2.5" fill="#fff" opacity="0.5"/>';
+    s += '<rect x="31" y="38" width="38" height="16" rx="7" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="3.5"/>';
+    s += '<rect x="38" y="41" width="24" height="5" rx="2.5" fill="#fff" opacity="0.5"/>';
     // 後環
-    s += '<rect x="33" y="92" width="34" height="10" rx="4" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="3"/>';
+    s += '<rect x="33" y="98" width="34" height="9" rx="4" fill="url(#' + p + 'gold)" stroke="' + ol + '" stroke-width="3"/>';
     // 底座木箱（旋轉中心周圍）
     s += '<path d="M14 118 Q14 104 30 104 H70 Q86 104 86 118 V140 Q86 150 76 150 H24 Q14 150 14 140Z" fill="url(#' + p + 'wood2)" stroke="' + ol + '" stroke-width="3.5"/>';
     s += '<path d="M20 120 Q50 132 80 120" fill="none" stroke="#fff" stroke-width="2.5" opacity="0.35" stroke-linecap="round"/>';

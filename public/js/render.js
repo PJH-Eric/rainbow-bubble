@@ -17,7 +17,7 @@
 
   const PAD = 0.85;                 /* 盤面內側留白（世界單位）：泡泡和外框之間不擠 */
   const CANNON_K = 4.4 / 100;                 /* 砲台縮放：每個 sprite 單位 = 幾個格子單位 */
-  const MUZZLE_D = 104 * CANNON_K;            /* 轉軸到砲口的距離 */
+  const MUZZLE_D = 72 * CANNON_K;            /* 轉軸到砲口的距離 */
   function worldSize(cols) {
     const sy = R.cy(R.LINE_ROW + 1.5);
     return { w: 2 * cols, h: TOP + sy + 2.9, shooterY: TOP + sy, pad: PAD };
