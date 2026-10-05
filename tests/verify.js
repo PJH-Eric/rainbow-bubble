@@ -102,8 +102,8 @@ t('星星標記：消除時連帶炸掉周圍', () => {
   const res = R.applyShot(b, angleTo(b, 0, 5) || angleTo(b, 0, 2));
   assert(res.popped.some(p => p.how === 'star'), '應有被星星炸掉的泡泡');
 });
-t('星星炸掉的圈數依難度：幼幼班、簡單 1 圈(6)；普通、困難 2 圈(18)', () => {
-  const want = { baby: 6, easy: 6, normal: 18, hard: 18 };
+t('星星炸掉的圈數：所有難度都是 1 圈(6 顆)', () => {
+  const want = { baby: 6, easy: 6, normal: 6, hard: 6 };
   for (const lv of R.LEVELS) {
     const b = blank(lv);
     for (let r = 0; r < 13; r++) {
