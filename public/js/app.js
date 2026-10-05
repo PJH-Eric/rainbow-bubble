@@ -5,7 +5,7 @@
   const R = root.Rules, Art = root.Art, AI = root.AI, Layouts = root.Layouts;
   const $ = id => document.getElementById(id);
 
-  const LEVEL_HINT = { baby: '3 種泡泡、有提示、不會下壓', easy: '5 種泡泡、偶爾會下壓、會出現陌生色', normal: '7 種泡泡、星星泡泡、陌生色變多', hard: '9 種泡泡、下壓最快、常出現陌生色' };
+  const LEVEL_HINT = { baby: '4 種泡泡、有提示、不會下壓', easy: '6 種泡泡、偶爾會下壓、會出現陌生色', normal: '8 種泡泡、星星泡泡、陌生色變多', hard: '10 種泡泡、下壓最快、常出現陌生色' };
   const LEVEL_DD = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: LEVEL_HINT[k] }));
   const LEVEL_OPTS = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k] }));
   const AI_HINT = { baby: '慢慢來、常亂射', easy: '偶爾失手', normal: '穩穩消除', hard: '又快又準' };

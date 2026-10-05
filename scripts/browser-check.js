@@ -79,7 +79,7 @@ async function waitHealth(base) {
       ok(shots >= 3, '點擊棋盤真的會發射（' + shots + ' 發）');
       await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game' + (opp + 1) + 'p.png') });
       if (opp === 3 || (opp === 1 && v.name === 'phone-port')) { /* 資訊欄開關 */
-        await pg.click('.side-toggle');
+        if (await pg.locator('.side-toggle').isVisible()) await pg.click('.side-toggle');
         await pg.waitForTimeout(350);
         await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game' + (opp + 1) + 'p-side.png') });
         ok(!(await overflow(pg)), '開啟資訊欄後沒有水平溢出');

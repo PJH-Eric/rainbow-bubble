@@ -145,7 +145,7 @@
       const input = h('input', { class: 'text-input', maxlength: 60, placeholder: '說點什麼…', 'aria-label': '聊天訊息' });
       const send = () => { const t = input.value.trim(); if (!t) return; root.Net.send({ type: 'chat', text: t }); input.value = ''; };
       input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') send(); });
-      const quick = ['好棒！', '加油！', '哈哈', '再來一局', '等等我'].map(t => h('button', { type: 'button', class: 'chip', onClick: () => root.Net.send({ type: 'chat', text: t }) }, t));
+      const quick = ['好棒！', '加油！', '哈哈'].map(t => h('button', { type: 'button', class: 'chip', onClick: () => root.Net.send({ type: 'chat', text: t }) }, t));
       this.chatBox = h('div', { class: 'side-chat' }, this.chatLog, h('div', { class: 'quick-chat' }, quick),
         h('div', { class: 'chat-form' }, input, btn('送出', { cls: 'btn-sm', onClick: send })));
       (root.Online ? root.Online.chat : []).forEach(m => this.addChat(m, true));
@@ -437,27 +437,22 @@
       this.overlay.textContent = '';
       if (!this.spectator) root.App.recordResult(this.kind, !!win);
       const maxCl = Math.max(1, ...ranks.map(x => x.cleared));
-      const acc = x => (x.shots ? Math.round((x.hits | 0) / x.shots * 100) : 0);
       const rows = ranks.map(x => h('div', { class: 'rank-row' + (x.rank === 1 ? ' win' : '') + (x.s === this.slot ? ' me' : '') },
         h('span', { class: 'no' }, x.rank === 1 ? '🏆' : x.rank), avatar(x.dragon, 40),
         h('div', { class: 'rk-mid' },
           h('span', { class: 'nm' }, x.name + (x.s === this.slot ? '（你）' : '') + (x.fullClear ? '・清光' : '') + (x.left ? '・已離開' : '')),
           h('span', { class: 'rk-bar' }, h('i', { style: { width: Math.max(3, Math.round(x.cleared / maxCl * 100)) + '%' } })),
-          h('span', { class: 'rk-meta' }, ['發射 ' + x.shots, '命中 ' + acc(x) + '%', '連擊 ' + x.maxCombo].concat(this.cfg.mode === 'duel' ? ['送 ' + x.garbageOut + '／收 ' + x.garbageIn] : []).map(t => h('i', null, t)))),
+          h('span', { class: 'rk-meta' }, ['發射 ' + x.shots, '連擊 ' + x.maxCombo].concat(this.cfg.mode === 'duel' ? ['送 ' + x.garbageOut + '／收 ' + x.garbageIn] : []).map(t => h('i', null, t)))),
         h('b', null, x.cleared + ' 顆')));
       /* 我的（或冠軍的）戰績卡 */
       const who = (me || ranks[0]);
-      const sec = Math.round((r.t || 0) / 1000);
       const tile = (ico, big, label) => h('div', { class: 'stat-tile' }, h('div', { class: 'st-ico' }, ico), h('b', null, big), h('span', null, label));
       const tiles = [
         tile('🫧', who.cleared, '清除泡泡'),
-        tile('🎯', acc(who) + '%', '命中率'),
         tile('🔥', who.maxCombo, '最高連擊'),
         tile('💥', who.best | 0, '單發最多'),
-        tile('🍂', who.dropN | 0, '掉落清除'),
-        tile('⏱', Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'), '對局時間')
+        tile('🍂', who.dropN | 0, '掉落清除')
       ];
-      if (who.rains) tiles.push(tile('🌧', who.rains, '泡泡雨'));
       if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, '送出 / 收到'));
       const stats = h('div', { class: 'stat-grid', 'aria-label': (this.spectator ? ranks[0].name : '你') + '的戰績' }, tiles);
       const dragon = this.spectator ? ranks[0].dragon : this.cfg.players[this.slot].dragon;

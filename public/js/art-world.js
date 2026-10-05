@@ -75,7 +75,8 @@
     { id: 6, name: '橘', main: '#ff9a3c', shape: 'flower' },
     { id: 7, name: '青', main: '#27cfc3', shape: 'diamond' },
     { id: 8, name: '粉', main: '#ff86d2', shape: 'smile' },
-    { id: 9, name: '棕', main: '#c98857', shape: 'paw' }
+    { id: 9, name: '棕', main: '#c98857', shape: 'paw' },
+    { id: 10, name: '萊姆', main: '#a6d52f', shape: 'butterfly' }
   ];
   Art.COLORS = COLORS;
 
@@ -89,15 +90,15 @@
     return 'M' + n2(p1[0]) + ' ' + n2(p1[1]) + ' A' + r0 + ' ' + r0 + ' 0 1 0 ' + n2(p2[0]) + ' ' + n2(p2[1]) +
       ' A' + r1 + ' ' + r1 + ' 0 1 1 ' + n2(p1[0]) + ' ' + n2(p1[1]) + 'Z';
   }
-  // ── 主題圖案組（每組 9 個，對應 colorId 1..9；顏色不變，只換圖案）──
+  // ── 主題圖案組（每組 10 個，對應 colorId 1..10；顏色不變，只換圖案）──
   Art.SETS = {
-    'default': { 1: 'heart', 2: 'star', 3: 'clover', 4: 'drop', 5: 'moon', 6: 'flower', 7: 'diamond', 8: 'smile', 9: 'paw' },
-    beach: { 1: 'crab', 2: 'sun', 3: 'palm', 4: 'wave', 5: 'shell', 6: 'starfish', 7: 'fish', 8: 'umbrella', 9: 'anchor' },
-    candy: { 1: 'lollipop', 2: 'cookie', 3: 'wrapped', 4: 'icecream', 5: 'cupcake', 6: 'donut', 7: 'popsicle', 8: 'cherry', 9: 'choco' },
-    forest: { 1: 'mushroom', 2: 'sun', 3: 'leaf', 4: 'drop', 5: 'butterfly', 6: 'fox', 7: 'pine', 8: 'flower', 9: 'acorn' },
-    night: { 1: 'rocket', 2: 'star', 3: 'ufo', 4: 'planet', 5: 'moon', 6: 'comet', 7: 'sparkle', 8: 'alien', 9: 'asteroid' },
-    ocean: { 1: 'octopus', 2: 'fish', 3: 'turtle', 4: 'whale', 5: 'jellyfish', 6: 'starfish', 7: 'seahorse', 8: 'shell', 9: 'anchor' },
-    sunmoon: { 1: 'bloodmoon', 2: 'sunray', 3: 'aurora', 4: 'fullmoon', 5: 'crescent', 6: 'dawn', 7: 'ringplanet', 8: 'sharpstar', 9: 'solarecl' }
+    'default': { 1: 'heart', 2: 'star', 3: 'clover', 4: 'drop', 5: 'moon', 6: 'flower', 7: 'diamond', 8: 'smile', 9: 'paw', 10: 'butterfly' },
+    beach: { 1: 'crab', 2: 'sun', 3: 'palm', 4: 'wave', 5: 'shell', 6: 'starfish', 7: 'fish', 8: 'umbrella', 9: 'anchor', 10: 'cloudsun' },
+    candy: { 1: 'lollipop', 2: 'cookie', 3: 'wrapped', 4: 'icecream', 5: 'cupcake', 6: 'donut', 7: 'popsicle', 8: 'cherry', 9: 'choco', 10: 'sparkle' },
+    forest: { 1: 'mushroom', 2: 'sun', 3: 'leaf', 4: 'drop', 5: 'butterfly', 6: 'fox', 7: 'pine', 8: 'flower', 9: 'acorn', 10: 'firefly' },
+    night: { 1: 'rocket', 2: 'star', 3: 'ufo', 4: 'planet', 5: 'moon', 6: 'comet', 7: 'sparkle', 8: 'alien', 9: 'asteroid', 10: 'firefly' },
+    ocean: { 1: 'octopus', 2: 'fish', 3: 'turtle', 4: 'whale', 5: 'jellyfish', 6: 'starfish', 7: 'seahorse', 8: 'shell', 9: 'anchor', 10: 'crab' },
+    sunmoon: { 1: 'bloodmoon', 2: 'sunray', 3: 'aurora', 4: 'fullmoon', 5: 'crescent', 6: 'dawn', 7: 'ringplanet', 8: 'sharpstar', 9: 'solarecl', 10: 'eclipse' }
   };
   // 粗線條（外框層 + 白色層）與細節線
   function thick(d, w) { return { o: '<path d="' + d + '" fill="none" stroke-width="' + (w || 10) + '"/>', f: '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="' + ((w || 10) - 5.5) + '"/>' }; }

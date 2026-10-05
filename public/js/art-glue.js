@@ -43,7 +43,7 @@
   };
   /** 先把常用精靈圖全部載入，避免開局時閃一下空白 */
   Art.preload = function (dragonIds) {
-    for (let c = 1; c <= 9; c++) for (let m = 0; m < 3; m++) Art.sprite('b:' + c + ':' + m);
+    for (let c = 1; c <= 10; c++) for (let m = 0; m < 3; m++) Art.sprite('b:' + c + ':' + m);
     ['rainbow', 'star', 'cloud'].forEach(k => Art.sprite('s:' + k));
     Art.sprite('cannon');
     (dragonIds || Art.DRAGONS.map(d => d.id)).forEach(id => { ['idle', 'shoot', 'cheer', 'sad'].forEach(p => Art.sprite('dragon:' + id + ':' + p)); Art.sprite('face:' + id); });
@@ -51,7 +51,7 @@
   /** 其他圖案組：進入該主題時才載入（lazy） */
   Art.preloadSet = function (set) {
     if (!set || set === 'default' || !Art.SETS[set]) return;
-    for (let c = 1; c <= 9; c++) Art.sprite('b:' + c + ':0:' + set);
+    for (let c = 1; c <= 10; c++) Art.sprite('b:' + c + ':0:' + set);
   };
   Art.spriteKeyOf = function (v, set) {
     const c = v & 15, m = v >> 4;

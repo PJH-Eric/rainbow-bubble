@@ -8,7 +8,7 @@
  *     改用只靠加減乘除的自製表（IEEE 754 四則運算在所有引擎上結果一致）
  *
  * 座標：泡泡半徑 R = 1；格 (r,c) 的圓心 x = 1 + 2c + off，y = 1 + √3·r，其中 off = (r+parity) & 1。
- * 格子內容：0 空；低 4 位是顏色 1～6、15 是雲朵磚（消不掉、永遠算黏在天花板）；高位是標記（1 星星、2 獎勵）。
+ * 格子內容：0 空；低 4 位是顏色 1～10、15 是雲朵磚（消不掉、永遠算黏在天花板）；高位是標記（1 星星、2 獎勵）。
  */
 (function (root) {
   'use strict';
@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { cols: 9,  colors: [1, 2, 4],          descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { cols: 10, colors: [1, 2, 3, 4, 5],    descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { cols: 12, colors: [1, 2, 3, 4, 5, 6, 7],    descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -151,7 +151,7 @@
     const perm = b.colors.slice();
     for (let i = perm.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
     /* 版型只有 6 個顏色槽；顏色比 6 種多時，約 2 成的格子改抽其他顏色，讓每種造型都會出現 */
-    const slotColor = k => (perm.length > 6 && rng() < 0.22 ? perm[Math.floor(rng() * perm.length)] : perm[k % perm.length]);
+    const slotColor = k => (perm.length > 6 && rng() < Math.min(0.6, 0.12 * (perm.length - 5)) ? perm[Math.floor(rng() * perm.length)] : perm[k % perm.length]);
     const randColor = () => b.colors[Math.floor(rng() * b.colors.length)];
     lay.rows.slice(0, cfg.rows[1]).forEach((str, r) => {
       const row = [];
