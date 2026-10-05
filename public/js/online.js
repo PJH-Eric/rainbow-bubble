@@ -80,14 +80,11 @@
     }, 500);
   }
 
+  /** 邀請連結只帶房號與 token；伺服器位置由部署時注入（config.js），不放在連結裡 */
   function inviteLink(tok) {
     const p = new URLSearchParams();
     p.set('room', App.room.id); p.set('t', tok);
-    let srv = '';
-    try { srv = new URLSearchParams(location.search).get('server') || ''; } catch (e) { srv = ''; }
-    let s = '?' + p.toString();
-    if (srv) s += '&server=' + encodeURIComponent(srv);
-    return location.origin + location.pathname + s;
+    return location.origin + location.pathname + '?' + p.toString();
   }
   /** 只拿掉邀請參數；?server= 要留著，不然重新整理就連不到同一台伺服器 */
   function clearInviteUrl() {
@@ -435,11 +432,12 @@
       h('div', { class: 'room-grid' },
         h('div', { class: 'col' },
           h('section', { class: 'card' }, h('h3', null, '玩家席位'), ui.seatsBox),
+          ui.invCard,
           ui.specBox,
           h('section', { class: 'card' }, h('h3', null, '聊天室'), roomChat.el)),
         h('div', { class: 'col' },
           h('section', { class: 'card' }, ui.actBox),
-          ui.setCard, ui.invCard))));
+          ui.setCard))));
     ui.paint();
     Net.open(profile());
     /* 萬一一直等不到房間資料（例如已被關閉），回大廳 */
