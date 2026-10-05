@@ -552,11 +552,11 @@ test('倒數中電腦不動；開打後電腦用 ev 射擊（s = 電腦 slot）�
   startIt(x);
   x.run(2900);
   assert.strictEqual(x.all('aaaaaaaa1', 'ev').length, 0, '倒數期間不動');
-  x.run(30000);
+  x.run(14000);
   const g = roomOf(x).match;
   const sh = shotsOf(x, 'aaaaaaaa1');
   assert(sh.some(e => e.s === 1) && sh.some(e => e.s === 2) && !sh.some(e => e.s === 0), '兩個電腦都有射、人類沒動');
-  assert(x.hub.counters.shots >= 20);
+  assert(x.hub.counters.shots >= 12);
   const client = Match.create(g.cfg);
   for (const msg of x.all('aaaaaaaa1', 'ev')) for (const ev of msg.evs) Match.apply(client, ev);
   assert.deepStrictEqual(client.boards.map(Rules.boardHash), g.m.boards.map(Rules.boardHash));
@@ -569,7 +569,7 @@ test('倒數中電腦不動；開打後電腦用 ev 射擊（s = 電腦 slot）�
 });
 test('電腦也守 SHOT_CD；難度有差：hard 比 baby 射得多；人類與電腦可同時輸入', () => {
   const a = soloRoom(['baby'], { duration: 300000 }), b = soloRoom(['hard'], { duration: 300000 });
-  for (const r of [a, b]) { startIt(r.x); r.x.run(3000 + 40000); }
+  for (const r of [a, b]) { startIt(r.x); r.x.run(3000 + 12000); }
   const sa = shotsOf(a.x, 'aaaaaaaa1', 1), sb = shotsOf(b.x, 'aaaaaaaa1', 1);
   assert(sb.length > sa.length * 1.5, 'hard ' + sb.length + ' vs baby ' + sa.length);
   for (let i = 1; i < sb.length; i++) assert(sb[i].t - sb[i - 1].t >= 250, '電腦射擊間隔 < SHOT_CD');

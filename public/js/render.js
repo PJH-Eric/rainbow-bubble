@@ -139,6 +139,7 @@
       if (j.kind === 'shot') {
         const lx = R.cx(prev, res.land.r, res.land.c), ly = TOP + R.cy(res.land.r);
         if (snd) snd.sfx('land');
+        if (res.laser) this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 520, x: lx, y: ly, h: res.laser.h });
         /* 爆開 */
         const lst = res.popped || [];
         let idx = 0, sx = 0, sy = 0, sn = 0, big = false;
@@ -149,7 +150,7 @@
           this.fx.push({ k: 'pop', t0: now + delay, dur: reduce ? 150 : 420, x, y, v: p.v, how: p.how, pre: k, idx });
           if (p.how === 'star') big = true;
           sx += x; sy += y; sn++; idx++;
-          if (snd) setTimeout(() => snd.sfx(p.how === 'star' ? 'star' : 'pop', idx), delay);
+          if (snd) setTimeout(() => snd.sfx(p.how === 'star' || p.how === 'laser' ? 'star' : 'pop', idx), delay);
         }
         const dr = res.dropped || [];
         dr.forEach((p, i) => {
@@ -343,6 +344,14 @@
           const y = f.y + yoff + 11 * tt * tt;
           const x = f.x + Math.sin(tt * 9 + f.x) * 0.35;
           this.bubble(g, f.v, x, y, 1 - t * 0.2, 1 - clamp01((t - 0.5) / 0.5));
+        } else if (f.k === 'beam') {
+          /* 雷射光束：橫向貫穿整個盤面寬、縱向貫穿整個盤面高，很快淡出 */
+          const w = (1 - t) * 1.1 + 0.15, ws = this.ws;
+          g.save(); g.globalAlpha = Math.min(1, (1 - t) * 1.6); g.lineCap = 'round';
+          const x0 = f.h ? 0 : f.x, x1 = f.h ? ws.w : f.x, y0 = f.h ? f.y : 0, y1 = f.h ? f.y : ws.h;
+          g.strokeStyle = '#7fd1ff'; g.lineWidth = w * 2.2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          g.strokeStyle = '#fff'; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          g.restore();
         } else if (f.k === 'spark') {
           g.save(); g.globalAlpha = 1 - t; g.fillStyle = '#fff'; this.star(g, f.x, f.y, 0.5 + t * 1.5); g.restore();
         }

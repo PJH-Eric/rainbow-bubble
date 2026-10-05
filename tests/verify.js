@@ -102,19 +102,57 @@ t('星星標記：消除時連帶炸掉周圍', () => {
   const res = R.applyShot(b, angleTo(b, 0, 5) || angleTo(b, 0, 2));
   assert(res.popped.some(p => p.how === 'star'), '應有被星星炸掉的泡泡');
 });
-t('星星炸掉周圍的數量依難度：幼幼班 6／簡單 7／普通 8／困難 9', () => {
-  const want = { baby: 6, easy: 7, normal: 8, hard: 9 };
+t('星星炸掉的圈數依難度：幼幼班、簡單 1 圈(6)；普通 2 圈(18)；困難 3 圈(36)', () => {
+  const want = { baby: 6, easy: 6, normal: 18, hard: 36 };
   for (const lv of R.LEVELS) {
     const b = blank(lv);
-    for (let r = 0; r < 9; r++) {
+    for (let r = 0; r < 13; r++) {
       while (b.rows.length <= r) b.rows.push(new Array(R.rowLen(b, b.rows.length)).fill(0));
       for (let c = 0; c < R.rowLen(b, r); c++) b.rows[r][c] = 1 + ((r * 2 + c * 3) % 4);   /* 沒有同色連片，免得干擾 */
     }
-    b.rows[4][4] = 1 | 16;
-    const st = R.settle(b, [[4, 4]]);
+    b.rows[6][4] = 1 | 16;
+    const st = R.settle(b, [[6, 4]]);
     const boom = st.popped.filter(p => p.how === 'star').length;
     assert.strictEqual(boom, want[lv], lv + ' 應炸掉 ' + want[lv] + ' 顆，實際 ' + boom);
   }
+});
+function fillDistinct(b, rows) {
+  for (let r = 0; r < rows; r++) {
+    while (b.rows.length <= r) b.rows.push(new Array(R.rowLen(b, b.rows.length)).fill(0));
+    for (let c = 0; c < R.rowLen(b, r); c++) b.rows[r][c] = 1 + ((r * 2 + c * 3) % 4);
+  }
+}
+t('雷射泡泡（橫向）：落下後消掉整排', () => {
+  const b = blank();
+  fillDistinct(b, 4);
+  b.rows[3][5] = 0;                           /* 第 3 排留一個洞讓雷射泡泡落進去 */
+  b.cur = { k: 'laserh', c: 0 };
+  const a = angleTo(b, 3, 5);
+  assert(a != null, '找不到落點');
+  const tr = R.trace(b, a);
+  const row = tr.land.r;
+  const res = R.applyShot(b, a);
+  assert.strictEqual(res.laser && res.laser.h, true);
+  const n = res.popped.filter(p => p.how === 'laser' && p.r === row).length;
+  assert.strictEqual(n, R.rowLen(b, row), '整排都該消失，實際 ' + n + '／' + R.rowLen(b, row));
+});
+t('雷射泡泡（縱向）：每一排消掉最靠近那條直線的一顆', () => {
+  const b = blank();
+  fillDistinct(b, 6);
+  b.rows[5][4] = 0;
+  b.cur = { k: 'laserv', c: 0 };
+  const a = angleTo(b, 5, 4);
+  assert(a != null, '找不到落點');
+  const res = R.applyShot(b, a);
+  assert.strictEqual(res.laser && res.laser.h, false);
+  const rowsHit = new Set(res.popped.filter(p => p.how === 'laser').map(p => p.r));
+  for (let r = 0; r <= 5; r++) assert(rowsHit.has(r), '第 ' + r + ' 排應該被雷射打到');
+});
+t('發射序列會出現雷射泡泡（橫、直兩種都有）', () => {
+  const b = R.newBoard({ seed: 11, level: 'normal' });
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) seen.add(R.genItem ? R.genItem(b, i).k : 'x');
+  if (R.genItem) { assert(seen.has('laserh') && seen.has('laserv'), '400 發內應該各出現過：' + [...seen].join()); }
 });
 t('獎勵標記算 3 顆分數', () => {
   const b = blank();

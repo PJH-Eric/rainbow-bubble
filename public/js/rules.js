@@ -27,10 +27,10 @@
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
   const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
   const DIFF = {
-    baby:   { starN: 6, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.08, star: 0,    wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
-    easy:   { starN: 7, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.01, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
-    normal: { starN: 8, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.04, star: 0.03, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { starN: 9, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    baby:   { starR: 1, laser: 0.05, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.16, star: 0.06, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
+    easy:   { starR: 1, laser: 0.05, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.10, star: 0.08, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
+    normal: { starR: 2, laser: 0.06, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.10, star: 0.10, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
+    hard:   { starR: 3, laser: 0.06, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.09, star: 0.10, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -129,6 +129,7 @@
     const color = pool[Math.floor(r2 * pool.length) % pool.length];
     if (r1 < b.cfg.rainbow) return { k: 'rainbow', c: 0 };
     if (r1 < b.cfg.rainbow + b.cfg.star) return { k: 'star', c: 0 };
+    if (r1 < b.cfg.rainbow + b.cfg.star + (b.cfg.laser || 0)) return { k: rand01(b.queueSeed + 7919, idx) < 0.5 ? 'laserh' : 'laserv', c: 0 };
     return { k: 'n', c: color };
   }
 
@@ -318,43 +319,63 @@
   }
 
   /* ---------- 消除結算 ---------- */
-  /* 星星標記：被消除或掉落時，連帶炸掉周圍最近的 N 顆（N 依難度：幼幼班 6／簡單 7／普通 8／困難 9；可連鎖）。
-   * 6 顆正好是貼身一圈；多出來的由第二圈裡離星星最近的補上（距離相同時依列、欄順序，結果固定）。 */
+  /* 星星標記：被消除或掉落時，以星星泡泡為中心炸掉周圍幾圈（幼幼班、簡單 1 圈；普通 2 圈；困難 3 圈；可連鎖）。
+   * 圈數用六角格的「格距」算：1 圈 = 貼身 6 顆、2 圈 = 18 顆、3 圈 = 36 顆。 */
+  function hexDist(b, r0, c0, r1, c1) {
+    const dr = Math.abs(r1 - r0), dx = Math.abs(cx(b, r1, c1) - cx(b, r0, c0)) / 2;
+    return dr + Math.max(0, dx - dr / 2);
+  }
   function explodeStars(b, seeds, removed) {
-    const N = (b.cfg && b.cfg.starN) || 6;
+    const R = (b.cfg && b.cfg.starR) || 1;
     const q = seeds.slice();
     while (q.length) {
       const p = q.pop();
-      const x0 = cx(b, p[0], p[1]), y0 = cy(p[0]);
-      const cand = [];
-      for (let r = Math.max(0, p[0] - 2); r <= p[0] + 2; r++) {
+      for (let r = Math.max(0, p[0] - R); r <= p[0] + R; r++) {
         const row = b.rows[r];
         if (!row) continue;
         for (let c = 0; c < row.length; c++) {
           if (r === p[0] && c === p[1]) continue;
-          const v = row[c];
-          if (!isBubble(v) || removed.has(key(r, c))) continue;
-          const dx = cx(b, r, c) - x0, dy = cy(r) - y0, d = dx * dx + dy * dy;
-          if (d < 16.5) cand.push({ r, c, v, d });
+          const v = row[c], k = key(r, c);
+          if (!isBubble(v) || removed.has(k)) continue;
+          if (hexDist(b, p[0], p[1], r, c) > R + 1e-6) continue;
+          removed.set(k, { r, c, v, how: 'star' });
+          if (modOf(v) === 1) q.push([r, c]);
         }
-      }
-      cand.sort((a, z) => (a.d - z.d) || (a.r - z.r) || (a.c - z.c));
-      for (const n of cand.slice(0, N)) {
-        removed.set(key(n.r, n.c), { r: n.r, c: n.c, v: n.v, how: 'star' });
-        if (modOf(n.v) === 1) q.push([n.r, n.c]);
       }
     }
   }
   function weight(v) { return modOf(v) === 2 ? 3 : 1; }
 
+  /** 雷射線上的所有泡泡：橫向 = 同一排；縱向 = 每一排裡最靠近那一條直線的泡泡（六角格會左右錯開半格，所以是一條之字線） */
+  function laserLine(b, r, c, horizontal) {
+    const out = [];
+    if (horizontal) {
+      const row = b.rows[r] || [];
+      for (let i = 0; i < row.length; i++) if (isBubble(row[i])) out.push([r, i]);
+      return out;
+    }
+    const x0 = cx(b, r, c);
+    for (let rr = 0; rr < b.rows.length; rr++) {
+      const row = b.rows[rr];
+      if (!row) continue;
+      let best = -1, bd = 1e9;
+      for (let i = 0; i < row.length; i++) {
+        const d = Math.abs(cx(b, rr, i) - x0);
+        if (d < bd - 1e-9) { bd = d; best = i; }
+      }
+      if (best >= 0 && bd <= 1 + 1e-6 && isBubble(row[best])) out.push([rr, best]);
+    }
+    return out;
+  }
+
   /** 放下泡泡後的完整結算。回傳 { popped, dropped, gained } */
-  function settle(b, popCells) {
+  function settle(b, popCells, how) {
     const removed = new Map();
     const starSeeds = [];
     for (const p of popCells) {
       const v = get(b, p[0], p[1]);
       if (!isBubble(v)) continue;
-      removed.set(key(p[0], p[1]), { r: p[0], c: p[1], v, how: 'match' });
+      removed.set(key(p[0], p[1]), { r: p[0], c: p[1], v, how: how || 'match' });
       if (modOf(v) === 1) starSeeds.push(p);
     }
     explodeStars(b, starSeeds, removed);
@@ -450,8 +471,16 @@
       set(b, r, c, 1 << 4 | 1);       /* 先放成帶星星標記的泡泡，再連同周圍一起炸 */
       pop = [[r, c]];
     }
+    let popHow = 'match';
+    if (item.k === 'laserh' || item.k === 'laserv') {
+      /* 雷射泡泡：落下後橫向消掉整排／縱向消掉整列（含自己） */
+      set(b, r, c, 1);
+      pop = laserLine(b, r, c, item.k === 'laserh');
+      popHow = 'laser';
+      res.laser = { r, c, h: item.k === 'laserh' };
+    }
     let st = { popped: [], dropped: [], gained: 0 };
-    if (pop.length) st = settle(b, pop);
+    if (pop.length) st = settle(b, pop, popHow);
     res.popped = res.popped.concat(st.popped);
     res.dropped = st.dropped;
     res.gained = st.gained;
@@ -531,8 +560,8 @@
       const row = b.rows[r];
       for (let c = 0; c < row.length; c++) if (row[c]) h = hash2(h, r * 4096 + c * 64 + row[c]);
     }
-    h = hash2(h, b.cur.c * 8 + (b.cur.k === 'n' ? 0 : b.cur.k === 'rainbow' ? 1 : 2));
-    h = hash2(h, b.nxt.c * 8 + (b.nxt.k === 'n' ? 0 : b.nxt.k === 'rainbow' ? 1 : 2));
+    h = hash2(h, b.cur.c * 8 + (b.cur.k === 'n' ? 0 : b.cur.k === 'rainbow' ? 1 : b.cur.k === 'star' ? 2 : b.cur.k === 'laserh' ? 3 : 4));
+    h = hash2(h, b.nxt.c * 8 + (b.nxt.k === 'n' ? 0 : b.nxt.k === 'rainbow' ? 1 : b.nxt.k === 'star' ? 2 : b.nxt.k === 'laserh' ? 3 : 4));
     return hash2(h, b.cleared);
   }
 
@@ -560,7 +589,7 @@
     mulberry32, hash2, rand01, clampAngle,
     colorOf, modOf, isBubble, offOf, rowLen, cx, cy, get, neighbors, inBoard, shooterPos,
     cloneBoard, bubbleCount, lowestRow, presentColors,
-    newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating, settle
+    newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating, settle, laserLine, genItem
   };
   root.Rules = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

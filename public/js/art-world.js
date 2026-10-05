@@ -316,6 +316,23 @@
       s += '<polygon points="' + starPts(50, 52, 22, 9.5, 5) + '" fill="#fff" stroke="#fff" stroke-width="0.5" stroke-linejoin="round"/>';
       s += '<ellipse cx="36" cy="33" rx="9" ry="5" transform="rotate(-38 36 33)" fill="#fff" opacity="0.85"/>';
       s += sparkle(84, 18, 7) + sparkle(14, 80, 5.5);
+    } else if (kind === 'laserh' || kind === 'laserv') { // 閃電／雷射泡：電藍色泡泡，雷射方向用兩端的箭頭＋光束標示
+      var hz = kind === 'laserh';
+      defs = rg(p + 'in', 0.4, 0.3, 0.85, [[0, '#ffffff'], [0.55, '#bfe8ff'], [1, '#6cb8ff']]);
+      s += '<circle cx="50" cy="50" r="44" fill="#2a1240" opacity="0.12"/>';
+      s += '<circle cx="50" cy="50" r="44" fill="url(#' + p + 'in)" stroke="#2f6fd0" stroke-width="3.5"/>';
+      s += '<circle cx="50" cy="50" r="38" fill="none" stroke="#fff" stroke-width="2" opacity="0.6"/>';
+      // 方向光束（橫向／縱向）
+      var bm = hz ? 'M12 50 H88' : 'M50 12 V88';
+      s += '<path d="' + bm + '" stroke="#fff" stroke-width="12" stroke-linecap="round"/>';
+      s += '<path d="' + bm + '" stroke="#ffe14a" stroke-width="6" stroke-linecap="round"/>';
+      // 兩端箭頭
+      var ar = hz ? ['M10 50 L24 40 V60Z', 'M90 50 L76 40 V60Z'] : ['M50 10 L40 24 H60Z', 'M50 90 L40 76 H60Z'];
+      for (i = 0; i < 2; i++) s += '<path d="' + ar[i] + '" fill="#ff8a1c" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"/>';
+      // 中央閃電
+      s += '<path d="M56 24 L36 54 H48 L42 78 L66 44 H53Z" fill="#ffd23a" stroke="#c76a00" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<ellipse cx="32" cy="28" rx="9" ry="5" transform="rotate(-38 32 28)" fill="#fff" opacity="0.85"/>';
+      s += sparkle(80, 24, 7) + sparkle(20, 78, 5.5);
     } else { // cloud 雲朵磚：圓角方塊感，看起來推不動
       defs = lg(p + 'f', 0, 0, 0, 1, [[0, '#ffffff'], [0.65, '#f4f8ff'], [1, '#dbe6f7']]);
       var shapes = '<rect x="10" y="36" width="80" height="50" rx="22"/><circle cx="33" cy="42" r="19"/><circle cx="58" cy="34" r="23"/><circle cx="76" cy="48" r="15"/>';
