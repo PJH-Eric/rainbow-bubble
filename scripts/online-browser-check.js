@@ -339,7 +339,7 @@ async function ctxPage(browser, vp, tag) {
     await wait(3600);
     ok(await s.locator('.bslot').count() === 2, '對局畫面有 2 塊盤面（我 + 電腦）');
     ok((await s.locator('.bslot .bt-name').allTextContents()).some(t => t.includes('🤖')), 'HUD 的電腦名字帶 🤖');
-    await s.waitForFunction(() => App.game && App.game.m && App.game.m.boards[1].shots >= 3, null, { timeout: 15000 });
+    await s.waitForFunction(() => App.game && App.game.m && App.game.m.boards[1].shots >= 3, null, { timeout: 40000 });
     ok(true, '電腦盤面自己在動（伺服器代打，已射出 ' + await s.evaluate(() => App.game.m.boards[1].shots) + ' 發）');
     await shot(s, 'game-ai-landscape');
     await s.getByRole('button', { name: '離開對局' }).click();

@@ -383,10 +383,10 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 
 /* ---------- 對局 ---------- */
 .game { position: absolute; inset: 0; display: flex; background-size: cover; background-position: center; overflow: hidden; }
-.game-side { flex: 0 0 clamp(230px, 24vw, 320px); display: flex; flex-direction: column; gap: 8px; padding: calc(10px + var(--safe-t)) 10px calc(10px + var(--safe-b)) calc(10px + var(--safe-l)); background: rgba(255, 255, 255, .86); backdrop-filter: blur(6px); border-right: 3px solid #fff; box-shadow: 4px 0 18px rgba(60, 40, 120, .18); z-index: 20; min-height: 0; }
+.game-side { flex: 0 0 clamp(220px, 20vw, 290px); display: flex; flex-direction: column; gap: 8px; padding: calc(10px + var(--safe-t)) 10px calc(10px + var(--safe-b)) calc(10px + var(--safe-l)); background: rgba(255, 255, 255, .86); backdrop-filter: blur(6px); border-right: 3px solid #fff; box-shadow: 4px 0 18px rgba(60, 40, 120, .18); z-index: 20; min-height: 0; }
 .game.side-closed .game-side { display: none; }
 .side-head { display: flex; align-items: center; justify-content: space-between; font-size: 1.05rem; }
-.summary { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; max-height: 52%; min-height: 0; }
+.summary { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; max-height: 64%; min-height: 0; }
 .sum-meta { padding: 4px 4px 8px; border-bottom: 2px dashed var(--line); }
 .sum-row { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 14px; background: #faf5ff; }
 .sum-row.me { background: #fff1b8; }
@@ -470,6 +470,23 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .hud { min-height: 40px; }
   .hud-timer { font-size: 1.1rem; }
   .result-dragon { display: none; }
+}
+
+/* 寬螢幕（平板橫向／桌機，資訊欄常駐）：暫停鈕、倒數與模式移到左邊資訊欄的最上方，盤面從頂端用到底，整個放大 */
+@media (min-width: 861px) and (min-aspect-ratio: 5/4) {
+  .game { --sw: clamp(220px, 20vw, 290px); }
+  .game:not(.side-closed) .hud { position: absolute; top: calc(10px + var(--safe-t)); left: calc(10px + var(--safe-l) - var(--sw)); width: calc(var(--sw) - 20px - var(--safe-l)); padding-right: 0; z-index: 25; gap: 6px; }
+  .game:not(.side-closed) .hud-mid { justify-content: flex-start; gap: 6px; flex-wrap: nowrap; }
+  .game:not(.side-closed) .hud-mid .pill { display: none; }
+  .game:not(.side-closed) .game-side { padding-top: calc(66px + var(--safe-t)); }
+  .game:not(.side-closed) .game-main { padding-top: calc(8px + var(--safe-t)); }
+  .boards.l-main .opp-col { padding-top: calc(46px + var(--safe-t)); }   /* 讓出右上角設定鈕的位置 */
+}
+
+/* 直向平板：左右留白與欄距再縮小，自己的盤面更寬 */
+@media (max-width: 1100px) and (max-aspect-ratio: 1/1) and (min-width: 600px) {
+  .game-main { padding-left: calc(4px + var(--safe-l)); padding-right: calc(4px + var(--safe-r)); }
+  .boards.l-main, .boards.l-two { gap: 8px; grid-template-columns: minmax(0, 5fr) minmax(0, 1fr); }
 }
 
 /* ===== 排版：短文字不換行（whole-item wrap，不拆字） ===== */
