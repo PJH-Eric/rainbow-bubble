@@ -137,6 +137,8 @@
   }
 
   /* ---------- 發射序列（由 seed 與已發射次數決定） ---------- */
+  /* 第 0 列（天花板那排）還有空格＝泡泡可以直接打到天花板；這時不出閃電泡泡，不然一發就整片掉下來太容易 */
+  const ceilingOpen = b => { const row = b.rows[0]; if (!row) return true; for (let c = 0; c < rowLen(b, 0); c++) if (!row[c]) return true; return false; };
   function genItem(b, idx) {
     const r1 = rand01(b.queueSeed, idx * 3 + 1);
     const r2 = rand01(b.queueSeed, idx * 3 + 2);
@@ -153,12 +155,12 @@
       const ready = readyColors(b);
       if (ready.length && (lucky || rand01(b.queueSeed + 31337, idx) < (b.cfg.assist || 0))) pool = ready;
       /* 卡關保險：盤面上已經沒有任何成對的同色（只剩落單的），普通泡泡怎麼射都消不掉，這時送一顆星星或閃電泡泡 */
-      else if (!ready.length && lucky && bubbleCount(b) > 0) return { k: rand01(b.queueSeed + 4242, idx) < 0.5 ? 'star' : 'laser', c: 0 };
+      else if (!ready.length && lucky && bubbleCount(b) > 0) return { k: rand01(b.queueSeed + 4242, idx) < 0.5 || ceilingOpen(b) ? 'star' : 'laser', c: 0 };
     }
     const color = pool[Math.floor(r2 * pool.length) % pool.length];
     if (r1 < b.cfg.rainbow) return { k: 'rainbow', c: 0 };
     if (r1 < b.cfg.rainbow + b.cfg.star) return { k: 'star', c: 0 };
-    if (r1 < b.cfg.rainbow + b.cfg.star + (b.cfg.laser || 0)) return { k: 'laser', c: 0 };
+    if (r1 < b.cfg.rainbow + b.cfg.star + (b.cfg.laser || 0)) return ceilingOpen(b) ? { k: 'n', c: color } : { k: 'laser', c: 0 };
     return { k: 'n', c: color };
   }
 
@@ -479,8 +481,10 @@
   /* ---------- 一發 ---------- */
   /** 發射目前的泡泡。回傳完整結果（動畫與結算都用它）；會修改 b。 */
   function applyShot(b, angle) {
-    const item = b.cur;
+    let item = b.cur;
     const tr = trace(b, angle);
+    /* 備用：手上的閃電泡泡若落在天花板那排（排出來之後天花板才打開），改當星星泡泡用，避免整片掉落 */
+    if (item.k === 'laser' && tr.land.r === 0) item = { k: 'star', c: 0 };
     const res = {
       item, angle: tr.angle, path: tr.path, land: tr.land, popped: [], dropped: [], gained: 0,
       descended: null, rain: null, fullClear: false, combo: 0, rainbowColor: 0

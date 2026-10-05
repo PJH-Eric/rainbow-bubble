@@ -148,6 +148,21 @@ t('發射序列會出現閃電泡泡，且與彩虹、星星機率相同', () =>
   const hi = Math.max(cnt.rainbow, cnt.star, cnt.laser), lo = Math.min(cnt.rainbow, cnt.star, cnt.laser);
   assert(lo > hi * 0.6, '三種機率應該接近：' + JSON.stringify(cnt));
 });
+t('天花板排有空格（可打到天花板）時不出閃電泡泡；落在天花板排的閃電泡泡改當星星', () => {
+  const b = R.newBoard({ seed: 11, level: 'normal' });
+  for (let i = 0; i < 3000; i++) assert(R.genItem(b, i).k !== 'laser' || b.rows[0].every(v => v), '第 0 排滿時才可能有閃電泡泡');
+  b.rows[0][4] = 0;                           /* 天花板排開一個洞 */
+  for (let i = 0; i < 3000; i++) assert(R.genItem(b, i).k !== 'laser', '天花板打得到時不該出閃電泡泡，i=' + i);
+  const b2 = blank();
+  fillDistinct(b2, 1);
+  b2.rows[0][5] = 0;
+  b2.cur = { k: 'laser', c: 0 };
+  const a = angleTo(b2, 0, 5);
+  assert(a != null, '找不到天花板落點');
+  const res = R.applyShot(b2, a);
+  assert(!res.laser && res.item.k === 'star', '落在天花板排時應改當星星');
+  assert(res.gained <= 8 && R.bubbleCount(b2) > 0, '不該整片掉落，消了 ' + res.gained);
+});
 t('獎勵標記算 3 顆分數', () => {
   const b = blank();
   put(b, 0, 3, 1 | 32); put(b, 0, 4, 1);
