@@ -140,11 +140,8 @@
         const lx = R.cx(prev, res.land.r, res.land.c), ly = TOP + R.cy(res.land.r);
         if (snd) snd.sfx('land');
         if (res.laser) {
-          /* 光束穿過被打掉的每一顆泡泡中心（縱向會隨蜂巢交錯而左右微彎） */
-          const pts = (res.popped || []).filter(p => p.how === 'laser').map(p => [R.cx(prev, p.r, p.c), TOP + R.cy(p.r)]);
-          pts.push([lx, ly]);
-          pts.sort((a, b) => res.laser.h ? a[0] - b[0] : a[1] - b[1]);
-          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 520, x: lx, y: ly, h: res.laser.h, pts, pre: k });
+          const pts = [];   /* 直線光束（縱向不必跟著六邊形交錯彎折） */
+          this.fx.push({ k: 'beam', t0: now, dur: reduce ? 200 : 600, x: lx, y: ly, h: res.laser.h, pts, pre: k });
         }
         /* 爆開 */
         const lst = res.popped || [];
@@ -152,7 +149,8 @@
         for (const p of lst) {
           if (p.how === 'fizzle') { this.fx.push({ k: 'spark', t0: now, dur: 500, x: lx, y: ly }); continue; }
           const x = R.cx(prev, p.r, p.c), y = TOP + R.cy(p.r);
-          const delay = reduce ? 0 : idx * 28;
+          /* 雷射：泡泡在光束掃到的瞬間才爆開（由射中處向兩端依距離依序） */
+          const delay = reduce ? 0 : (p.how === 'laser' && res.laser ? Math.round((res.laser.h ? Math.abs(x - lx) / this.ws.w : Math.abs(y - ly) / this.ws.h) * 300) : idx * 28);
           this.fx.push({ k: 'pop', t0: now + delay, dur: reduce ? 150 : 420, x, y, v: p.v, how: p.how, pre: k, idx });
           if (p.how === 'star') big = true;
           sx += x; sy += y; sn++; idx++;
@@ -352,7 +350,7 @@
           this.bubble(g, f.v, x, y, 1 - t * 0.2, 1 - clamp01((t - 0.5) / 0.5));
         } else if (f.k === 'beam') {
           /* 雷射光束：細而亮的光線，由射中處向兩端射出，中心白、外圍淡藍紫光暈，並有閃爍星點 */
-          const ws = this.ws, e = t < 0.18 ? t / 0.18 : 1, fade = t < 0.3 ? 1 : 1 - (t - 0.3) / 0.7;
+          const ws = this.ws, e = t < 0.5 ? t / 0.5 : 1, fade = t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45;
           const thin = 0.07 + 0.09 * (1 - t);                       /* 核心半寬：越來越細 */
           const len = f.h ? ws.w : ws.h, c0 = f.h ? f.x : f.y;      /* 沿光束方向的起點 */
           const a0 = Math.max(0, c0 - len * e), a1 = Math.min(len, c0 + len * e);

@@ -19,8 +19,7 @@ const ROOT = path.join(__dirname, '..');
     await pg.evaluate(k => { const b = App.game.m.boards[0]; b.cur = { k, c: 0 }; }, k);
     const cv = await pg.$('.bslot.mine canvas'); const bb = await cv.boundingBox();
     await pg.mouse.click(bb.x + bb.width * 0.5, bb.y + bb.height * 0.3);
-    await pg.waitForTimeout(220);
-    await pg.screenshot({ path: path.join(ROOT, 'shots', 'laser-' + k + '-beam.png') });
+    for (const [i, ms] of [[1, 200], [2, 130], [3, 130]]) { await pg.waitForTimeout(ms); await pg.screenshot({ path: path.join(ROOT, 'shots', 'laser-' + k + '-f' + i + '.png'), clip: { x: bb.x, y: bb.y, width: bb.width, height: bb.height } }); }
     await pg.waitForTimeout(900);
     const after = await pg.evaluate(() => { const b = App.game.m.boards[0]; return { cleared: b.cleared, shots: b.shots, cnt: b.rows.flat().filter(x => x).length }; });
     console.log(k, 'before', before, 'after', JSON.stringify(after));
