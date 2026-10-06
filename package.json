@@ -4,14 +4,18 @@
   "description": "彩虹泡泡砲：可愛風泡泡龍（單機＋電腦＋線上房間／觀戰／邀請連結）",
   "private": true,
   "license": "UNLICENSED",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node server.js",
     "test": "node tests/verify.js && node tests/rooms.js && node tests/server.js",
     "verify": "node tests/verify.js && node tests/rooms.js && node tests/server.js && node scripts/online-check.js && node scripts/netcode-check.js",
     "check:online": "node scripts/online-check.js",
     "check:netcode": "node scripts/netcode-check.js",
-    "inject": "node scripts/inject-server-url.js"
+    "inject": "node scripts/inject-server-url.js",
+    "test:all": "node scripts/run-all.js",
+    "test:full": "node scripts/run-all.js --full"
   },
   "dependencies": {}
 }

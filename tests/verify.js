@@ -4,6 +4,7 @@ const assert = require('assert');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');
 const AI = require('../public/js/ai.js');
+const FULL = !!process.env.FULL;   /* 預設快速模式（抽樣少一點），FULL=1 才跑完整抽樣 */
 const L = require('../public/js/layouts.js');
 
 let pass = 0;
@@ -234,7 +235,7 @@ t('塞入泡泡：滿列先入、最後一列不滿，且都連著天花板', ()
 
 console.log('規則：開局與決定性');
 t('每個難度、每張地圖開局都至少有一組可打、沒有開局就掉下來的泡泡', () => {
-  for (const lv of R.LEVELS) for (let seed = 1; seed <= 150; seed++) {
+  for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 150 : 40); seed++) {
     const b = R.newBoard({ seed, level: lv });
     assert(R.bubbleCount(b) >= 10, `${lv}/${seed} 泡泡太少：${R.bubbleCount(b)}`);
     assert.strictEqual(R.floating(b).length, 0, `${lv}/${seed} 開局就有浮空泡泡 (${b.layoutId})`);
@@ -258,8 +259,8 @@ t('同 seed 同輸入 → 雜湊逐位元相同；快照還原後也相同', () 
 });
 t('不同 seed 的盤面不同；地圖種類夠多', () => {
   const ids = new Set();
-  for (let seed = 1; seed <= 400; seed++) ids.add(R.newBoard({ seed, level: 'normal' }).layoutId);
-  assert(ids.size >= 30, '400 局只出現 ' + ids.size + ' 種版型');
+  for (let seed = 1; seed <= (FULL ? 400 : 120); seed++) ids.add(R.newBoard({ seed, level: 'normal' }).layoutId);
+  assert(ids.size >= (FULL ? 30 : 22), '抽樣局數只出現 ' + ids.size + ' 種版型');
 });
 
 console.log('對局：事件重播與對打');
@@ -329,7 +330,7 @@ t('四段電腦：清光盤面所需的發數：簡單以下明顯多於普通�
   const avg = {};
   for (const lv of AI.LEVEL_ORDER) {
     const arr = [];
-    const N = 80;
+    const N = FULL ? 80 : 30;
     for (let seed = 1; seed <= N; seed++) {
       const b = R.newBoard({ seed, level: 'easy' });
       const brain = AI.createBrain(lv, seed);
@@ -351,6 +352,39 @@ t('四段電腦：清光盤面所需的發數：簡單以下明顯多於普通�
 t('反應間隔：幼幼班最慢、困難最快', () => {
   const d = lv => { const b = AI.createBrain(lv, 1); let s = 0; for (let i = 0; i < 200; i++) s += AI.delayOf(b); return s / 200; };
   assert(d('baby') > d('easy') && d('easy') > d('normal') && d('normal') > d('hard'));
+});
+
+t('不會出現單一顏色占大半的盤面（上限：普通 23%、困難 18%；開局後的微調允許再多 4%）', () => {
+  for (const [lv, cap] of [['normal', 0.23 + 0.04], ['hard', 0.18 + 0.04]]) {
+    for (let seed = 1; seed <= 60; seed++) {
+      const b = R.newBoard({ seed: seed * 5 + 1, level: lv });
+      const cnt = {}; let total = 0;
+      b.rows.forEach(r => r.forEach(v => { if (v && (v & 15) !== 15) { cnt[v & 15] = (cnt[v & 15] || 0) + 1; total++; } }));
+      const share = Math.max.apply(null, Object.values(cnt)) / total;
+      assert(share <= cap + 1e-9, lv + ' seed ' + seed + ' 單色占 ' + (share * 100).toFixed(0) + '%');
+    }
+  }
+});
+t('泡泡數量不能太少：普通 ≥ 72、困難 ≥ 84、簡單 ≥ 60、幼幼班 ≥ 45', () => {
+  for (const [lv, min] of [['baby', 45], ['easy', 60], ['normal', 72], ['hard', 84]]) {
+    assert.strictEqual(R.MIN_COUNT[lv], min);
+    for (let seed = 1; seed <= 60; seed++) {
+      const n = R.bubbleCount(R.newBoard({ seed: seed * 5 + 1, level: lv }));
+      assert(n >= min - 4, lv + ' seed ' + seed + ' 只有 ' + n + ' 顆');   /* 開局的微調（避免一發清太多）可能少幾顆 */
+    }
+  }
+});
+t('多人對局：每位玩家的盤面（顏色、版型、發射順序）都不一樣，但同一場可重現', () => {
+  const players = [{}, {}, {}, {}];
+  for (let seed = 1; seed <= 40; seed++) {
+    const m = M.create({ mode: 'race', level: 'normal', seed, players });
+    const hs = new Set(m.boards.map(b => R.boardHash(b)));
+    assert.strictEqual(hs.size, 4, 'seed ' + seed + ' 四個盤面雜湊應各不相同');
+    const q = new Set(m.boards.map(b => b.queueSeed));
+    assert.strictEqual(q.size, 4, '發射順序種子應各不相同');
+    const m2 = M.create({ mode: 'race', level: 'normal', seed, players });
+    assert.deepStrictEqual(m2.boards.map(b => R.boardHash(b)), m.boards.map(b => R.boardHash(b)), '同 seed 要可重現');
+  }
 });
 
 console.log('地圖資料');

@@ -32,7 +32,7 @@
       this.hintKey = ''; this.unread = 0; this.lastHud = 0; this.dead = false;
       this.offset = 0;
       if (this.kind === 'solo') {
-        this.tStart = performance.now() + (o.goIn == null ? 3000 : o.goIn);
+        this.tStart = performance.now() + (o.goIn == null ? (root.__GO_IN >= 0 ? root.__GO_IN : 3000) : o.goIn);
         this.brains = {};
         Object.keys(o.ai || {}).forEach(s => { this.brains[s] = root.AI.createBrain(o.ai[s], (o.cfg.seed + 977 * (+s + 1)) >>> 0); });
       } else {
@@ -75,7 +75,7 @@
       const chatBox = this.kind === 'online' ? this.buildChat() : null;
       this.side = h('aside', { class: 'game-side', 'aria-label': '對局資訊' },
         h('div', { class: 'side-head' }, h('b', null, '對局資訊'),
-          iconBtn('close', '收起資訊欄', () => this.toggleSide(false))),
+          iconBtn('panelHide', '收起資訊欄', () => this.toggleSide(false), 'side-close')),
         this.sumEl, chatBox);
 
       /* 盤面 */
@@ -109,8 +109,8 @@
 
       /* 上方狀態列 */
       this.sideBadge = h('span', { class: 'badge', hidden: true }, '0');
-      this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': '開關資訊欄', onClick: () => this.toggleSide() },
-        h('span', { html: Art.icon('list', 22) }), this.sideBadge);
+      this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': '展開資訊欄', 'aria-expanded': 'false', onClick: () => this.toggleSide() },
+        this.sideIcon = h('span', { html: Art.icon('panelShow', 22) }), this.sideBadge);
       this.timerEl = h('div', { class: 'hud-timer', role: 'timer' }, '0:00');
       this.modeEl = h('span', { class: 'pill' }, MODE_NAME[this.cfg.mode] + '・' + R.LEVEL_NAME[this.cfg.level]);
       this.exitBtn = this.kind === 'solo'
@@ -125,14 +125,22 @@
       this.root.appendChild(this.overlay);
       if (this.pingEl) this.root.appendChild(this.pingEl);
       /* 寬螢幕預設展開資訊欄 */
-      if (root.matchMedia && root.matchMedia('(min-width: 861px) and (min-aspect-ratio: 1/1)').matches) this.root.classList.remove('side-closed');
+      if (root.matchMedia && root.matchMedia('(min-width: 861px) and (min-aspect-ratio: 1/1)').matches) { this.root.classList.remove('side-closed'); this.syncSideIcon(); }
       if (!this.spectator) this.boardsEl.classList.add('can-play');
       this.renderSummary();
     }
 
+    /** 資訊欄開關鈕：開著顯示「收起」雙箭頭（«），關著顯示「展開」雙箭頭（»） */
+    syncSideIcon() {
+      const open = !this.root.classList.contains('side-closed');
+      if (this.sideIcon) this.sideIcon.innerHTML = Art.icon(open ? 'panelHide' : 'panelShow', 22);
+      this.sideBtn.setAttribute('aria-label', open ? '收起資訊欄' : '展開資訊欄');
+      this.sideBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
     toggleSide(v) {
       const open = v == null ? this.root.classList.contains('side-closed') : v;
       this.root.classList.toggle('side-closed', !open);
+      this.syncSideIcon();
       if (open) { this.unread = 0; this.updateBadge(); this.scrollChat(); }
       root.setTimeout(() => this.views.forEach(x => x && x.resize()), 260);
       root.setTimeout(() => this.views.forEach(x => x && x.resize()), 40);
@@ -200,9 +208,11 @@
       cv.style.touchAction = 'none';
       let down = false;
       const upd = e => { const hh = v.hit(e.clientX, e.clientY); if (hh && !hh.swap) v.setAim(hh.angle); return hh; };
+      const hover = on => { if (v.hoverSwap !== on) { v.hoverSwap = on; cv.style.cursor = on ? 'pointer' : ''; } };
       cv.addEventListener('pointermove', e => {
-        if (e.pointerType === 'mouse' || down) upd(e);
+        if (e.pointerType === 'mouse' || down) { const hh = upd(e); hover(e.pointerType === 'mouse' && !!(hh && hh.swap)); }
       });
+      cv.addEventListener('pointerleave', () => hover(false));
       cv.addEventListener('pointerdown', e => {
         root.Sound.unlock();
         if (this.paused || this.over) return;

@@ -22,6 +22,8 @@
 
   const Rules = root.Rules || (typeof require === 'function' ? require('./rules.js') : null);
 
+  /** 每位玩家的盤面種子：第 0 位沿用對局 seed，其他人各自混出不同的 seed（顏色、排版、發射順序都不一樣） */
+  function boardSeed(seed, i) { return i === 0 ? seed >>> 0 : (Math.imul((seed >>> 0) ^ (i * 0x9E3779B1), 0x85EBCA6B) ^ Math.imul(i + 1, 0xC2B2AE35)) >>> 0; }
   function create(cfg) {
     const players = cfg.players.map((p, i) => ({
       slot: i, name: p.name || '', dragon: p.dragon || 'rainbow', kind: p.kind || 'human', aiLevel: p.aiLevel || null
@@ -31,7 +33,7 @@
       level: cfg.level || 'normal', seed: cfg.seed >>> 0, layoutId: cfg.layoutId || 'random', themeId: cfg.themeId | 0,
       duration: cfg.duration == null ? 180000 : cfg.duration,
       players,
-      boards: players.map(() => Rules.newBoard({ seed: cfg.seed, level: cfg.level, layoutId: cfg.layoutId })),
+      boards: players.map((p, i) => Rules.newBoard({ seed: boardSeed(cfg.seed, i), level: cfg.level, layoutId: cfg.layoutId })),
       pending: players.map(() => []),
       reachedAt: players.map(() => 0),
       lastAttacker: players.map(() => -1),

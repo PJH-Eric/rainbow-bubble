@@ -67,6 +67,8 @@
       DIRX[a] = c; DIRY[a] = s;
     }
   })();
+  /* 開局泡泡數量下限（版型本身不夠的會從上往下補泡泡） */
+  const MIN_COUNT = { baby: 45, easy: 60, normal: 72, hard: 84 };
   const clampAngle = a => { a = Math.round(a); return a < MIN_A ? MIN_A : a > MAX_A ? MAX_A : a; };
 
   /* ---------- 格子工具 ---------- */
@@ -186,7 +188,16 @@
     };
     const Layouts = root.Layouts || (typeof require === 'function' ? require('./layouts.js') : null);
     const Tiers = root.LayoutTiers || (typeof require === 'function' ? require('./layout-tiers.js') : null);
-    const lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng, noObstacles: level === 'baby', allow: Tiers && Tiers[level] ? Tiers[level] : null });
+    /* 泡泡數量不能太少（普通常常只有 30 幾顆就很快清完）：隨機版型數量低於下限就換一張（最多 12 次，固定指定版型不換） */
+    const minCount = MIN_COUNT[level] || 50;
+    const countOf = l => { let n = 0; l.rows.slice(0, cfg.rows[1]).forEach(str => { for (let i = 0; i < str.length; i++) if ('abcdefABCDEF#*+'.indexOf(str[i]) >= 0) n++; }); return n; };
+    let lay = null;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const lrng = attempt === 0 ? rng : mulberry32(hash2(opt.seed, 5000 + attempt));
+      lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng: lrng, noObstacles: level === 'baby', allow: Tiers && Tiers[level] ? Tiers[level] : null });
+      if (opt.layoutId && opt.layoutId !== 'random') break;
+      if (countOf(lay) >= minCount * 0.6) break;      /* 差不多夠就用，不夠的部分下面補泡泡 */
+    }
     b.layoutId = lay.id; b.layoutName = lay.name;
     /* 顏色槽 → 本局顏色：用 seed 洗牌，槽數超過顏色數就循環使用 */
     const perm = b.colors.slice();
@@ -210,6 +221,40 @@
       while (row.length < rowLen(b, r)) row.push(0);
       b.rows.push(row);
     });
+    /* 數量補足：版型的泡泡不到下限，就從上往下把「貼著現有泡泡或天花板」的空格補上去（保持原本的形狀，只是更滿） */
+    {
+      const tr2 = mulberry32(hash2(opt.seed, 919));
+      const lim = Math.min(cfg.rows[1], MAX_ROWS);
+      for (let r = 0; r < lim; r++) ensureRow(b, r);
+      for (let guard = 0; guard < 400 && bubbleCount(b) < minCount; guard++) {
+        let done = false;
+        for (let r = 0; r < lim && !done; r++) for (let c = 0; c < rowLen(b, r) && !done; c++) {
+          if (b.rows[r][c]) continue;
+          if (r > 0 && !neighbors(b, r, c).some(q => b.rows[q[0]] && b.rows[q[0]][q[1]])) continue;
+          b.rows[r][c] = b.colors[Math.floor(tr2() * b.colors.length)];
+          done = true;
+        }
+        if (!done) break;
+      }
+    }
+    /* 不要讓單一顏色占大半（整盤幾乎同色一發就清一大片，太簡單）：占比超過上限就把多的那色隨機改成最少的顏色 */
+    {
+      const cap = { baby: 0.36, easy: 0.3, normal: 0.23, hard: 0.18 }[level] || 0.3;
+      const cr = mulberry32(hash2(opt.seed, 313));
+      for (let guard = 0; guard < 80; guard++) {
+        const cnt = {}; let total = 0;
+        b.rows.forEach(row => row.forEach(v => { if (isBubble(v)) { cnt[colorOf(v)] = (cnt[colorOf(v)] || 0) + 1; total++; } }));
+        if (!total) break;
+        let top = 0; for (const k2 of Object.keys(cnt)) if (!top || cnt[k2] > cnt[top]) top = +k2;
+        if (cnt[top] <= Math.ceil(total * cap)) break;
+        const low = b.colors.slice().sort((x, y) => (cnt[x] || 0) - (cnt[y] || 0) || x - y)[0];
+        if (low === top) break;
+        const cells = [];
+        b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v) && colorOf(v) === top) cells.push([r, c]); }));
+        const q = cells[Math.floor(cr() * cells.length)];
+        b.rows[q[0]][q[1]] = low | (modOf(b.rows[q[0]][q[1]]) << 4);
+      }
+    }
     /* 星星記號泡泡每局固定 2～3 顆：版型自帶的太多就拿掉多的，不夠就補（用獨立亂數，不影響其他抽籤） */
     {
       const mr = mulberry32(hash2(opt.seed, 271));
@@ -635,7 +680,7 @@
   }
 
   const api = {
-    SQ3, OBST, LINE_ROW, MAX_ROWS, MIN_A, MAX_A, STEP, LEVELS, LEVEL_NAME, DIFF,
+    SQ3, OBST, LINE_ROW, MAX_ROWS, MIN_COUNT, MIN_A, MAX_A, STEP, LEVELS, LEVEL_NAME, DIFF,
     mulberry32, hash2, rand01, clampAngle,
     colorOf, modOf, isBubble, offOf, rowLen, cx, cy, get, neighbors, inBoard, shooterPos,
     cloneBoard, bubbleCount, lowestRow, presentColors,

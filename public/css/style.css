@@ -449,9 +449,9 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .game.side-closed .game-side { display: flex; transform: translateX(-105%); visibility: hidden; box-shadow: none; }
   .game-side { transition: transform .22s, visibility 0s; }
   .game-main { padding-left: calc(8px + var(--safe-l)); }
-  /* 抽屜打開時，關閉鈕在抽屜裡，上方的開關鈕不重複顯示 */
+  /* 抽屜打開時，關閉鈕（雙箭頭）在抽屜標題列裡，上方的開關鈕不重複顯示 */
+  .game:not(.side-closed) .hud .side-toggle { display: none; }
 }
-.game:not(.side-closed) .hud .side-toggle { display: none; }
 /* 多人（3～4 人）：自己的盤面在左側佔滿高度，其他人固定排成右邊一直列（所有裝置、橫直向） */
 .boards.l-main { grid-auto-flow: row; grid-template-columns: minmax(0, 4.4fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .boards.l-main .bslot.mine { grid-column: 1; grid-row: 1; }
@@ -554,4 +554,11 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 @media (min-aspect-ratio: 5/4) and (max-height: 520px) {
   .boards.l-main .opp-col .bt-name { max-width: 3.6em; }
   .boards.l-main .opp-col .btag { gap: 4px; padding-right: 6px; }
+}
+
+/* 資訊欄常駐的寬螢幕：暫停、倒數、收合箭頭（««）排在同一排，標題列不再放按鈕；收合後箭頭回到最左邊（»） */
+@media (min-width: 861px) and (min-aspect-ratio: 1/1) {
+  .game:not(.side-closed) .hud .side-toggle { order: 3; margin-left: auto; }
+  .game:not(.side-closed) .side-close { display: none; }
+  .game.side-closed .hud .side-toggle { order: -1; }
 }

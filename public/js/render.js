@@ -39,7 +39,7 @@
       this.shift = null;                     /* { t0, dur, k } 天花板下降／泡泡落下時，盤面往下滑的動畫 */
       this.pose = 'idle'; this.poseUntil = 0;
       this.aim = 9000; this.showAim = this.mine; this.aimTrace = null; this.aimKey = '';
-      this.hint = null; this.reload = 0; this.swapBump = 0;
+      this.hint = null; this.reload = 0; this.swapBump = 0; this.hoverSwap = false;
       this.scale = 10; this.ox = 0; this.oy = 0; this.cols = 8;
       this.shake = 0; this.winner = false; this.dim = false; this.rainBand = null;
       this.dpr = 1;
@@ -514,7 +514,7 @@
         g.beginPath(); g.arc(nx, ny, 1.45, 0, 7); g.fill(); g.stroke();
         this.item(g, b.nxt, nx, ny, 0.72 + 0.2 * Math.sin(bump * Math.PI));
         /* 交換按鈕：發射台與下一顆之間，立體圓角按鍵（底座＋按鍵面＋高光），按下去會下沉 */
-        if (this.mine) this.drawSwapBtn(g, sp, clamp01((performance.now() - this.swapBump) / 220));
+        if (this.mine) this.drawSwapBtn(g, sp, clamp01((performance.now() - this.swapBump) / 220), this.hoverSwap);
         g.restore();
         if (b.protect > 0) {
           g.save(); g.font = '800 0.75px ' + FONT; g.textAlign = 'center'; g.fillStyle = '#3d9bff'; g.fillText('保護中 ' + b.protect, s.x, sy - 2.4); g.restore();
@@ -585,19 +585,28 @@
     }
 
     /** 立體圓角按鍵 */
-    drawSwapBtn(g, sp, down) {
-      const pressed = down < 1, depth = pressed ? 0.08 : 0.3, off = pressed ? 0.22 : 0;
+    drawSwapBtn(g, sp, down, hover) {
+      const pressed = down < 1, depth = pressed ? 0.08 : 0.3;
+      hover = !!hover && !pressed;                 /* 滑鼠移上去：換成粉紫泡泡風、微微浮起、外圈發光 */
+      const off = pressed ? 0.22 : hover ? -0.14 : 0;
       const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
       g.save();
+      if (hover) {
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+        g.shadowColor = 'rgba(255,111,190,' + (0.55 + 0.25 * pulse) + ')'; g.shadowBlur = 14 + 6 * pulse;
+        rr(sp.x - 0.1, sp.y - 0.1, sp.w + 0.2, sp.h + 0.2, 0.7); g.fillStyle = 'rgba(255,170,220,.35)'; g.fill();
+        g.shadowBlur = 0; g.shadowColor = 'transparent';
+      }
       /* 地面陰影 */
       g.fillStyle = 'rgba(60,30,90,.22)'; rr(sp.x + 0.05, sp.y + 0.38, sp.w, sp.h, 0.6); g.fill();
       /* 底座（深橘色，顯示厚度） */
-      rr(sp.x, sp.y + 0.3, sp.w, sp.h, 0.6); g.fillStyle = '#e0892a'; g.fill(); g.lineWidth = 0.16; g.strokeStyle = '#a85a14'; g.stroke();
+      rr(sp.x, sp.y + 0.3, sp.w, sp.h, 0.6); g.fillStyle = hover ? '#8a4fd6' : '#e0892a'; g.fill(); g.lineWidth = 0.16; g.strokeStyle = hover ? '#5a2fa0' : '#a85a14'; g.stroke();
       /* 按鍵面 */
       const fy = sp.y + off, fh = sp.h - (0.3 - depth) * 0.0;
       const gr = g.createLinearGradient(0, fy, 0, fy + fh);
-      gr.addColorStop(0, pressed ? '#fff2c2' : '#ffffff'); gr.addColorStop(0.55, pressed ? '#ffdf86' : '#fff1bd'); gr.addColorStop(1, pressed ? '#ffc95a' : '#ffd877');
-      rr(sp.x, fy, sp.w, fh, 0.6); g.fillStyle = gr; g.fill(); g.lineWidth = 0.18; g.strokeStyle = '#f2a33a'; g.stroke();
+      if (hover) { gr.addColorStop(0, '#ffe3f3'); gr.addColorStop(0.55, '#ffb3dc'); gr.addColorStop(1, '#ff8ccb'); }
+      else { gr.addColorStop(0, pressed ? '#fff2c2' : '#ffffff'); gr.addColorStop(0.55, pressed ? '#ffdf86' : '#fff1bd'); gr.addColorStop(1, pressed ? '#ffc95a' : '#ffd877'); }
+      rr(sp.x, fy, sp.w, fh, 0.6); g.fillStyle = gr; g.fill(); g.lineWidth = 0.18; g.strokeStyle = hover ? '#c64fa6' : '#f2a33a'; g.stroke();
       /* 上緣高光與內框 */
       g.globalAlpha = 0.85; g.strokeStyle = '#fff'; g.lineWidth = 0.12; g.lineCap = 'round';
       g.beginPath(); g.moveTo(sp.x + 0.45, fy + 0.2); g.lineTo(sp.x + sp.w - 0.45, fy + 0.2); g.stroke();
@@ -610,7 +619,7 @@
       };
       g.lineCap = 'round'; g.lineJoin = 'round';
       g.strokeStyle = '#fff'; g.lineWidth = 0.4; arrows();
-      g.strokeStyle = pressed ? '#ff5fa8' : '#6a46b8'; g.lineWidth = 0.22; arrows();
+      g.strokeStyle = pressed ? '#ff5fa8' : hover ? '#7a2fc4' : '#6a46b8'; g.lineWidth = hover ? 0.27 : 0.22; arrows();
       g.restore();
     }
 

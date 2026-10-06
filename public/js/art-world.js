@@ -826,6 +826,8 @@
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
     robot: '<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V5"/><circle cx="12" cy="3.8" r="1.2"/><path d="M9 12.5v2M15 12.5v2M9.5 17h5M3 12v4M21 12v4"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
+    panelHide: '<path d="M12 6l-6 6 6 6M19 6l-6 6 6 6"/>',
+    panelShow: '<path d="M5 6l6 6-6 6M12 6l6 6-6 6"/>',
     flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/>',
     list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
     trophy: '<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/><path d="M12 15v3M8 21h8M9 18h6"/>',

@@ -15,13 +15,17 @@ fs.mkdirSync(SHOTS, { recursive: true });
 let pass = 0, fail = 0;
 const ok = (c, name, extra) => { if (c) { pass++; console.log('  ok  ' + name); } else { fail++; console.log('  FAIL ' + name + (extra ? '  ' + extra : '')); } };
 
-const VIEWS = [
+const GO = Number(process.env.GAME_GO_IN) || 3000;   /* 倒數毫秒；快速測試用環境變數縮短 */
+const FULL = !!process.env.FULL;
+const ALL_VIEWS = [
   { name: 'desktop', w: 1366, h: 768 },
   { name: 'tablet-land', w: 1180, h: 820 },
   { name: 'tablet-port', w: 820, h: 1180 },
   { name: 'phone-port', w: 390, h: 844 },
   { name: 'phone-land', w: 844, h: 390 }
 ];
+/* 快速模式（預設）：桌機、平板直向、手機直向三個尺寸；FULL=1 才跑全部 5 種 */
+const VIEWS = FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
 
 async function waitHealth(base) {
   for (let i = 0; i < 40; i++) { try { const r = await fetch(base + '/health'); if (r.ok) return; } catch (e) { /* 等待 */ } await new Promise(r => setTimeout(r, 150)); }
@@ -39,6 +43,7 @@ async function waitHealth(base) {
   const errs = [];
   const mk = async (v) => {
     const ctx = await br.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: v.name.startsWith('phone') || v.name.startsWith('tablet') });
+    await ctx.addInitScript('window.__GO_IN = ' + GO);
     const pg = await ctx.newPage();
     pg.on('pageerror', e => errs.push(v.name + ' PAGEERR ' + e.message));
     pg.on('console', m => { if (m.type() === 'error') errs.push(v.name + ' CONSOLE ' + m.text()); });
@@ -90,7 +95,7 @@ async function waitHealth(base) {
     await pg.evaluate(() => { App.store.solo.opponents = 1; App.go('solo'); });
     await pg.click('text=開始遊戲');
     await pg.waitForSelector('.bslot canvas');
-    await pg.waitForTimeout(3300);
+    await pg.waitForTimeout(GO + 300);
     await pg.click('#gear');
     await pg.waitForSelector('.dialog');
     ok(await pg.evaluate(() => !!document.querySelector('.dialog .sw') && !!document.querySelector('.dialog .vol')), '設定彈窗含音樂／音效開關與音量滑桿');

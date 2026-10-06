@@ -40,7 +40,7 @@ function twoPlayers(patch, keepRandom) {
   x.send('aaaaaaaa1', { type: 'create', name: 'A', roomName: '測試房' });
   const id = x.room('aaaaaaaa1').id;
   x.send('bbbbbbbb2', { type: 'join', room: id, name: 'B', dragon: 'cloud' });
-  /* 隨機版型約 8% 一發直射就能全清（見 README 的已知問題），對局測試固定用 checker 讓結果穩定 */
+  /* 對局測試固定用 checker 讓結果穩定（隨機版型也已限制一發最多消 34%，見 README） */
   x.send('aaaaaaaa1', { type: 'settings', patch: Object.assign(keepRandom ? {} : { layout: 'checker' }, patch || {}) });
   x.send('bbbbbbbb2', { type: 'ready', value: true });
   return { x, id };
