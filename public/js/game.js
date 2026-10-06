@@ -111,12 +111,21 @@
       this.sideBadge = h('span', { class: 'badge', hidden: true }, '0');
       this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': '展開資訊欄', 'aria-expanded': 'false', onClick: () => this.toggleSide() },
         this.sideIcon = h('span', { html: Art.icon('panelShow', 22) }), this.sideBadge);
-      this.timerEl = h('div', { class: 'hud-timer', role: 'timer' }, '0:00');
+      this.timerEl = h('div', { class: 'board-time', role: 'timer' }, '0:00');
       this.modeEl = h('span', { class: 'pill' }, MODE_NAME[this.cfg.mode] + '・' + R.LEVEL_NAME[this.cfg.level]);
-      this.exitBtn = this.kind === 'solo'
-        ? iconBtn('pause', '暫停', () => this.pauseMenu())
+      const solo = this.kind === 'solo';
+      this.exitBtn = solo
+        ? iconBtn('pause', '暫停', () => this.pauseMenu(), 'sm')
         : iconBtn('back', '離開對局', () => this.confirmExit());
-      this.hud = h('div', { class: 'hud' }, this.sideBtn, this.exitBtn, h('div', { class: 'hud-mid' }, this.timerEl, this.modeEl),
+      /* 時間（單機連同暫停鍵）掛在主盤面正上方中間，造型跟著地圖主題 */
+      const th = this.theme;
+      this.timerBox = h('div', { class: 'board-timer t-' + (th.set || 'default') }, this.timerEl, solo ? this.exitBtn : null);
+      this.timerBox.style.setProperty('--f0', th.frame[0]); this.timerBox.style.setProperty('--f1', th.frame[1]);
+      this.timerBox.style.setProperty('--ac', th.accent);
+      const mainView = this.views[order[0]];
+      mainView.el.appendChild(this.timerBox);
+      if (mainView.el.parentNode) mainView.el.parentNode.classList.add('has-timer');
+      this.hud = h('div', { class: 'hud' }, this.sideBtn, solo ? null : this.exitBtn, h('div', { class: 'hud-mid' }, this.modeEl),
         this.spectator ? h('span', { class: 'pill sun' }, '觀戰中') : null);
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
       this.overlay = h('div', { class: 'g-overlay', 'aria-live': 'assertive' });

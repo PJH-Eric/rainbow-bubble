@@ -103,7 +103,7 @@ async function waitHealth(base) {
     await pg.keyboard.press('Escape');
     await pg.waitForTimeout(300);
     ok(await pg.evaluate(() => !document.querySelector('.dialog')), 'Esc 可關閉設定彈窗');
-    await pg.click('.hud .icon-btn[aria-label="暫停"]');
+    await pg.click('.board-timer .icon-btn[aria-label="暫停"]');
     await pg.waitForSelector('.dialog');
     const t1 = await pg.evaluate(() => App.game.mt());
     await pg.waitForTimeout(800);

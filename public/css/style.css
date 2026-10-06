@@ -414,8 +414,62 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 .game-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: calc(8px + var(--safe-t)) calc(10px + var(--safe-r)) calc(8px + var(--safe-b)) 10px; gap: 6px; position: relative; }
 .hud { display: flex; align-items: center; gap: 8px; padding-right: 58px; min-height: 48px; flex: none; }
 .hud-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.hud-timer { font-size: 1.5rem; font-weight: 900; padding: 0 16px; border-radius: 999px; background: #fff; border: 3px solid #fff; box-shadow: 0 4px 0 var(--line); font-variant-numeric: tabular-nums; color: var(--ink); }
-.hud-timer.low { background: #ffe1e6; color: #d93d4a; animation: pulse .6s ease-in-out infinite; }
+/* ---- 盤面正上方中間的計時牌（造型跟著地圖主題 t-<set>；--f0/--f1 外框色、--ac 主題強調色） ---- */
+.bslot.has-timer > .board-wrap { inset: 36px 0 0 0; }
+.board-timer { position: absolute; left: 50%; top: calc(var(--ctop, 0px) + var(--fpad, 8px)); transform: translate(-50%, -100%); z-index: 4; pointer-events: none; }
+.board-timer .icon-btn { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); pointer-events: auto; }
+.board-timer .icon-btn:active { transform: translateY(calc(-50% + 3px)); }
+.board-time {
+  position: relative; min-width: 5.4em; padding: 6px 20px 5px; text-align: center; white-space: nowrap;
+  font-size: 1.45rem; font-weight: 900; line-height: 1.15; font-variant-numeric: tabular-nums;
+  color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .22);
+  background: linear-gradient(180deg, var(--f0, #8fe39a), var(--f1, #3fa863));
+  border: 3px solid #fff; border-radius: 18px 18px 12px 12px;
+  box-shadow: 0 4px 0 rgba(40, 30, 90, .18), 0 8px 16px rgba(40, 30, 90, .18), inset 0 3px 0 rgba(255, 255, 255, .45);
+}
+.board-time::before, .board-time::after { position: absolute; top: 50%; transform: translateY(-50%); font-size: .8em; line-height: 1; text-shadow: none; pointer-events: none; }
+.board-time::before { left: -.55em; }
+.board-time::after { right: -.55em; }
+/* 彩虹草原：白底彩虹邊、兩側小花 */
+.t-default .board-time { color: #2f8f52; text-shadow: 0 2px 0 #fff; border: 4px solid transparent;
+  background: linear-gradient(#fff, #f2fff4) padding-box, linear-gradient(90deg, #ff7aa8, #ffcf3a, #46d37f, #4aa8ff, #a678ff) border-box; }
+.t-default .board-time::before, .t-default .board-time::after { content: "✿"; color: #ff7aa8; }
+.t-default .board-time::after { color: #4aa8ff; }
+/* 暖暖海灘：木板告示牌、海星 */
+.t-beach .board-time { color: #7a4514; text-shadow: 0 2px 0 rgba(255, 240, 200, .8); border-color: #fff3d2;
+  background: repeating-linear-gradient(180deg, #f2c27a 0 9px, #e3a85c 9px 11px); }
+.t-beach .board-time::before { content: "★"; color: #ff8a5c; }
+.t-beach .board-time::after { content: "☀"; color: #ffb03a; }
+/* 糖果山：條紋糖果邊、兩側糖果紙 */
+.t-candy .board-time { color: #d9569a; text-shadow: 0 2px 0 #fff; border: 5px solid transparent; border-radius: 999px;
+  background: linear-gradient(#fff, #fff0f8) padding-box, repeating-linear-gradient(45deg, #ff9ccb 0 7px, #fff 7px 14px) border-box; }
+.t-candy .board-time::before, .t-candy .board-time::after { content: ""; width: 0; height: 0; border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+.t-candy .board-time::before { left: -16px; border-right: 14px solid #c06bff; }
+.t-candy .board-time::after { right: -16px; border-left: 14px solid #c06bff; }
+/* 童話森林：木頭牌子、葉子 */
+.t-forest .board-time { color: #fffbe0; border-color: #e9f5c8; text-shadow: 0 2px 0 #4d2f12;
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .05) 0 3px, transparent 3px 11px), linear-gradient(180deg, #b07a43, #7d5226); }
+.t-forest .board-time::before, .t-forest .board-time::after { content: "❦"; color: #6fbf4a; }
+/* 星星夜空：深藍夜色、金色字與光暈 */
+.t-night .board-time { color: #ffd23a; text-shadow: 0 0 8px rgba(255, 210, 58, .7); border-color: #b9a6ff;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .25) 0 2px, transparent 3px), radial-gradient(circle at 75% 70%, rgba(255, 255, 255, .3) 0 1.5px, transparent 2.5px), linear-gradient(180deg, #3a3fa0, #1f2366);
+  box-shadow: 0 0 16px rgba(185, 166, 255, .65), 0 4px 0 rgba(20, 15, 60, .35); }
+.t-night .board-time::before, .t-night .board-time::after { content: "✦"; color: #ffe27a; }
+/* 海底世界：玻璃泡泡、小氣泡 */
+.t-ocean .board-time { color: #1a6fb0; text-shadow: 0 2px 0 #fff; border-color: #fff; border-radius: 999px;
+  background: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, .9) 0 4px, transparent 5px), linear-gradient(180deg, rgba(235, 252, 255, .95), rgba(127, 224, 238, .95)); }
+.t-ocean .board-time::before, .t-ocean .board-time::after { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; background: rgba(127, 224, 238, .6); }
+.t-ocean .board-time::before { left: -16px; top: 30%; }
+.t-ocean .board-time::after { right: -18px; top: 65%; width: 14px; height: 14px; }
+/* 日月光：夜到黃昏的漸層、金邊、日與月 */
+.t-sunmoon .board-time { color: #fff4c0; border-color: #ffd36a; text-shadow: 0 2px 0 rgba(60, 30, 80, .5);
+  background: linear-gradient(90deg, #2c2a7a, #8a4f8f 50%, #f08a4c); }
+.t-sunmoon .board-time::before { content: "☾"; color: #ffe9a8; }
+.t-sunmoon .board-time::after { content: "☀"; color: #ffd36a; }
+/* 最後 15 秒：所有主題都變紅並跳動 */
+.board-time.low { color: #fff; text-shadow: 0 2px 0 #a31d33; border-color: #fff; background: linear-gradient(180deg, #ff7b8c, #e2394f) !important; animation: tick-pulse .6s ease-in-out infinite; }
+@keyframes tick-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .board-time.low { animation: none; } }
 .boards { flex: 1 1 0; min-height: 0; min-width: 0; display: flex; gap: 14px; align-items: stretch; justify-content: center; }
 .bslot { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
 .board-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
@@ -464,11 +518,14 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 }
 @media (max-width: 560px) {
   .hud-mid .pill { display: none; }
-  .hud-timer { font-size: 1.2rem; padding: 0 12px; }
+  .board-time { font-size: 1.2rem; padding: 5px 14px 4px; }
+  .bslot.has-timer > .board-wrap { inset: 32px 0 0 0; }
 }
 @media (max-height: 460px) and (orientation: landscape) {
   .hud { min-height: 40px; }
-  .hud-timer { font-size: 1.1rem; }
+  .board-time { font-size: 1.05rem; padding: 3px 12px 2px; }
+  .bslot.has-timer > .board-wrap { inset: 28px 0 0 0; }
+  .board-timer .icon-btn.sm { width: 34px; height: 34px; }
   .result-dragon { display: none; }
 }
 
@@ -505,7 +562,7 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 .toast { max-width: 100%; }
 @media (max-width: 560px) { .banner { top: calc(64px + var(--safe-t)); font-size: .92rem; } }
 /* 標籤／按鈕／膠囊一律單行；放不下時由外層整顆換行或捲動，不拆字 */
-.pill, .chip, .seg-btn, .key, .status, .badge, .stat-tile span, .stat span, .sum-name, .dd, .dd-cur, .more-btn, .lobby-home-link, .hud-timer, .btag, .bt-n, .rank-row .no, .stepper-val, .field > .label, .ai-row .name, .animal-opt, .seat-tags .pill { white-space: nowrap; }
+.pill, .chip, .seg-btn, .key, .status, .badge, .stat-tile span, .stat span, .sum-name, .dd, .dd-cur, .more-btn, .lobby-home-link, .board-time, .btag, .bt-n, .rank-row .no, .stepper-val, .field > .label, .ai-row .name, .animal-opt, .seat-tags .pill { white-space: nowrap; }
 .btn .btn-label, .btn { white-space: nowrap; }
 .btn .btn-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

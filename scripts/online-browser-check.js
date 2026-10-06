@@ -5,7 +5,7 @@
 'use strict';
 const { spawn } = require('child_process');
 const path = require('path');
-const { chromium } = require('/opt/npm-tools/node_modules/playwright');
+const { chromium } = require(require('fs').existsSync('/opt/npm-tools/node_modules/playwright') ? '/opt/npm-tools/node_modules/playwright' : 'playwright');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.OB_PORT) || 3199;
