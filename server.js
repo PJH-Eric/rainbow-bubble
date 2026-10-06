@@ -38,6 +38,7 @@ function createServer(opt) {
 
   const hub = createHub({
     now: opt.now,
+    random: opt.random,
     emit(key, msg) { const s = sockets.get(key); if (s && s.alive) s.sendJSON(msg); }
   });
 

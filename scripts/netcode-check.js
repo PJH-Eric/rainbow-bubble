@@ -16,6 +16,7 @@
  */
 'use strict';
 const { createServer } = require('../server.js');
+const Rules = require('../public/js/rules.js');
 const MatchSnap = require('../public/js/matchsnap.js');
 const { client, attachMatch, boardHashes, wait } = require('../tests/wsclient.js');
 
@@ -28,7 +29,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 (async () => {
   let server = null, hub = null, base = (process.env.SERVER || '').replace(/\/+$/, '');
   if (!base) {
-    const s = createServer({ allowOrigin: '*' });
+    /* 本機伺服器用固定亂數：盤面種子固定，避免偶爾抽到很快就被清光的盤面（對局提早結束，測試誤判） */
+    const s = createServer({ allowOrigin: '*', random: Rules.mulberry32(20261006) });
     server = s.server; hub = s.hub;
     await new Promise(r => server.listen(0, '127.0.0.1', r));
     base = 'http://127.0.0.1:' + server.address().port;
@@ -79,8 +81,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const hA = boardHashes(A.m), hB = boardHashes(B.m), hS = boardHashes(S.m);
   ok(same(hA, hB) && same(hA, hS), '三個客戶端的盤面雜湊一致：' + hA.join(', '));
   if (hub) {
-    const srv = [...hub._rooms.values()][0].match.m;
-    ok(same(hA, boardHashes(srv)), '與伺服器上的對局雜湊相同');
+    const room = [...hub._rooms.values()][0];
+    ok(room && room.match && same(hA, boardHashes(room.match.m)), '與伺服器上的對局雜湊相同');
   }
   ok(A.stats.mismatch + B.stats.mismatch + S.stats.mismatch === 0, 'hash 對帳沒有不一致（對帳 ' + A.stats.hashes + '／' + B.stats.hashes + '／' + S.stats.hashes + ' 次，因 seq 還沒追上而略過 ' + (A.stats.skipped + B.stats.skipped + S.stats.skipped) + ' 次）');
   /* 向伺服器要一份完整快照，與本機逐位元相同 */

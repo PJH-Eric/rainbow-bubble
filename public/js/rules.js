@@ -68,7 +68,7 @@
     }
   })();
   /* 開局泡泡數量下限（版型本身不夠的會從上往下補泡泡） */
-  const MIN_COUNT = { baby: 45, easy: 60, normal: 72, hard: 84 };
+  const MIN_COUNT = { baby: 40, easy: 50, normal: 64, hard: 76 };
   const clampAngle = a => { a = Math.round(a); return a < MIN_A ? MIN_A : a > MAX_A ? MAX_A : a; };
 
   /* ---------- 格子工具 ---------- */
