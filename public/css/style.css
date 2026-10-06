@@ -416,6 +416,7 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 .hud-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 /* ---- 盤面正上方中間的計時牌（造型跟著地圖主題 t-<set>；--f0/--f1 外框色、--ac 主題強調色） ---- */
 .bslot.has-timer > .board-wrap { inset: 36px 0 0 0; }
+.bslot.has-timer.timer-stack > .board-wrap { inset: 82px 0 0 0; }   /* 名牌一列、計時牌一列（fitTimer 判斷擠不下才加） */
 .board-timer { position: absolute; left: 50%; top: calc(var(--ctop, 0px) + var(--fpad, 8px)); transform: translate(-50%, -100%); z-index: 4; pointer-events: none; }
 .board-timer .icon-btn { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); pointer-events: auto; }
 .board-timer .icon-btn:active { transform: translateY(calc(-50% + 3px)); }
@@ -520,11 +521,13 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .hud-mid .pill { display: none; }
   .board-time { font-size: 1.2rem; padding: 5px 14px 4px; }
   .bslot.has-timer > .board-wrap { inset: 32px 0 0 0; }
+  .bslot.has-timer.timer-stack > .board-wrap { inset: 74px 0 0 0; }
 }
 @media (max-height: 460px) and (orientation: landscape) {
   .hud { min-height: 40px; }
   .board-time { font-size: 1.05rem; padding: 3px 12px 2px; }
   .bslot.has-timer > .board-wrap { inset: 28px 0 0 0; }
+  .bslot.has-timer.timer-stack > .board-wrap { inset: 66px 0 0 0; }
   .board-timer .icon-btn.sm { width: 34px; height: 34px; }
   .result-dragon { display: none; }
 }

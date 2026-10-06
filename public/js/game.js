@@ -84,6 +84,7 @@
       const order = [];
       if (this.spectator) for (let i = 0; i < n; i++) order.push(i);
       else { order.push(this.slot); for (let i = 0; i < n; i++) if (i !== this.slot) order.push(i); }
+      this.timerSlot = order[0];
       const mainLayout = !this.spectator && n >= 3;
       this.boardsEl.classList.add(mainLayout ? 'l-main' : (n === 2 ? 'l-two' : n === 1 ? 'l-one' : 'l-grid'), 'n' + n);
       const sets = () => this.store;
@@ -104,7 +105,7 @@
           if (!this.oppCol) { this.oppCol = h('div', { class: 'opp-col' }); this.boardsEl.appendChild(this.oppCol); }
           this.oppCol.appendChild(slotEl);
         } else this.boardsEl.appendChild(slotEl);
-        if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => v.resize()); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
+        if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => { v.resize(); if (this.timerBox && s === this.timerSlot) this.fitTimer(); }); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
       });
 
       /* 上方狀態列 */
@@ -125,6 +126,7 @@
       const mainView = this.views[order[0]];
       mainView.el.appendChild(this.timerBox);
       if (mainView.el.parentNode) mainView.el.parentNode.classList.add('has-timer');
+      root.setTimeout(() => this.fitTimer(), 60);
       this.hud = h('div', { class: 'hud' }, this.sideBtn, solo ? null : this.exitBtn, h('div', { class: 'hud-mid' }, this.modeEl),
         this.spectator ? h('span', { class: 'pill sun' }, '觀戰中') : null);
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
@@ -137,6 +139,17 @@
       if (root.matchMedia && root.matchMedia('(min-width: 861px) and (min-aspect-ratio: 1/1)').matches) { this.root.classList.remove('side-closed'); this.syncSideIcon(); }
       if (!this.spectator) this.boardsEl.classList.add('can-play');
       this.renderSummary();
+    }
+
+    /** 計時牌和玩家名牌擠不下同一列（窄盤面、長名字）時，盤面往下讓出一列：名牌第一列、計時牌第二列 */
+    fitTimer() {
+      const v = this.views[this.timerSlot];
+      const slot = this.timerBox && this.timerBox.closest('.bslot');
+      const tag = slot && slot.querySelector('.btag');
+      if (!v || !tag) return;
+      slot.classList.remove('timer-stack'); v.resize();
+      const a = this.timerBox.getBoundingClientRect(), b = tag.getBoundingClientRect();
+      if (a.left < b.right + 6 && a.right > b.left - 6 && a.top < b.bottom + 2 && a.bottom > b.top) { slot.classList.add('timer-stack'); v.resize(); }
     }
 
     /** 資訊欄開關鈕：開著顯示「收起」雙箭頭（«），關著顯示「展開」雙箭頭（»） */
@@ -397,6 +410,8 @@
         this.timerEl.classList.toggle('low', left < 15000 && !this.over);
       } else this.timerEl.textContent = '悠閒玩';
       this.boardsEl.querySelectorAll('.bt-n').forEach(el => { const s = +el.getAttribute('data-n'); el.textContent = m.boards[s].cleared; });
+      const tagKey = String(m.boards[this.timerSlot].cleared).length;      /* 分數位數變多，名牌變寬，要重新量一次 */
+      if (tagKey !== this._tagKey) { this._tagKey = tagKey; this.fitTimer(); }
       this.renderSummary();
       if (this.pingEl) {
         const ms = Math.round((root.Net.rtt || 0) * 1000);
