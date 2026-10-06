@@ -24,6 +24,22 @@
 
   /** 每位玩家的盤面種子：第 0 位沿用對局 seed，其他人各自混出不同的 seed（顏色、排版、發射順序都不一樣） */
   function boardSeed(seed, i) { return i === 0 ? seed >>> 0 : (Math.imul((seed >>> 0) ^ (i * 0x9E3779B1), 0x85EBCA6B) ^ Math.imul(i + 1, 0xC2B2AE35)) >>> 0; }
+  /** 每人盤面不同，但泡泡數、星星數、獎勵泡泡數都跟第 0 位一樣（公平） */
+  function boardsFor(cfg, n) {
+    const base = { level: cfg.level, layoutId: cfg.layoutId };
+    const first = Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, 0) }, base));
+    const marks = m => { let k = 0; first.rows.forEach(row => row.forEach(v => { if (Rules.isBubble(v) && Rules.modOf(v) === m) k++; })); return k; };
+    const same = { count: Rules.bubbleCount(first), stars: marks(1), bonus: marks(2) };
+    let out = [first];
+    for (let i = 1; i < n; i++) out.push(Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, i) }, base, same)));
+    /* 有人的版型裝不下那麼多顆：大家一起降到最少的那個數量（只會往下拿掉，一定做得到） */
+    const min = Math.min.apply(null, out.map(b => Rules.bubbleCount(b)));
+    if (min < same.count) {
+      same.count = min;
+      out = out.map((b, i) => Rules.bubbleCount(b) === min ? b : Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, i) }, base, same)));
+    }
+    return out;
+  }
   function create(cfg) {
     const players = cfg.players.map((p, i) => ({
       slot: i, name: p.name || '', dragon: p.dragon || 'rainbow', kind: p.kind || 'human', aiLevel: p.aiLevel || null
@@ -33,7 +49,7 @@
       level: cfg.level || 'normal', seed: cfg.seed >>> 0, layoutId: cfg.layoutId || 'random', themeId: cfg.themeId | 0,
       duration: cfg.duration == null ? 180000 : cfg.duration,
       players,
-      boards: players.map((p, i) => Rules.newBoard({ seed: boardSeed(cfg.seed, i), level: cfg.level, layoutId: cfg.layoutId })),
+      boards: boardsFor(cfg, players.length),
       pending: players.map(() => []),
       reachedAt: players.map(() => 0),
       lastAttacker: players.map(() => -1),

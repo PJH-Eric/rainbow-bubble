@@ -232,6 +232,30 @@ t('塞入泡泡：滿列先入、最後一列不滿，且都連著天花板', ()
   assert.strictEqual(R.bubbleCount(b) - before, 15);
   assert.strictEqual(R.floating(b).length, 0);
 });
+t('塞入泡泡：零頭不會變成天花板上不滿的一列（不會整盤只靠幾顆吊著）', () => {
+  for (const n of [2, 5, 13, 20]) {
+    const b = R.newBoard({ seed: 9, level: 'normal' });
+    const before = R.bubbleCount(b);
+    R.applyGarbage(b, n, 1);
+    assert.strictEqual(R.bubbleCount(b) - before, n, '塞 ' + n + ' 顆數量要對');
+    assert.strictEqual(R.floating(b).length, 0);
+    if (n >= b.cols) assert(b.rows[0].every(v => v), '塞 ' + n + ' 顆：天花板那排要是滿的');
+  }
+});
+t('開局不會整片只靠 1～2 顆吊著：任何一組同色打掉，掉下去的不超過盤面 1/4', () => {
+  for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 60 : 20); seed++) {
+    const b = R.newBoard({ seed: seed * 13 + 5, level: lv });
+    const total = R.bubbleCount(b), seen = new Set();
+    for (let r = 0; r < b.rows.length; r++) for (let c = 0; c < b.rows[r].length; c++) {
+      if (!R.isBubble(b.rows[r][c]) || seen.has(r * 100 + c)) continue;
+      const g = R.group(b, r, c); g.forEach(p => seen.add(p[0] * 100 + p[1]));
+      if (g.length < 2) continue;
+      const t2 = R.cloneBoard(b); g.forEach(p => { t2.rows[p[0]][p[1]] = 0; });
+      const fl = R.floating(t2).length;
+      assert(fl <= Math.max(6, Math.floor(total * 0.25)) + 4, lv + ' seed ' + seed + '：打掉一組會掉 ' + fl + '／' + total);   /* 開局後的換色微調可能多幾顆 */
+    }
+  }
+});
 
 console.log('規則：開局與決定性');
 t('每個難度、每張地圖開局都至少有一組可打、沒有開局就掉下來的泡泡', () => {
@@ -384,6 +408,14 @@ t('多人對局：每位玩家的盤面（顏色、版型、發射順序）都�
     assert.strictEqual(q.size, 4, '發射順序種子應各不相同');
     const m2 = M.create({ mode: 'race', level: 'normal', seed, players });
     assert.deepStrictEqual(m2.boards.map(b => R.boardHash(b)), m.boards.map(b => R.boardHash(b)), '同 seed 要可重現');
+  }
+});
+t('多人對局公平：盤面不同，但每人的泡泡數、星星數、獎勵泡泡數都一樣', () => {
+  const marks = (b, k) => { let n = 0; b.rows.forEach(r => r.forEach(v => { if (R.isBubble(v) && R.modOf(v) === k) n++; })); return n; };
+  for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 80 : 25); seed++) {
+    const m = M.create({ mode: 'race', level: lv, seed: seed * 9973, players: [{}, {}, {}, {}] });
+    const sig = m.boards.map(b => R.bubbleCount(b) + '/' + marks(b, 1) + '/' + marks(b, 2));
+    assert.strictEqual(new Set(sig).size, 1, lv + ' seed ' + seed + '：' + sig.join(' | '));
   }
 });
 

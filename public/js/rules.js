@@ -221,12 +221,16 @@
       while (row.length < rowLen(b, r)) row.push(0);
       b.rows.push(row);
     });
+    /* 多人對戰指定數量（opt.count）：比目標多就從最下面一排開始拿掉（連帶懸空的也拿掉），不夠的由下面的補足處理 */
+    const target = opt.count > 0 ? opt.count : minCount;
+    const tr1 = mulberry32(hash2(opt.seed, 811));
+    if (opt.count > 0) trimTo(b, target, tr1);
     /* 數量補足：版型的泡泡不到下限，就從上往下把「貼著現有泡泡或天花板」的空格補上去（保持原本的形狀，只是更滿） */
     {
       const tr2 = mulberry32(hash2(opt.seed, 919));
       const lim = Math.min(cfg.rows[1], MAX_ROWS);
       for (let r = 0; r < lim; r++) ensureRow(b, r);
-      for (let guard = 0; guard < 400 && bubbleCount(b) < minCount; guard++) {
+      for (let guard = 0; guard < 400 && bubbleCount(b) < target; guard++) {
         let done = false;
         for (let r = 0; r < lim && !done; r++) for (let c = 0; c < rowLen(b, r) && !done; c++) {
           if (b.rows[r][c]) continue;
@@ -258,12 +262,23 @@
     /* 星星記號泡泡每局固定 2～3 顆：版型自帶的太多就拿掉多的，不夠就補（用獨立亂數，不影響其他抽籤） */
     {
       const mr = mulberry32(hash2(opt.seed, 271));
-      const want = 2 + (mr() < 0.36 ? 1 : 0);
+      const draw = 2 + (mr() < 0.36 ? 1 : 0);
+      const want = opt.stars >= 0 ? opt.stars : draw;     /* 多人對戰：星星數跟第一位玩家一樣 */
       const marked = [], plain = [];
       b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 1) marked.push([r, c]); else if (modOf(v) === 0) plain.push([r, c]); } }));
       while (marked.length > want) { const q = marked.splice(Math.floor(mr() * marked.length), 1)[0]; b.rows[q[0]][q[1]] &= 15; }
       while (marked.length < want && plain.length) { const q = plain.splice(Math.floor(mr() * plain.length), 1)[0]; b.rows[q[0]][q[1]] |= (1 << 4); marked.push(q); }
+      /* 多人對戰：獎勵泡泡（算 3 顆）數量也跟第一位玩家一樣 */
+      if (opt.bonus >= 0) {
+        const bonus = [], rest = [];
+        b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 2) bonus.push([r, c]); else if (modOf(v) === 0) rest.push([r, c]); } }));
+        while (bonus.length > opt.bonus) { const q = bonus.splice(Math.floor(mr() * bonus.length), 1)[0]; b.rows[q[0]][q[1]] &= 15; }
+        while (bonus.length < opt.bonus && rest.length) { const q = rest.splice(Math.floor(mr() * rest.length), 1)[0]; b.rows[q[0]][q[1]] |= (2 << 4); bonus.push(q); }
+      }
     }
+    /* 整片只靠 1～2 顆吊著的補上接點（會多出幾顆，多人對戰再修回指定數量） */
+    ensureAnchored(b, mulberry32(hash2(opt.seed, 1201)));
+    if (opt.count > 0) trimTo(b, target, tr1);
     ensureStartable(b, rng);
     b.cur = genItem(b, 0);
     b.nxt = genItem(b, 1);
@@ -297,6 +312,66 @@
       const others = b.colors.filter(c => c !== colorOf(old));
       if (!others.length) return;
       set(b, q.r, q.c, others[Math.floor(rng() * others.length)] | (modOf(old) << 4));
+    }
+  }
+
+  /** 從最下面一排開始拿掉泡泡（連帶懸空的也拿掉）直到剩 target 顆；盡量不拿星星、獎勵泡泡 */
+  function trimTo(b, target, rnd) {
+    for (let guard = 0; guard < 400 && bubbleCount(b) > target; guard++) {
+      let low = -1;
+      b.rows.forEach((row, r) => { if (row.some(isBubble)) low = r; });
+      const all = [], plain = [];
+      b.rows[low].forEach((v, c) => { if (isBubble(v)) { all.push(c); if (!modOf(v)) plain.push(c); } });
+      const cells = plain.length ? plain : all;
+      b.rows[low][cells[Math.floor(rnd() * cells.length)]] = 0;
+      for (const p of floating(b)) set(b, p[0], p[1], 0);
+    }
+  }
+  /** 打掉這一組同色之後會跟著掉下去的泡泡 */
+  function dropsIfRemoved(b, g) {
+    const t = cloneBoard(b);
+    for (const p of g) set(t, p[0], p[1], 0);
+    return floating(t);
+  }
+  /* 避免「整片只靠 1～2 顆吊著」：任何一組能一發打掉的同色（2 顆以上）被打掉後，掉下去的不能超過盤面的 1/4。
+   * 做法：在掉下去那片的旁邊補一顆泡泡，把它接到天花板或接到不會掉的泡泡上；接不起來就把那一組換掉一顆顏色。 */
+  function ensureAnchored(b, rng) {
+    for (let guard = 0; guard < 60; guard++) {
+      const total = bubbleCount(b);
+      const limit = Math.max(6, Math.floor(total * 0.25));
+      const seen = new Set();
+      let worst = null;
+      for (let r = 0; r < b.rows.length; r++) for (let c = 0; c < b.rows[r].length; c++) {
+        if (!isBubble(b.rows[r][c]) || seen.has(key(r, c))) continue;
+        const g = group(b, r, c);
+        g.forEach(p => seen.add(key(p[0], p[1])));
+        if (g.length < 2) continue;
+        const fl = dropsIfRemoved(b, g);
+        if (fl.length > limit && (!worst || fl.length > worst.fl.length)) worst = { g, fl };
+      }
+      if (!worst) return;
+      const gone = new Set(worst.g.concat(worst.fl).map(p => key(p[0], p[1])));
+      const col = colorOf(get(b, worst.g[0][0], worst.g[0][1]));
+      let bridge = null;
+      for (const p of worst.fl) {
+        for (const q of neighbors(b, p[0], p[1])) {
+          if (b.rows[q[0]] && b.rows[q[0]][q[1]]) continue;
+          if (q[0] >= LINE_ROW - 2) continue;
+          const holds = q[0] === 0 || neighbors(b, q[0], q[1]).some(n => b.rows[n[0]] && b.rows[n[0]][n[1]] && !gone.has(key(n[0], n[1])));
+          if (holds && (!bridge || q[0] < bridge[0])) bridge = q;
+        }
+      }
+      if (bridge) {
+        ensureRow(b, bridge[0]);
+        const others = b.colors.filter(x => x !== col);
+        b.rows[bridge[0]][bridge[1]] = others[Math.floor(rng() * others.length)];
+      } else {
+        const p = worst.g[Math.floor(rng() * worst.g.length)];
+        const old = get(b, p[0], p[1]);
+        const others = b.colors.filter(x => x !== col && !neighbors(b, p[0], p[1]).some(n => isBubble(get(b, n[0], n[1])) && colorOf(get(b, n[0], n[1])) === x));
+        const pick = others.length ? others : b.colors.filter(x => x !== col);
+        set(b, p[0], p[1], pick[Math.floor(rng() * pick.length)] | (modOf(old) << 4));
+      }
     }
   }
 
@@ -614,17 +689,34 @@
   function swapItems(b) { const t = b.cur; b.cur = b.nxt; b.nxt = t; }
 
   /* ---------- 送來的泡泡（對打） ---------- */
-  /** 在盤面頂端塞入 count 顆泡泡（滿列先入、最後一列不滿）。回傳 { rows:[…新列], rain } */
+  /** 在盤面頂端塞入 count 顆泡泡：只塞整列（天花板那排永遠是滿的），湊不滿一列的零頭補進最上面、貼著現有泡泡的空格。
+   *  不滿的一列若直接放在天花板，整盤會只靠那幾顆吊著，打掉就一發清光。回傳 { rows:[…新列], extra:[[r,c]…], rain } */
   function applyGarbage(b, count, gid) {
     const rng = mulberry32(hash2(b.seed, 70000 + (gid | 0)));
-    const out = { rows: [], rain: null };
+    const out = { rows: [], extra: [], rain: null };
     let left = Math.max(0, count | 0);
-    const rowsNeeded = Math.ceil(left / b.cols);
-    for (let i = 0; i < rowsNeeded + 1 && left > 0; i++) {
+    for (let guard = 0; guard < 20 && left > 0; guard++) {
       const lenNext = b.cols - ((b.parity ^ 1) & 1);
-      const n = Math.min(lenNext, left);
-      out.rows.push(pushRow(b, n, rng));
-      left -= n;
+      if (left < lenNext) break;
+      out.rows.push(pushRow(b, lenNext, rng));
+      left -= lenNext;
+    }
+    const present = presentColors(b);
+    const pool = present.length ? present : b.colors;
+    while (left > 0) {
+      let cand = [];
+      for (let r = 0; r < MAX_ROWS && !cand.length; r++) {
+        ensureRow(b, r);
+        for (let c = 0; c < rowLen(b, r); c++) {
+          if (b.rows[r][c]) continue;
+          if (r === 0 || neighbors(b, r, c).some(q => b.rows[q[0]] && b.rows[q[0]][q[1]])) cand.push([r, c]);
+        }
+      }
+      if (!cand.length) { out.rows.push(pushRow(b, left, rng)); left = 0; break; }   /* 盤面滿到沒空格（幾乎不會發生）：照舊塞一列 */
+      const p = cand[Math.floor(rng() * cand.length)];
+      b.rows[p[0]][p[1]] = pool[Math.floor(rng() * pool.length)];
+      out.extra.push(p);
+      left--;
     }
     b.garbageIn += count;
     out.rain = rain(b);
