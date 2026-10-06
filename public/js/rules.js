@@ -30,7 +30,7 @@
     baby:   { assist: 0.8, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 6] },
     easy:   { assist: 0.7, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [7, 9] },
     normal: { assist: 0.15, pity: 1, starR: 1, laser: 0.035, laserBoost: 3.5, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 7, rainbow: 0.035, star: 0.035, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 10] },
-    hard:   { assist: 0.08, pity: 3, starR: 1, laser: 0.03, laserBoost: 2, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.03, star: 0.03, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
+    hard:   { assist: 0.08, pity: 3, starR: 1, laser: 0.04, laserBoost: 1, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 5, rainbow: 0.04, star: 0.04, wild: 0.4,  mult: 1,    warnMs: 1500, rows: [8, 11] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
