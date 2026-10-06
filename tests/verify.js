@@ -365,8 +365,8 @@ t('不會出現單一顏色占大半的盤面（上限：普通 23%、困難 18%
     }
   }
 });
-t('泡泡數量不能太少：普通 ≥ 64、困難 ≥ 76、簡單 ≥ 50、幼幼班 ≥ 40', () => {
-  for (const [lv, min] of [['baby', 40], ['easy', 50], ['normal', 64], ['hard', 76]]) {
+t('泡泡數量不能太少：普通 ≥ 60、困難 ≥ 72、簡單 ≥ 48、幼幼班 ≥ 36', () => {
+  for (const [lv, min] of [['baby', 36], ['easy', 48], ['normal', 60], ['hard', 72]]) {
     assert.strictEqual(R.MIN_COUNT[lv], min);
     for (let seed = 1; seed <= 60; seed++) {
       const n = R.bubbleCount(R.newBoard({ seed: seed * 5 + 1, level: lv }));
