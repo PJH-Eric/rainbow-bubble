@@ -67,6 +67,7 @@
       /* 給盤面上方的計時牌對位：canvas 在框裡的上緣位置、外框留白的像素 */
       this.el.style.setProperty('--ctop', Math.max(0, Math.floor((ch - ph) / 2)) + 'px');
       this.el.style.setProperty('--fpad', Math.round(ws.pad * sc) + 'px');
+      this.el.style.setProperty('--cw', pw + 'px');       /* 盤面（含外框）寬度：上方那一排的寬度跟它一樣 */
       if (!force && this._w === pw && this._h === ph && this.dpr === dpr) return;
       this._w = pw; this._h = ph; this.dpr = dpr;
       this.canvas.style.width = pw + 'px'; this.canvas.style.height = ph + 'px';

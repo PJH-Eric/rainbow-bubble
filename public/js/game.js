@@ -84,7 +84,6 @@
       const order = [];
       if (this.spectator) for (let i = 0; i < n; i++) order.push(i);
       else { order.push(this.slot); for (let i = 0; i < n; i++) if (i !== this.slot) order.push(i); }
-      this.timerSlot = order[0];
       const mainLayout = !this.spectator && n >= 3;
       this.boardsEl.classList.add(mainLayout ? 'l-main' : (n === 2 ? 'l-two' : n === 1 ? 'l-one' : 'l-grid'), 'n' + n);
       const sets = () => this.store;
@@ -100,12 +99,13 @@
         const tag = h('div', { class: 'btag' }, avatar(p.dragon, 30),
           h('span', { class: 'bt-name' }, p.name + (p.kind === 'ai' ? ' 🤖' : '')),
           h('span', { class: 'bt-n', 'data-n': s }, '0'));
-        const slotEl = h('div', { class: 'bslot' + (s === this.slot ? ' mine' : '') + (mainLayout && idx > 0 ? ' small' : '') }, v.el, tag);
+        if (idx === 0) this.mainTag = tag;     /* 主盤面的名牌改放進上方那一排（跟計時牌、暫停鍵同排） */
+        const slotEl = h('div', { class: 'bslot' + (s === this.slot ? ' mine' : '') + (mainLayout && idx > 0 ? ' small' : '') }, v.el, idx === 0 ? null : tag);
         if ((mainLayout || n === 2) && s !== this.slot) {
           if (!this.oppCol) { this.oppCol = h('div', { class: 'opp-col' }); this.boardsEl.appendChild(this.oppCol); }
           this.oppCol.appendChild(slotEl);
         } else this.boardsEl.appendChild(slotEl);
-        if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => { v.resize(); if (this.timerBox && s === this.timerSlot) this.fitTimer(); }); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
+        if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => v.resize()); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
       });
 
       /* 上方狀態列 */
@@ -116,17 +116,17 @@
       this.modeEl = h('span', { class: 'pill' }, MODE_NAME[this.cfg.mode] + '・' + R.LEVEL_NAME[this.cfg.level]);
       const solo = this.kind === 'solo';
       this.exitBtn = solo
-        ? iconBtn('pause', '暫停', () => this.pauseMenu(), 'sm')
+        ? iconBtn('pause', '暫停', () => this.pauseMenu(), 'board-pause')
         : iconBtn('back', '離開對局', () => this.confirmExit());
-      /* 時間（單機連同暫停鍵）掛在主盤面正上方中間，造型跟著地圖主題 */
+      /* 主盤面正上方一排：名牌（左）、計時牌（中）、暫停鍵（右），寬度跟盤面一樣、左右貼齊盤面；造型跟著地圖主題 */
       const th = this.theme;
-      this.timerBox = h('div', { class: 'board-timer t-' + (th.set || 'default') }, this.timerEl, solo ? this.exitBtn : null);
-      this.timerBox.style.setProperty('--f0', th.frame[0]); this.timerBox.style.setProperty('--f1', th.frame[1]);
-      this.timerBox.style.setProperty('--ac', th.accent);
+      this.timerBox = h('div', { class: 'board-timer' }, this.timerEl);
+      this.boardBar = h('div', { class: 'board-bar t-' + (th.set || 'default') }, this.mainTag, this.timerBox, solo ? this.exitBtn : h('span', { class: 'bar-gap' }));
+      this.boardBar.style.setProperty('--f0', th.frame[0]); this.boardBar.style.setProperty('--f1', th.frame[1]);
+      this.boardBar.style.setProperty('--ac', th.accent);
       const mainView = this.views[order[0]];
-      mainView.el.appendChild(this.timerBox);
+      mainView.el.appendChild(this.boardBar);
       if (mainView.el.parentNode) mainView.el.parentNode.classList.add('has-timer');
-      root.setTimeout(() => this.fitTimer(), 60);
       this.hud = h('div', { class: 'hud' }, this.sideBtn, solo ? null : this.exitBtn, h('div', { class: 'hud-mid' }, this.modeEl),
         this.spectator ? h('span', { class: 'pill sun' }, '觀戰中') : null);
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
@@ -139,17 +139,6 @@
       if (root.matchMedia && root.matchMedia('(min-width: 861px) and (min-aspect-ratio: 1/1)').matches) { this.root.classList.remove('side-closed'); this.syncSideIcon(); }
       if (!this.spectator) this.boardsEl.classList.add('can-play');
       this.renderSummary();
-    }
-
-    /** 計時牌和玩家名牌擠不下同一列（窄盤面、長名字）時，盤面往下讓出一列：名牌第一列、計時牌第二列 */
-    fitTimer() {
-      const v = this.views[this.timerSlot];
-      const slot = this.timerBox && this.timerBox.closest('.bslot');
-      const tag = slot && slot.querySelector('.btag');
-      if (!v || !tag) return;
-      slot.classList.remove('timer-stack'); v.resize();
-      const a = this.timerBox.getBoundingClientRect(), b = tag.getBoundingClientRect();
-      if (a.left < b.right + 6 && a.right > b.left - 6 && a.top < b.bottom + 2 && a.bottom > b.top) { slot.classList.add('timer-stack'); v.resize(); }
     }
 
     /** 資訊欄開關鈕：開著顯示「收起」雙箭頭（«），關著顯示「展開」雙箭頭（»） */
@@ -410,8 +399,6 @@
         this.timerEl.classList.toggle('low', left < 15000 && !this.over);
       } else this.timerEl.textContent = '悠閒玩';
       this.boardsEl.querySelectorAll('.bt-n').forEach(el => { const s = +el.getAttribute('data-n'); el.textContent = m.boards[s].cleared; });
-      const tagKey = String(m.boards[this.timerSlot].cleared).length;      /* 分數位數變多，名牌變寬，要重新量一次 */
-      if (tagKey !== this._tagKey) { this._tagKey = tagKey; this.fitTimer(); }
       this.renderSummary();
       if (this.pingEl) {
         const ms = Math.round((root.Net.rtt || 0) * 1000);
@@ -431,12 +418,14 @@
         this.paused = false; this.last = performance.now();
       };
       const mo = modal({
-        title: '暫停中', cls: 'dialog-sm', dismissible: true, onClose: resume,
-        content: h('div', { class: 'dialog-text' }, '休息一下，準備好再繼續吧！'),
+        title: '暫停中', cls: 'dialog-sm dialog-pause', dismissible: true, onClose: resume,
+        content: h('div', { class: 'pause-body' },
+          h('div', { class: 'pause-art', html: Art.icon('pause', 34) }),
+          h('div', { class: 'dialog-text' }, '休息一下，準備好再繼續吧！')),
         actions: [
-          btn('繼續玩', { cls: 'btn-pink', icon: 'play', onClick: () => mo.close() }),
+          btn('繼續玩', { cls: 'btn-pink btn-lg pause-main', icon: 'play', onClick: () => mo.close() }),
           btn('重新開始', { cls: 'btn-sky', icon: 'refresh', onClick: () => { mo.close(true); resume(); this.o.onAgain(); } }),
-          btn('離開（回到房間）', { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
+          btn('回到房間', { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
         ]
       });
     }

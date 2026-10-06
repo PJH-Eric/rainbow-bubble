@@ -15,7 +15,7 @@ const envB = Object.assign({}, env);
 if (!env.FULL && !env.GAME_GO_IN) { envB.GAME_GO_IN = '400'; envB.GAME_DURATION_SCALE = '0.2'; }
 const LANES = {
   A: ['tests/verify.js', 'tests/rooms.js', 'tests/server.js', 'scripts/online-check.js', 'scripts/netcode-check.js'],
-  B: ['scripts/browser-check.js', 'scripts/swap-hover-check.js', 'scripts/online-browser-check.js']
+  B: ['scripts/browser-check.js', 'scripts/swap-hover-check.js', 'scripts/timer-row-check.js', 'scripts/online-browser-check.js']
 };
 const t0 = Date.now();
 const run = (file, e) => new Promise(res => {

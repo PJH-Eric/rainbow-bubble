@@ -96,7 +96,6 @@ async function waitHealth(base) {
     await pg.click('text=開始遊戲');
     await pg.waitForSelector('.bslot canvas');
     await pg.waitForTimeout(GO + 300);
-    ok(await pg.evaluate(() => { const a = document.querySelector('.board-timer').getBoundingClientRect(); return Array.from(document.querySelectorAll('.btag, .hud .icon-btn, #gear')).every(e => { const b = e.getBoundingClientRect(); return !(a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top); }); }), '計時牌沒有蓋到名牌與按鈕');
     await pg.click('#gear');
     await pg.waitForSelector('.dialog');
     ok(await pg.evaluate(() => !!document.querySelector('.dialog .sw') && !!document.querySelector('.dialog .vol')), '設定彈窗含音樂／音效開關與音量滑桿');
@@ -104,7 +103,7 @@ async function waitHealth(base) {
     await pg.keyboard.press('Escape');
     await pg.waitForTimeout(300);
     ok(await pg.evaluate(() => !document.querySelector('.dialog')), 'Esc 可關閉設定彈窗');
-    await pg.click('.board-timer .icon-btn[aria-label="暫停"]');
+    await pg.click('.board-bar .board-pause');
     await pg.waitForSelector('.dialog');
     const t1 = await pg.evaluate(() => App.game.mt());
     await pg.waitForTimeout(800);
