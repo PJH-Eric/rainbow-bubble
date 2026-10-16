@@ -29,6 +29,7 @@
       this.m = M.create(o.cfg);
       this.theme = Art.THEMES[o.cfg.themeId | 0] || Art.THEMES[0];
       this.spectator = this.slot < 0;
+      if (root.GameAnalytics && !this.spectator) root.GameAnalytics.start({ mode: this.kind, difficulty: this.m.level, players: this.m.players.length }, this.kind === 'online' ? o.cfg.seed : null);
       this.paused = false; this.pausedAt = 0; this.pausedTotal = 0;
       this.lastShot = 0; this.lastAction = performance.now();
       this.keys = {}; this.over = false; this.resultShown = false; this.goShown = false; this.lastCount = 99;
@@ -450,6 +451,7 @@
     onEnd() {
       if (this.over) return;
       this.over = true;
+      if (root.GameAnalytics && !this.spectator) root.GameAnalytics.end({ result: this.m.result && this.m.result.winner === this.slot ? 'win' : 'lose' });
       this.clearHint();
       setTimeout(() => this.showResult(), 1100);
     }

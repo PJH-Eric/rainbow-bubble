@@ -1,5 +1,7 @@
 /* tests/verify.js — 規則核心、對局事件、電腦難度、重播一致性（node tests/verify.js） */
 'use strict';
+
+require('./seo.js');
 const assert = require('assert');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');

@@ -94,6 +94,7 @@
         const r = (performance.now() - msg.t) / 1000;
         if (r >= 0 && r < 5) rtt = rtt ? rtt * 0.7 + r * 0.3 : r;
       }
+      if (root.GameAnalytics) root.GameAnalytics.roomResponse(msg.type, !!msg.room);
       (handlers[msg.type] || []).forEach(fn => fn(msg));
       (handlers['*'] || []).forEach(fn => fn(msg));
     };
@@ -122,7 +123,11 @@
   }
 
   function send(msg) {
-    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(msg)); return true; }
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify(msg));
+      if (root.GameAnalytics) root.GameAnalytics.roomRequest(msg);
+      return true;
+    }
     return false;
   }
 
