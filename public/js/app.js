@@ -292,7 +292,7 @@
     gear.innerHTML = Art.icon('gear', 26);
     gear.addEventListener('click', () => { root.Sound.sfx('click'); App.openSettings(); });
     /* 語言切換鈕：設定鈕左邊（同一排） */
-    root.I18N.mountToggle({ after: gear, id: 'b-lang' });
+    root.I18N.mountToggle({ after: gear, id: 'b-lang', className: 'icon-btn' });
     const lobbyLink = $('lobby-home-link');
     const syncLobbyLink = () => { if (lobbyLink) lobbyLink.href = root.I18N.withLang(lobbyLink.getAttribute('data-base') || lobbyLink.href); };
     if (lobbyLink) lobbyLink.setAttribute('data-base', lobbyLink.getAttribute('href'));
