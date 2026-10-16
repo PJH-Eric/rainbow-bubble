@@ -25,6 +25,12 @@
     { id: 'forest',  name: '森林龍', accent: '#7cc95a' }
   ];
 
+  /* 名稱跟著語言走（I18N 沒載入時維持中文） */
+  DRAGONS.forEach(function (d) {
+    var zh = d.name;
+    Object.defineProperty(d, 'name', { enumerable: true, get: function () { return root.I18N ? root.I18N.t('dragon.' + d.id, null, zh) : zh; } });
+  });
+
   var RAINBOW = ['#ff6b8b', '#ffa24a', '#ffd84a', '#5fd88a', '#5aaeff', '#a47cff'];
 
   // 每隻龍的設定。body/belly = [亮, 中, 暗]（belly 為 [亮, 暗]）
@@ -520,7 +526,7 @@
       var f = s.face || [0.68, 72];
       var sc = f[0], cy = f[1];
       var tx = r1(50 - 100 * sc), ty = r1(50 - cy * sc);
-      return svgWrap('0 0 100 100', 100, meta.name + '頭像', c, G('translate(' + tx + ' ' + ty + ') scale(' + sc + ')', head));
+      return svgWrap('0 0 100 100', 100, (root.I18N ? root.I18N.t('dragon.avatar', { name: meta.name }, meta.name + '頭像') : meta.name + '頭像'), c, G('translate(' + tx + ' ' + ty + ') scale(' + sc + ')', head));
     }
 
     // 身體

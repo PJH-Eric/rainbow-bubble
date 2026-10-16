@@ -26,10 +26,10 @@
       return { url: null, source: 'none', status: 'unset', error: null };
     }
     if (!/^https?:\/\//i.test(raw)) {
-      return { url: null, source: source, status: 'invalid', error: 'server URL 必須是 http/https 開頭的絕對網址' };
+      return { url: null, source: source, status: 'invalid', error: 'server URL 必須是 http/https 開頭的絕對網址', code: 'abs' };
     }
     if (pageProtocol === 'https:' && /^http:\/\//i.test(raw)) {
-      return { url: null, source: source, status: 'invalid', error: '頁面走 https 時不接受 http 的 server URL（瀏覽器會擋混合內容）' };
+      return { url: null, source: source, status: 'invalid', error: '頁面走 https 時不接受 http 的 server URL（瀏覽器會擋混合內容）', code: 'mixed' };
     }
     return { url: raw.replace(/\/+$/, ''), source: source, status: 'ok', error: null };
   }

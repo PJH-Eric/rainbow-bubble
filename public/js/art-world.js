@@ -402,6 +402,11 @@
     { id: 5, name: '海底世界', sky: ['#62d6f5', '#1a7ec6'], frame: ['#7fe0ee', '#2a8fb8'], boardFill: 'rgba(255,255,255,0.80)', boardLine: '#6cc8e6', accent: '#ff7a6b', music: 'f', set: 'ocean' },
     { id: 6, name: '日月光', sky: ['#2c2a7a', '#f08a4c'], frame: ['#ffd36a', '#a8672a'], boardFill: 'rgba(255,252,244,0.84)', boardLine: '#e0a850', accent: '#ff8a3c', music: 'g', set: 'sunmoon' }
   ];
+  /* 主題名稱跟著語言走 */
+  Art.THEMES.forEach(function (t) {
+    var zh = t.name;
+    Object.defineProperty(t, 'name', { enumerable: true, get: function () { return root.I18N ? root.I18N.t('theme.' + t.id, null, zh) : zh; } });
+  });
 
   // ───────────── 5. 背景共用裝飾 ─────────────
   function wave(y0, amp, wl, ph, bottom, step) {          // 起伏的地平線，封到畫面底部
@@ -776,11 +781,15 @@
     s = '<g transform="translate(0 4)">' + s + '</g>';
     s += cloudMini(100, 100) + cloudMini(420, 100);
     // 文字：陰影 → 白邊 → 填色
-    var tx = '<text x="260" y="168" text-anchor="middle" font-family=\'' + FONT + '\' font-size="82" font-weight="900" textLength="400" lengthAdjust="spacingAndGlyphs"';
-    s += tx + ' fill="#5a2a9a" stroke="#5a2a9a" stroke-width="22" stroke-linejoin="round" transform="translate(0 6)">彩虹泡泡砲</text>';
-    s += tx + ' fill="#fff" stroke="#fff" stroke-width="15" stroke-linejoin="round">彩虹泡泡砲</text>';
-    s += tx + ' fill="url(#' + p + 'txt)" stroke="#d9569a" stroke-width="3" stroke-linejoin="round">彩虹泡泡砲</text>';
-    s += tx + ' fill="none" stroke="#fff" stroke-width="2" opacity="0.0">彩虹泡泡砲</text>';
+    var en = root.I18N && root.I18N.lang === 'en';
+    function title(y, size, len, label) {
+      var tx = '<text x="260" y="' + y + '" text-anchor="middle" font-family=\'' + FONT + '\' font-size="' + size + '" font-weight="900" textLength="' + len + '" lengthAdjust="spacingAndGlyphs"';
+      s += tx + ' fill="#5a2a9a" stroke="#5a2a9a" stroke-width="' + (size > 70 ? 22 : 16) + '" stroke-linejoin="round" transform="translate(0 6)">' + label + '</text>';
+      s += tx + ' fill="#fff" stroke="#fff" stroke-width="' + (size > 70 ? 15 : 11) + '" stroke-linejoin="round">' + label + '</text>';
+      s += tx + ' fill="url(#' + p + 'txt)" stroke="#d9569a" stroke-width="3" stroke-linejoin="round">' + label + '</text>';
+    }
+    if (en) { title(132, 50, 230, 'Rainbow'); title(184, 50, 420, 'Bubble Blaster'); }
+    else title(168, 82, 400, '彩虹泡泡砲');
     // 泡泡裝飾
     function bub(x, y, r) {
       return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + p + 'bub)" stroke="#4a86d8" stroke-width="2.6"/><ellipse cx="' + n2(x - r * 0.35) + '" cy="' + n2(y - r * 0.4) + '" rx="' + n2(r * 0.3) + '" ry="' + n2(r * 0.18) + '" transform="rotate(-35 ' + n2(x - r * 0.35) + ' ' + n2(y - r * 0.4) + ')" fill="#fff"/>';

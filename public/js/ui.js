@@ -5,6 +5,7 @@
 (function (root) {
   'use strict';
   const doc = root.document;
+  const T = (k, p, fb) => root.I18N.t(k, p, fb);
 
   function h(tag, attrs) {
     const el = doc.createElement(tag);
@@ -78,8 +79,8 @@
   function stepper(o) {
     let v = o.value;
     const out = h('output', { class: 'stepper-val', 'aria-live': 'polite' });
-    const minus = h('button', { type: 'button', class: 'step-btn', 'aria-label': (o.label || '') + ' 減少', html: root.Art.icon('minus', 20) });
-    const plus = h('button', { type: 'button', class: 'step-btn', 'aria-label': (o.label || '') + ' 增加', html: root.Art.icon('plus', 20) });
+    const minus = h('button', { type: 'button', class: 'step-btn', 'aria-label': T('ui.dec', { label: o.label || '' }), html: root.Art.icon('minus', 20) });
+    const plus = h('button', { type: 'button', class: 'step-btn', 'aria-label': T('ui.inc', { label: o.label || '' }), html: root.Art.icon('plus', 20) });
     const wrap = h('div', { class: 'stepper', role: 'group', 'aria-label': o.label || '' }, minus, out, plus);
     const paint = () => {
       out.textContent = o.fmt ? o.fmt(v) : String(v);
@@ -154,7 +155,7 @@
     let value = o.value;
     const cur = h('span', { class: 'dd-cur' });
     const b = h('button', { type: 'button', class: 'dd ' + (o.cls || ''), 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': o.label || '', disabled: o.disabled }, cur, h('i', { class: 'dd-caret', 'aria-hidden': 'true' }));
-    const paint = () => { const f = o.options.find(x => x.v === value); cur.textContent = ''; if (f && f.swatch) cur.appendChild(h('i', { class: 'dd-sw', style: { background: f.swatch } })); cur.appendChild(doc.createTextNode(f ? f.label : (o.placeholder || '請選擇'))); };
+    const paint = () => { const f = o.options.find(x => x.v === value); cur.textContent = ''; if (f && f.swatch) cur.appendChild(h('i', { class: 'dd-sw', style: { background: f.swatch } })); cur.appendChild(doc.createTextNode(f ? f.label : (o.placeholder || T('ui.choose')))); };
     function open() {
       closePop();
       const list = h('div', { class: 'dd-list', role: 'listbox', 'aria-label': o.label || '' });
@@ -222,14 +223,24 @@
     o = o || {};
     const opener = doc.activeElement;
     const titleId = 'm' + Math.random().toString(36).slice(2, 7);
-    const dialog = h('div', { class: 'dialog ' + (o.cls || ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': o.title ? titleId : null, 'aria-label': o.title ? null : o.aria, tabindex: -1 });
-    if (o.title || o.dismissible !== false) {
-      dialog.appendChild(h('div', { class: 'dialog-head' },
-        o.title ? h('h2', { id: titleId, class: 'dialog-title' }, o.title) : h('span'),
-        o.dismissible === false ? null : h('button', { type: 'button', class: 'icon-btn', 'aria-label': '關閉', html: root.Art.icon('close', 22), onClick: () => api.close() })));
-    }
-    dialog.appendChild(h('div', { class: 'dialog-body' }, o.content));
-    if (o.actions && o.actions.length) dialog.appendChild(h('div', { class: 'dialog-actions' }, o.actions));
+    /* o.render：回傳 { title, content, actions, aria }；語言切換時會重新呼叫並換掉內容（不關閉彈窗） */
+    const rend = typeof o.render === 'function' ? o.render : null;
+    if (rend) o = Object.assign({}, o, rend());
+    const dialog = h('div', { class: 'dialog ' + (o.cls || ''), role: 'dialog', 'aria-modal': 'true', tabindex: -1 });
+    const paint = () => {
+      dialog.textContent = '';
+      dialog.setAttribute('aria-labelledby', o.title ? titleId : '');
+      if (o.title) dialog.removeAttribute('aria-label'); else if (o.aria) dialog.setAttribute('aria-label', o.aria);
+      if (!o.title) dialog.removeAttribute('aria-labelledby');
+      if (o.title || o.dismissible !== false) {
+        dialog.appendChild(h('div', { class: 'dialog-head' },
+          o.title ? h('h2', { id: titleId, class: 'dialog-title' }, o.title) : h('span'),
+          o.dismissible === false ? null : h('button', { type: 'button', class: 'icon-btn', 'aria-label': T('common.close'), title: T('common.close'), html: root.Art.icon('close', 22), onClick: () => api.close() })));
+      }
+      dialog.appendChild(h('div', { class: 'dialog-body' }, o.content));
+      if (o.actions && o.actions.length) dialog.appendChild(h('div', { class: 'dialog-actions' }, o.actions));
+    };
+    paint();
     const mask = h('div', { class: 'mask' }, dialog);
     if (o.dismissible !== false) mask.addEventListener('pointerdown', e => { if (e.target === mask) api.close(); });
     doc.getElementById('modals').appendChild(mask);
@@ -247,7 +258,18 @@
         if (!silent && o.onClose) o.onClose();
         if (opener && opener.focus && doc.contains(opener)) try { opener.focus(); } catch (e) { /* 忽略 */ }
       },
-      dismissible: o.dismissible !== false
+      dismissible: o.dismissible !== false,
+      refresh() {
+        if (!rend || api.closed) return;
+        const act = doc.activeElement;
+        const idx = act && dialog.contains(act) ? Array.from(dialog.querySelectorAll(FOCUS)).indexOf(act) : -1;
+        const sc = dialog.querySelector('.dialog-body');
+        const top = sc ? sc.scrollTop : 0;
+        o = Object.assign({}, o, rend());
+        paint();
+        const nb = dialog.querySelector('.dialog-body'); if (nb) nb.scrollTop = top;
+        if (idx >= 0) { const f = dialog.querySelectorAll(FOCUS)[idx]; if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ } }
+      }
     };
     stack.push(api);
     setTimeout(() => {
@@ -269,18 +291,24 @@
       else if (!e.shiftKey && (doc.activeElement === last || !top.el.contains(doc.activeElement))) { e.preventDefault(); first.focus(); }
     }
   }, true);
+  if (root.I18N) root.I18N.onChange(() => stack.slice().forEach(m => m.refresh()));
   const modalOpen = () => stack.length > 0;
   function closeAllModals() { while (stack.length) stack[stack.length - 1].close(); }
   /** 返回鍵用：只關最上層、而且要是可關閉的（對局結果這種不能被返回鍵關掉） */
   function closeTopModal() { const top = stack[stack.length - 1]; if (top && top.dismissible) top.close(); }
 
   function confirmBox(o) {
+    /* title／text／ok／cancel 可傳字串或函式（函式在語言切換時重新取字） */
+    const v = x => (typeof x === 'function' ? x() : x);
     const m = modal({
-      title: o.title, content: h('p', { class: 'dialog-text' }, o.text), cls: 'dialog-sm',
-      actions: [
-        btn(o.cancel || '取消', { cls: 'btn-ghost', onClick: () => m.close() }),
-        btn(o.ok || '確定', { cls: o.danger ? 'btn-pink' : 'btn-mint', onClick: () => { m.close(true); o.onOk && o.onOk(); } })
-      ]
+      cls: 'dialog-sm',
+      render: () => ({
+        title: v(o.title), content: h('p', { class: 'dialog-text' }, v(o.text)),
+        actions: [
+          btn(v(o.cancel) || T('common.cancel'), { cls: 'btn-ghost', onClick: () => m.close() }),
+          btn(v(o.ok) || T('common.ok'), { cls: o.danger ? 'btn-pink' : 'btn-mint', onClick: () => { m.close(true); o.onOk && o.onOk(); } })
+        ]
+      })
     });
     return m;
   }
@@ -299,5 +327,13 @@
     return ok;
   }
 
-  root.UI = { h, btn, iconBtn, seg, stepper, toggle, volume, dropdown, closePop, avatar, keycap, toast, modal, confirmBox, copyText, modalOpen, closeAllModals, closeTopModal };
+  /** 系統聊天訊息：伺服器附 k（字典代碼）與 p（參數）就依目前語言翻譯，否則用原文 */
+  function chatText(m) {
+    if (!m || !m.k) return m ? m.text : '';
+    const p = Object.assign({}, m.p || {});
+    if (p.dragon) p.name = T('ai.name', { dragon: T('dragon.short.' + p.dragon) });
+    return T(m.k, p, m.text);
+  }
+
+  root.UI = { chatText, h, btn, iconBtn, seg, stepper, toggle, volume, dropdown, closePop, avatar, keycap, toast, modal, confirmBox, copyText, modalOpen, closeAllModals, closeTopModal };
 })(typeof self !== 'undefined' ? self : this);

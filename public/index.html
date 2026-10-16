@@ -1,44 +1,47 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" data-i18n-title="meta.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#8fd6ff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="description" data-i18n-content="meta.desc" content="彩虹泡泡砲：可愛風泡泡龍，單機對電腦、線上房間、觀戰與邀請連結。">
   <title>彩虹泡泡砲</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="css/style.css?v=20261006q">
-  <link rel="stylesheet" href="css/online.css?v=20261006q">
+  <link rel="stylesheet" href="css/style.css?v=20261016i">
+  <link rel="stylesheet" href="css/online.css?v=20261016i">
 </head>
 <body>
   <div id="app" class="app"></div>
-  <a id="lobby-home-link" class="lobby-home-link" href="https://pjh-eric.github.io/game-lobby/" aria-label="回遊戲大廳" hidden>← 回遊戲大廳</a>
-  <button id="gear" class="icon-btn gear" type="button" aria-label="設定" title="設定"></button>
+  <a id="lobby-home-link" class="lobby-home-link" href="https://pjh-eric.github.io/game-lobby/" aria-label="回遊戲大廳" data-i18n-attr="aria-label=nav.lobbyAria" data-i18n="nav.lobby" hidden>← 回遊戲大廳</a>
+  <button id="gear" class="icon-btn gear" type="button" aria-label="設定" title="設定" data-i18n-attr="aria-label=settings.open;title=settings.open"></button>
   <div id="banner" aria-live="polite"></div>
   <div id="toasts" class="toasts" aria-live="polite"></div>
   <div id="modals"></div>
-  <noscript><p style="padding:24px;font-weight:800">彩虹泡泡砲需要開啟 JavaScript 才能玩。</p></noscript>
+  <noscript><p style="padding:24px;font-weight:800">彩虹泡泡砲需要開啟 JavaScript 才能玩。<br>Rainbow Bubble Blaster needs JavaScript to run.</p></noscript>
 
-  <script src="js/config.js?v=20261006q"></script>
-  <script src="js/art-dragons.js?v=20261006q"></script>
-  <script src="js/art-world.js?v=20261006q"></script>
-  <script src="js/art-glue.js?v=20261006q"></script>
-  <script src="js/layouts.js?v=20261006q"></script>
-  <script src="js/layout-tiers.js?v=20261006q"></script>
-  <script src="js/rules.js?v=20261006q"></script>
-  <script src="js/match.js?v=20261006q"></script>
-  <script src="js/matchsnap.js?v=20261006q"></script>
-  <script src="js/ai.js?v=20261006q"></script>
-  <script src="js/storage.js?v=20261006q"></script>
-  <script src="js/sound.js?v=20261006q"></script>
-  <script src="js/net.js?v=20261006q"></script>
-  <script src="js/ui.js?v=20261006q"></script>
-  <script src="js/render.js?v=20261006q"></script>
-  <script src="js/game.js?v=20261006q"></script>
-  <script src="js/scroll.js?v=20261006q"></script>
-  <script src="js/app.js?v=20261006q"></script>
-  <script src="js/online.js?v=20261006q"></script>
+  <script src="js/i18n.js?v=20261016i"></script>
+  <script src="js/locales.js?v=20261016i"></script>
+  <script src="js/config.js?v=20261016i"></script>
+  <script src="js/art-dragons.js?v=20261016i"></script>
+  <script src="js/art-world.js?v=20261016i"></script>
+  <script src="js/art-glue.js?v=20261016i"></script>
+  <script src="js/layouts.js?v=20261016i"></script>
+  <script src="js/layout-tiers.js?v=20261016i"></script>
+  <script src="js/rules.js?v=20261016i"></script>
+  <script src="js/match.js?v=20261016i"></script>
+  <script src="js/matchsnap.js?v=20261016i"></script>
+  <script src="js/ai.js?v=20261016i"></script>
+  <script src="js/storage.js?v=20261016i"></script>
+  <script src="js/sound.js?v=20261016i"></script>
+  <script src="js/net.js?v=20261016i"></script>
+  <script src="js/ui.js?v=20261016i"></script>
+  <script src="js/render.js?v=20261016i"></script>
+  <script src="js/game.js?v=20261016i"></script>
+  <script src="js/scroll.js?v=20261016i"></script>
+  <script src="js/app.js?v=20261016i"></script>
+  <script src="js/online.js?v=20261016i"></script>
 </body>
 </html>

@@ -175,10 +175,10 @@
         if (sn && res.gained >= 3) {
           const cx0 = sx / sn, cy0 = sy / sn;
           this.popup('+' + res.gained, cx0, cy0 - 0.5, '#ff6f9c', res.gained >= 7);
-          if (res.combo >= 2) this.popup('連擊 ×' + res.combo, cx0, cy0 + 1.4, '#ffa21f', false);
+          if (res.combo >= 2) this.popup(root.I18N.t('hud.combo', { n: res.combo }), cx0, cy0 + 1.4, '#ffa21f', false);
           if (res.gained >= 7 || big) { this.shake = now; this.pose = 'cheer'; this.poseUntil = now + 900; if (snd) snd.sfx('combo'); }
         }
-        if (res.fullClear) { this.pose = 'cheer'; this.poseUntil = now + 3000; this.popup('全部清光！', this.ws.w / 2, this.ws.h * 0.4, '#ff6f9c', true); }
+        if (res.fullClear) { this.pose = 'cheer'; this.poseUntil = now + 3000; this.popup(root.I18N.t('hud.fullClear'), this.ws.w / 2, this.ws.h * 0.4, '#ff6f9c', true); }
       } else if (j.kind === 'land') {
         if (snd) snd.sfx('splash');
         this.shake = now;
@@ -196,7 +196,7 @@
         const x = R.cx(this.shown, p.r, p.c), y = TOP + R.cy(p.r);
         this.fx.push({ k: 'wash', t0: now + 250 + i * 14, dur: reduce ? 300 : 1100, x, y, v: p.v, post: true });
       });
-      this.popup('泡泡雨來幫忙！', this.ws.w / 2, TOP + R.cy(R.LINE_ROW - 3), '#3d9bff', true);
+      this.popup(root.I18N.t('hud.rain'), this.ws.w / 2, TOP + R.cy(R.LINE_ROW - 3), '#3d9bff', true);
     }
 
     /* ---------- 輸入座標 ---------- */
@@ -521,7 +521,7 @@
         if (this.mine) this.drawSwapBtn(g, sp, clamp01((performance.now() - this.swapBump) / 220), this.hoverSwap);
         g.restore();
         if (b.protect > 0) {
-          g.save(); g.font = '800 0.75px ' + FONT; g.textAlign = 'center'; g.fillStyle = '#3d9bff'; g.fillText('保護中 ' + b.protect, s.x, sy - 2.4); g.restore();
+          g.save(); g.font = '800 0.75px ' + FONT; g.textAlign = 'center'; g.fillStyle = '#3d9bff'; g.fillText(root.I18N.t('hud.protect', { n: b.protect }), s.x, sy - 2.4); g.restore();
         }
       }
       /* 瞄準線 */

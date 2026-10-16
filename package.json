@@ -9,13 +9,16 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/verify.js && node tests/rooms.js && node tests/server.js",
-    "verify": "node tests/verify.js && node tests/rooms.js && node tests/server.js && node scripts/online-check.js && node scripts/netcode-check.js",
+    "test": "node tests/localization.js && node tests/i18n.js && node tests/verify.js && node tests/rooms.js && node tests/server.js",
+    "verify": "node tests/i18n.js && node tests/verify.js && node tests/rooms.js && node tests/server.js && node scripts/online-check.js && node scripts/netcode-check.js",
+    "test:i18n": "node tests/i18n.js",
+    "check:i18n": "node scripts/i18n-check.js",
     "check:online": "node scripts/online-check.js",
     "check:netcode": "node scripts/netcode-check.js",
     "inject": "node scripts/inject-server-url.js",
     "test:all": "node scripts/run-all.js",
-    "test:full": "node scripts/run-all.js --full"
+    "test:full": "node scripts/run-all.js --full",
+    "test:localization": "node tests/localization.js"
   },
   "dependencies": {}
 }

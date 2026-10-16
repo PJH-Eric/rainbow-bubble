@@ -10,7 +10,10 @@
   'use strict';
   const { h, btn, iconBtn, avatar, toast, modal } = root.UI;
   const R = root.Rules, M = root.Match, Art = root.Art;
-  const MODE_NAME = { race: '各自比賽', duel: '送泡泡對打' };
+  const T = (k, p, fb) => root.I18N.t(k, p, fb);
+  const modeName = m => T('mode.' + m);
+  /* 電腦玩家的名字跟著語言走；真人暱稱原樣顯示 */
+  const pname = p => (p && p.kind === 'ai' ? T('ai.name', { dragon: T('dragon.short.' + p.dragon) }) : (p ? p.name : ''));
   const SHOT_GAP = 270;
 
   function fmtTime(ms) {
@@ -73,9 +76,9 @@
       /* 左側資訊欄 */
       this.sumEl = h('div', { class: 'summary' });
       const chatBox = this.kind === 'online' ? this.buildChat() : null;
-      this.side = h('aside', { class: 'game-side', 'aria-label': '對局資訊' },
-        h('div', { class: 'side-head' }, h('b', null, '對局資訊'),
-          iconBtn('panelHide', '收起資訊欄', () => this.toggleSide(false), 'side-close')),
+      this.side = h('aside', { class: 'game-side', 'aria-label': T('game.info') },
+        h('div', { class: 'side-head' }, this.sideTitle = h('b', null, T('game.info')),
+          this.sideClose = iconBtn('panelHide', T('game.hideSide'), () => this.toggleSide(false), 'side-close')),
         this.sumEl, chatBox);
 
       /* 盤面 */
@@ -97,7 +100,7 @@
         v.showAim = s === this.slot;
         this.views[s] = v;
         const tag = h('div', { class: 'btag' }, avatar(p.dragon, 30),
-          h('span', { class: 'bt-name' }, p.name + (p.kind === 'ai' ? ' 🤖' : '')),
+          h('span', { class: 'bt-name', 'data-s': s }, pname(p) + (p.kind === 'ai' ? ' 🤖' : '')),
           h('span', { class: 'bt-n', 'data-n': s }, '0'));
         if (idx === 0) this.mainTag = tag;     /* 主盤面的名牌改放進上方那一排（跟計時牌、暫停鍵同排） */
         const slotEl = h('div', { class: 'bslot' + (s === this.slot ? ' mine' : '') + (mainLayout && idx > 0 ? ' small' : '') }, v.el, idx === 0 ? null : tag);
@@ -110,14 +113,14 @@
 
       /* 上方狀態列 */
       this.sideBadge = h('span', { class: 'badge', hidden: true }, '0');
-      this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': '展開資訊欄', 'aria-expanded': 'false', onClick: () => this.toggleSide() },
+      this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': T('game.showSide'), 'aria-expanded': 'false', onClick: () => this.toggleSide() },
         this.sideIcon = h('span', { html: Art.icon('panelShow', 22) }), this.sideBadge);
       this.timerEl = h('div', { class: 'board-time', role: 'timer' }, '0:00');
-      this.modeEl = h('span', { class: 'pill' }, MODE_NAME[this.cfg.mode] + '・' + R.LEVEL_NAME[this.cfg.level]);
+      this.modeEl = h('span', { class: 'pill' }, modeName(this.cfg.mode) + '・' + R.LEVEL_NAME[this.cfg.level]);
       const solo = this.kind === 'solo';
       this.exitBtn = solo
-        ? iconBtn('pause', '暫停', () => this.pauseMenu(), 'board-pause')
-        : iconBtn('back', '離開對局', () => this.confirmExit());
+        ? iconBtn('pause', T('game.pause'), () => this.pauseMenu(), 'board-pause')
+        : iconBtn('back', T('game.leave'), () => this.confirmExit());
       /* 主盤面正上方一排：名牌（左）、計時牌（中）、暫停鍵（右），寬度跟盤面一樣、左右貼齊盤面；造型跟著地圖主題 */
       const th = this.theme;
       this.timerBox = h('div', { class: 'board-timer' }, this.timerEl);
@@ -128,7 +131,7 @@
       mainView.el.appendChild(this.boardBar);
       if (mainView.el.parentNode) mainView.el.parentNode.classList.add('has-timer');
       this.hud = h('div', { class: 'hud' }, this.sideBtn, solo ? null : this.exitBtn, h('div', { class: 'hud-mid' }, this.modeEl),
-        this.spectator ? h('span', { class: 'pill sun' }, '觀戰中') : null);
+        this.spectator ? (this.specPill = h('span', { class: 'pill sun' }, T('game.spectating'))) : null);
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
       this.overlay = h('div', { class: 'g-overlay', 'aria-live': 'assertive' });
       this.main = h('main', { class: 'game-main' }, this.hud, this.boardsEl);
@@ -145,7 +148,7 @@
     syncSideIcon() {
       const open = !this.root.classList.contains('side-closed');
       if (this.sideIcon) this.sideIcon.innerHTML = Art.icon(open ? 'panelHide' : 'panelShow', 22);
-      this.sideBtn.setAttribute('aria-label', open ? '收起資訊欄' : '展開資訊欄');
+      this.sideBtn.setAttribute('aria-label', open ? T('game.hideSide') : T('game.showSide'));
       this.sideBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
     toggleSide(v) {
@@ -161,19 +164,22 @@
     /* ---------- 聊天（線上） ---------- */
     buildChat() {
       this.chatLog = h('div', { class: 'chat-log', role: 'log', 'aria-live': 'polite' });
-      const input = h('input', { class: 'text-input', maxlength: 60, placeholder: '說點什麼…', 'aria-label': '聊天訊息' });
+      const input = h('input', { class: 'text-input', maxlength: 60, placeholder: T('chat.ph'), 'aria-label': T('chat.msg') });
+      this.chatInput = input;
       const send = () => { const t = input.value.trim(); if (!t) return; root.Net.send({ type: 'chat', text: t }); input.value = ''; };
       input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') send(); });
-      const quick = ['好棒！', '加油！', '哈哈'].map(t => h('button', { type: 'button', class: 'chip', onClick: () => root.Net.send({ type: 'chat', text: t }) }, t));
+      /* 快捷語：按下去送出的是當下語言的文字（聊天內容本身不翻譯） */
+      const quick = ['q1', 'q2', 'q3'].map(k => h('button', { type: 'button', class: 'chip', 'data-q': k, onClick: () => root.Net.send({ type: 'chat', text: T('chat.' + k) }) }, T('chat.' + k)));
+      this.chatSend = btn(T('common.send'), { cls: 'btn-sm', onClick: send });
       this.chatBox = h('div', { class: 'side-chat' }, this.chatLog, h('div', { class: 'quick-chat' }, quick),
-        h('div', { class: 'chat-form' }, input, btn('送出', { cls: 'btn-sm', onClick: send })));
+        h('div', { class: 'chat-form' }, input, this.chatSend));
       (root.Online ? root.Online.chat : []).forEach(m => this.addChat(m, true));
       return this.chatBox;
     }
     addChat(m, silent) {
       if (!this.chatLog) return;
       const sys = m.role === 'sys';
-      this.chatLog.appendChild(h('div', { class: 'msg' + (sys ? ' sys' : '') }, sys ? null : h('b', null, m.name + '：'), m.text));
+      this.chatLog.appendChild(h('div', { class: 'msg' + (sys ? ' sys' : '') }, sys ? null : h('b', null, m.name + (m.role === 'spectator' ? T('chat.spec') : '') + T('chat.colon')), sys ? root.UI.chatText(m) : m.text));
       while (this.chatLog.children.length > 80) this.chatLog.removeChild(this.chatLog.firstChild);
       this.scrollChat();
       if (!silent && this.root.classList.contains('side-closed')) { this.unread++; this.updateBadge(); }
@@ -188,27 +194,27 @@
       const max = Math.max(1, ...m.boards.map(b => b.cleared));
       this.sumEl.textContent = '';
       this.sumEl.appendChild(h('div', { class: 'sum-meta' },
-        h('div', null, h('b', null, MODE_NAME[m.mode]), '・', R.LEVEL_NAME[m.level]),
-        h('div', { class: 'muted small' }, '地圖：' + (m.boards[0].layoutName || '隨機') + '・' + this.theme.name),
-        h('div', { class: 'muted small' }, m.mode === 'duel' ? '消得多，就送泡泡給對手！' : '誰消得多誰贏，先清光也贏！')));
+        h('div', null, h('b', null, modeName(m.mode)), '・', R.LEVEL_NAME[m.level]),
+        h('div', { class: 'muted small' }, T('game.map') + (m.boards[0].layoutId ? T('layout.' + m.boards[0].layoutId, null, m.boards[0].layoutName) : T('game.random')) + '・' + this.theme.name),
+        h('div', { class: 'muted small' }, m.mode === 'duel' ? T('game.goalDuel') : T('game.goalRace'))));
       order.forEach((s, rank) => {
         const p = m.players[s], b = m.boards[s];
         rows.push(h('div', { class: 'sum-row' + (s === this.slot ? ' me' : '') + (m.left[s] ? ' gone' : '') },
           h('span', { class: 'sum-rank' }, rank + 1),
           avatar(p.dragon, 34),
-          h('div', { class: 'sum-main' }, h('div', { class: 'sum-name' }, p.name + (s === this.slot ? '（你）' : '') + (p.kind === 'ai' ? ' 🤖' : '')),
+          h('div', { class: 'sum-main' }, h('div', { class: 'sum-name' }, pname(p) + (s === this.slot ? T('game.you') : '') + (p.kind === 'ai' ? ' 🤖' : '')),
             h('div', { class: 'sum-bar' }, h('i', { style: { width: Math.round(b.cleared / max * 100) + '%' } }))),
           h('b', { class: 'sum-n' }, b.cleared)));
       });
       rows.forEach(r => this.sumEl.appendChild(r));
       const mine = !this.spectator ? m.boards[this.slot] : null;
       if (mine) this.sumEl.appendChild(h('div', { class: 'mystats' },
-        h('div', { class: 'stat' }, h('b', null, mine.shots), h('span', null, '發射')),
-        h('div', { class: 'stat' }, h('b', null, mine.maxCombo), h('span', null, '最高連擊')),
-        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageOut), h('span', null, '送出')) : null,
-        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageIn), h('span', null, '收到')) : null));
+        h('div', { class: 'stat' }, h('b', null, mine.shots), h('span', null, T('stat.shots'))),
+        h('div', { class: 'stat' }, h('b', null, mine.maxCombo), h('span', null, T('stat.combo'))),
+        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageOut), h('span', null, T('stat.out'))) : null,
+        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageIn), h('span', null, T('stat.in'))) : null));
       this.sumEl.appendChild(h('div', { class: 'side-keys muted small keyline' },
-        h('span', null, '瞄準 ', root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, '發射 ', root.UI.keycap('空白')), h('span', null, '交換 ', root.UI.keycap('S'))));
+        h('span', null, T('key.aim'), root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, T('key.fire'), root.UI.keycap(T('key.space'))), h('span', null, T('key.swap'), root.UI.keycap('S'))));
     }
 
     /* ---------- 輸入 ---------- */
@@ -364,7 +370,7 @@
         const c = Math.ceil(-t / 1000);
         if (c !== this.lastCount) { this.lastCount = c; this.showBig(String(c), 'count'); root.Sound.sfx('count'); }
       } else if (!this.goShown && !this.over) {
-        this.goShown = true; this.showBig('開始！', 'go'); root.Sound.sfx('go');
+        this.goShown = true; this.showBig(T('game.go'), 'go'); root.Sound.sfx('go');
         clearTimeout(this.goT); this.goT = setTimeout(() => { if (!this.over) this.overlay.textContent = ''; }, 800);
       }
       /* 幼幼班提示 */
@@ -397,7 +403,7 @@
         const left = Math.max(0, this.cfg.duration - Math.max(0, t));
         this.timerEl.textContent = fmtTime(left);
         this.timerEl.classList.toggle('low', left < 15000 && !this.over);
-      } else this.timerEl.textContent = '悠閒玩';
+      } else this.timerEl.textContent = T('game.relaxed');
       this.boardsEl.querySelectorAll('.bt-n').forEach(el => { const s = +el.getAttribute('data-n'); el.textContent = m.boards[s].cleared; });
       this.renderSummary();
       if (this.pingEl) {
@@ -418,21 +424,24 @@
         this.paused = false; this.last = performance.now();
       };
       const mo = modal({
-        title: '暫停中', cls: 'dialog-sm dialog-pause', dismissible: true, onClose: resume,
-        content: h('div', { class: 'pause-body' },
-          h('div', { class: 'pause-art', html: Art.icon('pause', 34) }),
-          h('div', { class: 'dialog-text' }, '休息一下，準備好再繼續吧！')),
-        actions: [
-          btn('繼續玩', { cls: 'btn-pink btn-lg pause-main', icon: 'play', onClick: () => mo.close() }),
-          btn('重新開始', { cls: 'btn-sky', icon: 'refresh', onClick: () => { mo.close(true); resume(); this.o.onAgain(); } }),
-          btn('回到房間', { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
-        ]
+        cls: 'dialog-sm dialog-pause', dismissible: true, onClose: resume,
+        render: () => ({
+          title: T('pause.title'),
+          content: h('div', { class: 'pause-body' },
+            h('div', { class: 'pause-art', html: Art.icon('pause', 34) }),
+            h('div', { class: 'dialog-text' }, T('pause.text'))),
+          actions: [
+            btn(T('pause.resume'), { cls: 'btn-pink btn-lg pause-main', icon: 'play', onClick: () => mo.close() }),
+            btn(T('pause.restart'), { cls: 'btn-sky', icon: 'refresh', onClick: () => { mo.close(true); resume(); this.o.onAgain(); } }),
+            btn(T('pause.room'), { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
+          ]
+        })
       });
     }
     confirmExit() {
       if (this.over) return this.o.onExit();
       root.UI.confirmBox({
-        title: '要離開對局嗎？', text: this.spectator ? '離開後就不再觀戰囉。' : '現在離開，這一局就算你放棄囉。', ok: '離開', cancel: '繼續玩',
+        title: () => T('exit.title'), text: () => (this.spectator ? T('exit.textSpec') : T('exit.text')), ok: () => T('exit.ok'), cancel: () => T('exit.stay'),
         onOk: () => this.o.onExit()
       });
     }
@@ -452,48 +461,79 @@
       const me = this.spectator ? null : ranks.find(x => x.s === this.slot);
       const win = me && me.rank === 1;
       const tie = ranks.filter(x => x.rank === 1).length > 1;
-      let head;
-      if (this.spectator) head = ranks[0].name + ' 贏了！';
-      else if (tie && me.rank === 1) head = '平手！一樣棒！';
-      else head = win ? '你贏了！太棒了！' : (ranks[0].name + ' 贏了！');
+      this.resCtx = { r, ranks, me, win, tie };
       root.Sound.sfx(win ? 'win' : 'lose');
-      this.overlay.textContent = '';
       if (!this.spectator) root.App.recordResult(this.kind, !!win);
+      this.renderResult();
+    }
+    /** 結算畫面（語言切換時會重畫，不重複記錄戰績） */
+    renderResult() {
+      const { r, ranks, me, win, tie } = this.resCtx;
+      const nameOf = x => pname(x);
+      let head;
+      if (this.spectator) head = T('res.wins', { name: nameOf(ranks[0]) });
+      else if (tie && me.rank === 1) head = T('res.tie');
+      else head = win ? T('res.youWin') : T('res.wins', { name: nameOf(ranks[0]) });
+      const hadFocus = this.overlay.querySelector('.result-card button:focus');
+      const fidx = hadFocus ? Array.from(this.overlay.querySelectorAll('.result-card button')).indexOf(hadFocus) : 0;
+      this.overlay.textContent = '';
       const maxCl = Math.max(1, ...ranks.map(x => x.cleared));
       const rows = ranks.map(x => h('div', { class: 'rank-row' + (x.rank === 1 ? ' win' : '') + (x.s === this.slot ? ' me' : '') },
         h('span', { class: 'no' }, x.rank === 1 ? '🏆' : x.rank), avatar(x.dragon, 40),
         h('div', { class: 'rk-mid' },
-          h('span', { class: 'nm' }, x.name + (x.s === this.slot ? '（你）' : '') + (x.fullClear ? '・清光' : '') + (x.left ? '・已離開' : '')),
+          h('span', { class: 'nm' }, nameOf(x) + (x.s === this.slot ? T('game.you') : '') + (x.fullClear ? T('res.cleared') : '') + (x.left ? T('res.left') : '')),
           h('span', { class: 'rk-bar' }, h('i', { style: { width: Math.max(3, Math.round(x.cleared / maxCl * 100)) + '%' } })),
-          h('span', { class: 'rk-meta' }, ['發射 ' + x.shots, '連擊 ' + x.maxCombo].concat(this.cfg.mode === 'duel' ? ['送 ' + x.garbageOut + '／收 ' + x.garbageIn] : []).map(t => h('i', null, t)))),
-        h('b', null, x.cleared + ' 顆')));
+          h('span', { class: 'rk-meta' }, [T('res.shots', { n: x.shots }), T('res.combo', { n: x.maxCombo })].concat(this.cfg.mode === 'duel' ? [T('res.sendRecv', { a: x.garbageOut, b: x.garbageIn })] : []).map(t => h('i', null, t)))),
+        h('b', null, T('res.count', { n: x.cleared }))));
       /* 我的（或冠軍的）戰績卡 */
       const who = (me || ranks[0]);
       const tile = (ico, big, label) => h('div', { class: 'stat-tile' }, h('div', { class: 'st-ico' }, ico), h('b', null, big), h('span', null, label));
       const tiles = [
-        tile('🫧', who.cleared, '清除泡泡'),
-        tile('🔥', who.maxCombo, '最高連擊'),
-        tile('💥', who.best | 0, '單發最多'),
-        tile('🍂', who.dropN | 0, '掉落清除')
+        tile('🫧', who.cleared, T('res.tCleared')),
+        tile('🔥', who.maxCombo, T('stat.combo')),
+        tile('💥', who.best | 0, T('res.tBest')),
+        tile('🍂', who.dropN | 0, T('res.tDrop'))
       ];
-      if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, '送出 / 收到'));
-      const stats = h('div', { class: 'stat-grid', 'aria-label': (this.spectator ? ranks[0].name : '你') + '的戰績' }, tiles);
+      if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, T('res.tSendRecv')));
+      const stats = h('div', { class: 'stat-grid', 'aria-label': this.spectator ? T('res.statsOf', { name: nameOf(ranks[0]) }) : T('res.yourStats') }, tiles);
       const dragon = this.spectator ? ranks[0].dragon : this.cfg.players[this.slot].dragon;
-      const card = h('div', { class: 'dialog result-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': '結算' },
+      const card = h('div', { class: 'dialog result-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('res.aria') },
         h('div', { class: 'big-result' },
           h('img', { class: 'result-dragon', alt: '', src: Art.svgUrl(Art.dragonSVG(dragon, win || this.spectator ? 'cheer' : 'sad')) }),
           h('div', { class: 'head' }, head),
-          h('div', { class: 'muted small' }, r.reason === 'clear' ? '有人把泡泡全部清光啦！' : r.reason === 'left' ? '其他人都離開了。' : '時間到！')),
-        h('div', { class: 'stat-title' }, this.spectator ? ranks[0].name + ' 的戰績' : (me && me.rank === 1 ? '你的戰績' : '你的戰績')),
+          h('div', { class: 'muted small' }, r.reason === 'clear' ? T('res.rClear') : r.reason === 'left' ? T('res.rLeft') : T('res.rTime'))),
+        h('div', { class: 'stat-title' }, this.spectator ? T('res.statsOf', { name: nameOf(ranks[0]) }) : T('res.yourStats')),
         stats,
         h('div', { class: 'rank' }, rows),
         h('div', { class: 'result-actions' },
-          btn('再來一局', { cls: 'btn-pink btn-lg', icon: 'refresh', onClick: () => this.o.onAgain() }),
-          btn('回到房間', { cls: 'btn-sky', icon: 'users', onClick: () => this.o.onRoom() }),
-          btn('回到首頁', { cls: 'btn-ghost', icon: 'home', onClick: () => this.o.onHome() })));
+          btn(T('res.again'), { cls: 'btn-pink btn-lg', icon: 'refresh', onClick: () => this.o.onAgain() }),
+          btn(T('pause.room'), { cls: 'btn-sky', icon: 'users', onClick: () => this.o.onRoom() }),
+          btn(T('res.home'), { cls: 'btn-ghost', icon: 'home', onClick: () => this.o.onHome() })));
       const wrap = h('div', { class: 'result-mask' }, card);
       this.overlay.appendChild(wrap);
-      const first = card.querySelector('button'); if (first) first.focus();
+      const btns = card.querySelectorAll('button'); const first = btns[Math.max(0, fidx)] || btns[0]; if (first) first.focus();
+    }
+
+    /** 語言切換：只重畫文字，不動對局狀態 */
+    relocalize() {
+      if (this.dead) return;
+      this.side.setAttribute('aria-label', T('game.info'));
+      this.sideTitle.textContent = T('game.info');
+      const lab = (el, k) => { el.setAttribute('aria-label', T(k)); el.setAttribute('title', T(k)); };
+      lab(this.sideClose, 'game.hideSide');
+      lab(this.exitBtn, this.kind === 'solo' ? 'game.pause' : 'game.leave');
+      this.syncSideIcon();
+      this.modeEl.textContent = modeName(this.cfg.mode) + '・' + R.LEVEL_NAME[this.cfg.level];
+      if (this.specPill) this.specPill.textContent = T('game.spectating');
+      this.cfg.players.forEach((p, s) => { const el = this.boardsEl.querySelector('.bt-name[data-s="' + s + '"]'); if (el) el.textContent = pname(p) + (p.kind === 'ai' ? ' 🤖' : ''); });
+      if (this.chatInput) {
+        this.chatInput.setAttribute('placeholder', T('chat.ph')); this.chatInput.setAttribute('aria-label', T('chat.msg'));
+        this.chatBox.querySelectorAll('[data-q]').forEach(b => { b.textContent = T('chat.' + b.getAttribute('data-q')); });
+        const sl = this.chatSend.querySelector('.btn-label'); if (sl) sl.textContent = T('common.send');
+      }
+      if (this.chatLog && root.Online) { this.chatLog.textContent = ''; root.Online.chat.forEach(m => this.addChat(m, true)); }
+      this.updateHud(this.mt());
+      if (this.resultShown && this.resCtx) this.renderResult();
     }
 
     destroy() {

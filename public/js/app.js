@@ -5,23 +5,23 @@
   const R = root.Rules, Art = root.Art, AI = root.AI, Layouts = root.Layouts;
   const $ = id => document.getElementById(id);
 
-  const LEVEL_HINT = { baby: '4 種泡泡、有提示、不會下壓', easy: '6 種泡泡、偶爾會下壓、會出現陌生色', normal: '8 種泡泡、星星泡泡、陌生色變多', hard: '10 種泡泡、下壓最快、常出現陌生色' };
-  const LEVEL_DD = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: LEVEL_HINT[k] }));
-  const LEVEL_OPTS = R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k] }));
-  const AI_HINT = { baby: '慢慢來、常亂射', easy: '偶爾失手', normal: '穩穩消除', hard: '又快又準' };
-  const AI_DD = AI.LEVEL_ORDER.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: AI_HINT[k] }));
-  const TIME_OPTS = [{ v: 120000, label: '2 分' }, { v: 180000, label: '3 分' }, { v: 300000, label: '5 分' }, { v: 0, label: '不限時' }];
-  const MODE_OPTS = [{ v: 'race', label: '各自比賽' }, { v: 'duel', label: '送泡泡對打' }];
-  const THEME_DD = [{ v: 'random', label: '隨機', swatch: 'linear-gradient(135deg,#8fd6ff,#ffbfe0,#bdeecb)' }]
+  const T = (k, p, fb) => root.I18N.t(k, p, fb);
+  /* 選項清單都在使用當下才組（語言切換後重畫就會換字） */
+  const levelHint = k => T('level.hint.' + k);
+  const levelOpts = () => R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k] }));
+  const aiDD = () => AI.LEVEL_ORDER.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: T('ai.hint.' + k) }));
+  const timeOpts = () => [{ v: 120000, label: T('time.2') }, { v: 180000, label: T('time.3') }, { v: 300000, label: T('time.5') }, { v: 0, label: T('time.off') }];
+  const modeOpts = () => [{ v: 'race', label: T('mode.race') }, { v: 'duel', label: T('mode.duel') }];
+  const themeDD = () => [{ v: 'random', label: T('theme.random'), swatch: 'linear-gradient(135deg,#8fd6ff,#ffbfe0,#bdeecb)' }]
     .concat(Art.THEMES.map(t => ({ v: String(t.id), label: t.name, swatch: 'linear-gradient(135deg,' + t.sky[0] + ',' + t.sky[1] + ')' })));
   function layoutOpts() {
     const list = Layouts.list();
-    const out = [{ v: 'random', label: '隨機（每局不同）' }];
+    const out = [{ v: 'random', label: T('layout.randomEach') }];
     list.filter(x => x.kind === 'pattern').forEach(x => out.push({ v: x.id, label: x.name, hint: x.group }));
-    list.filter(x => x.kind === 'family').forEach(x => out.push({ v: x.id, label: x.name, hint: '花紋' }));
+    list.filter(x => x.kind === 'family').forEach(x => out.push({ v: x.id, label: x.name, hint: T('layout.family') }));
     return out;
   }
-  const ADJ = ['快樂', '勇敢', '調皮', '害羞', '閃亮', '軟綿綿', '圓滾滾', '機靈', '呆萌', '活潑'];
+  const ADJ_N = 10;
 
   const App = {
     store: root.Store.load(), screen: null, params: null, game: null, el: null, screens: {}, util: {}
@@ -31,7 +31,8 @@
   function myName() {
     const n = (App.store.nickname || '').trim();
     if (n) return n.slice(0, 10);
-    return (App.autoAdj || (App.autoAdj = ADJ[Math.floor(Math.random() * ADJ.length)])) + Art.dragonName(App.store.dragon).replace('龍', '');
+    if (App.autoAdj == null) App.autoAdj = Math.floor(Math.random() * ADJ_N);
+    return T('auto.name', { adj: T('adj.' + App.autoAdj), dragon: T('dragon.short.' + App.store.dragon) });
   }
   function save() { root.Store.save(App.store); }
   function applySettings() {
@@ -63,59 +64,59 @@
   App.go = go;
   App.rerender = () => { if (App.screen === 'lobby' || App.screen === 'room') go(App.screen, App.params, { quiet: true }); };
   const screenBox = (cls, kids) => h('main', { class: 'screen ' + (cls || '') }, kids);
-  const topbar = (title, backFn, extra) => h('div', { class: 'topbar' }, backFn ? root.UI.iconBtn('back', '返回', backFn) : null, h('h2', null, title), extra);
+  const topbar = (title, backFn, extra) => h('div', { class: 'topbar' }, backFn ? root.UI.iconBtn('back', T('common.back'), backFn) : null, h('h2', null, title), extra);
   const img = (svg, cls, size) => h('img', { class: cls || '', alt: '', draggable: 'false', src: Art.svgUrl(svg), width: size, height: size });
 
   /* ---------- 首頁 ---------- */
   App.screens.home = function () {
     const st = App.store.stats, sline = [];
-    if (st.solo) sline.push('單機 ' + st.solo.win + ' 勝／' + st.solo.play + ' 場');
-    if (st.online) sline.push('線上 ' + st.online.win + ' 勝／' + st.online.play + ' 場');
+    if (st.solo) sline.push(T('home.statSolo', { w: st.solo.win, p: st.solo.play }));
+    if (st.online) sline.push(T('home.statOnline', { w: st.online.win, p: st.online.play }));
     return screenBox('home center', [
       h('div', { class: 'hero' },
-        h('img', { class: 'hero-logo', alt: '彩虹泡泡砲', src: Art.svgUrl(Art.logoSVG()) }),
-        h('h1', { class: 'sr' }, '彩虹泡泡砲'),
-        h('p', { class: 'hero-sub' }, '對準同顏色的泡泡，咻！一次消掉好多好多！'),
+        h('img', { class: 'hero-logo', alt: T('app.name'), src: Art.svgUrl(Art.logoSVG()) }),
+        h('h1', { class: 'sr' }, T('app.name')),
+        h('p', { class: 'hero-sub' }, T('home.sub')),
         h('div', { class: 'hero-cast' }, Art.DRAGONS.map(d => avatar(d.id, 70)))),
-      h('nav', { class: 'home-menu', 'aria-label': '主選單' },
-        btn('一個人玩', { cls: 'btn-pink btn-lg btn-block', icon: 'robot', iconSize: 28, onClick: () => go('solo') }),
-        btn('跟別人玩', { cls: 'btn-sky btn-lg btn-block', icon: 'users', iconSize: 28, onClick: () => go('lobby') }),
-        btn('怎麼玩', { cls: 'btn-sun btn-lg btn-block', icon: 'help', iconSize: 28, onClick: () => go('help') })),
-      sline.length ? h('p', { class: 'home-foot' }, '本機戰績：' + sline.join('　')) : null
+      h('nav', { class: 'home-menu', 'aria-label': T('home.menu') },
+        btn(T('home.solo'), { cls: 'btn-pink btn-lg btn-block', icon: 'robot', iconSize: 28, onClick: () => go('solo') }),
+        btn(T('home.online'), { cls: 'btn-sky btn-lg btn-block', icon: 'users', iconSize: 28, onClick: () => go('lobby') }),
+        btn(T('help.title'), { cls: 'btn-sun btn-lg btn-block', icon: 'help', iconSize: 28, onClick: () => go('help') })),
+      sline.length ? h('p', { class: 'home-foot' }, T('home.stats') + sline.join('　')) : null
     ]);
   };
 
   /* ---------- 教學（純圖文，看得懂就好） ---------- */
   App.screens.help = function () {
-    const fig = (key, label) => h('div', { class: 'help-item' }, img(key.startsWith('s:') ? Art.specialBubbleSVG(key.slice(2)) : Art.bubbleSVG(+key.split(':')[1], { mod: +key.split(':')[2] || 0 }), 'help-bub', 56), h('span', { class: 'help-txt' }, h('b', null, label.split('：')[0]), h('small', null, label.split('：')[1] || '')));
+    const fig = (key, name) => h('div', { class: 'help-item' }, img(key.startsWith('s:') ? Art.specialBubbleSVG(key.slice(2)) : Art.bubbleSVG(+key.split(':')[1], { mod: +key.split(':')[2] || 0 }), 'help-bub', 56), h('span', { class: 'help-txt' }, h('b', null, T('help.sp.' + name + '.n')), h('small', null, T('help.sp.' + name + '.d'))));
     return screenBox('', h('div', { class: 'wrap' },
-      topbar('怎麼玩', () => go('home')),
+      topbar(T('help.title'), () => go('home')),
       h('div', { class: 'help-grid' },
-        h('section', { class: 'card' }, h('h3', null, '目標'),
-          h('p', null, '用彩虹砲發射泡泡，3 顆以上同顏色的泡泡碰在一起就會「啵」地消失！'),
-          h('p', { class: 'muted small', style: { marginTop: '6px' } }, '時間到的時候，消得最多的贏；有人把泡泡全部清光，也是他贏！')),
-        h('section', { class: 'card' }, h('h3', null, '怎麼射'),
-          h('p', null, '平板與手機：點哪裡，泡泡就飛向哪裡。點砲台右邊的小長方形「⇄」按鈕，可以換下一顆。'),
-          h('p', { class: 'keyline', style: { margin: '6px 0' } }, h('span', null, '電腦鍵盤：'), h('span', null, '瞄準 ', keycap('←'), keycap('→')), h('span', null, '發射 ', keycap('空白', 'wide')), h('span', null, '交換泡泡 ', keycap('S'))),
-          h('p', { class: 'muted small' }, '泡泡會彈牆壁喔！跟著虛線瞄準就對了。'))),
-      h('section', { class: 'card' }, h('h3', null, '特別的泡泡'),
+        h('section', { class: 'card' }, h('h3', null, T('help.goal.h')),
+          h('p', null, T('help.goal.p1')),
+          h('p', { class: 'muted small', style: { marginTop: '6px' } }, T('help.goal.p2'))),
+        h('section', { class: 'card' }, h('h3', null, T('help.shoot.h')),
+          h('p', null, T('help.shoot.p1')),
+          h('p', { class: 'keyline', style: { margin: '6px 0' } }, h('span', null, T('help.shoot.kb')), h('span', null, T('key.aim'), keycap('←'), keycap('→')), h('span', null, T('key.fire'), keycap(T('key.space'), 'wide')), h('span', null, T('help.shoot.swap'), keycap('S'))),
+          h('p', { class: 'muted small' }, T('help.shoot.p3')))),
+      h('section', { class: 'card' }, h('h3', null, T('help.special.h')),
         h('div', { class: 'help-items' },
-          fig('s:rainbow', '彩虹泡泡：碰到泡泡會變成旁邊最多的顏色，湊成 3 顆就消掉'),
-          fig('s:star', '星星泡泡：射出去碰到泡泡就爆開，炸掉周圍一圈'),
-          fig('b:2:1', '帶星星記號的泡泡：把它消掉時，也會以它為中心爆開一圈'),
-          fig('s:laser', '閃電泡泡：打到泡泡上就射出十字雷射，同時消掉一整排和一整列'),
-          fig('b:3:2', '金幣泡泡：算 3 顆分數'),
-          fig('s:cloud', '雲朵磚：消不掉，但會幫忙撐住泡泡'))),
-      h('section', { class: 'card' }, h('h3', null, '掉下來也算分'),
-        h('p', null, '泡泡一旦沒有連到天花板，就會一起掉下來，全部都算分！打斷「根」就能一次掉很多。')),
-      h('section', { class: 'card' }, h('h3', null, '送泡泡對打（5 歲以上）'),
-        h('p', null, '你一次消得越多，就會把雲朵泡泡送給別人。頭上有警告雲時，趕快多消幾顆就能抵銷！'),
-        h('p', { class: 'muted small', style: { marginTop: '6px' } }, '泡泡碰到底線時，會下一場「泡泡雨」，幫你沖掉最下面三排，還有兩發保護，不會輸掉。')),
-      h('section', { class: 'card' }, h('h3', null, '四種難度'),
-        h('div', { class: 'help-levels' }, R.LEVELS.map(k => h('div', null, h('b', null, R.LEVEL_NAME[k]), '　', h('span', { class: 'muted' }, LEVEL_HINT[k]))))),
+          fig('s:rainbow', 'rainbow'),
+          fig('s:star', 'star'),
+          fig('b:2:1', 'starmark'),
+          fig('s:laser', 'laser'),
+          fig('b:3:2', 'coin'),
+          fig('s:cloud', 'cloud'))),
+      h('section', { class: 'card' }, h('h3', null, T('help.fall.h')),
+        h('p', null, T('help.fall.p'))),
+      h('section', { class: 'card' }, h('h3', null, T('help.duel.h')),
+        h('p', null, T('help.duel.p1')),
+        h('p', { class: 'muted small', style: { marginTop: '6px' } }, T('help.duel.p2'))),
+      h('section', { class: 'card' }, h('h3', null, T('help.levels.h')),
+        h('div', { class: 'help-levels' }, R.LEVELS.map(k => h('div', null, h('b', null, R.LEVEL_NAME[k]), '　', h('span', { class: 'muted' }, levelHint(k)))))),
       h('div', { class: 'row', style: { justifyContent: 'center' } },
-        btn('開始練習', { cls: 'btn-pink btn-lg', onClick: () => go('solo') }),
-        btn('回首頁', { cls: 'btn-ghost btn-lg', onClick: () => go('home') }))));
+        btn(T('help.start'), { cls: 'btn-pink btn-lg', onClick: () => go('solo') }),
+        btn(T('common.home'), { cls: 'btn-ghost btn-lg', onClick: () => go('home') }))));
   };
 
   /* ---------- 暱稱與龍 ---------- */
@@ -123,7 +124,7 @@
     o = o || {};
     const st = App.store;
     const input = h('input', {
-      class: 'text-input', type: 'text', maxlength: 10, value: st.nickname || '', placeholder: '幫自己取個名字（最多 10 字）', 'aria-label': '暱稱', autocomplete: 'off', enterkeyhint: 'done',
+      class: 'text-input', type: 'text', maxlength: 10, value: st.nickname || '', placeholder: T('profile.ph'), 'aria-label': T('profile.nick'), autocomplete: 'off', enterkeyhint: 'done',
       onInput: () => { st.nickname = input.value; save(); o.onChange && o.onChange(); }
     });
     const btns = Art.DRAGONS.map(d => h('button', {
@@ -135,8 +136,8 @@
     }, avatar(d.id, 52), d.name));
     return {
       el: h('div', null,
-        h('div', { class: 'field' }, h('span', { class: 'label' }, '暱稱'), h('div', { class: 'ctl', style: { justifyContent: 'stretch' } }, input)),
-        h('div', { class: 'field' }, h('span', { class: 'label' }, '小龍'), h('div', { class: 'ctl', style: { justifyContent: 'stretch' } }, h('div', { class: 'animal-grid', role: 'radiogroup', 'aria-label': '選擇小龍', style: { width: '100%' } }, btns)))),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, T('profile.nick')), h('div', { class: 'ctl', style: { justifyContent: 'stretch' } }, input)),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, T('profile.dragon')), h('div', { class: 'ctl', style: { justifyContent: 'stretch' } }, h('div', { class: 'animal-grid', role: 'radiogroup', 'aria-label': T('profile.pick'), style: { width: '100%' } }, btns)))),
       input
     };
   };
@@ -146,11 +147,11 @@
     o = o || {};
     const f = (label, ctl) => h('div', { class: 'field' }, h('span', { class: 'label' }, label), h('div', { class: 'ctl' }, ctl));
     const rows = [];
-    if (!o.noMode) rows.push(f('玩法', seg({ label: '玩法', options: MODE_OPTS.map(x => Object.assign({}, x, { disabled: x.v === 'duel' && o.duelDisabled })), value: rules.mode, onChange: v => set({ mode: v }) })));
-    rows.push(f('難度', seg({ label: '難度', cls: 'small', options: LEVEL_OPTS, value: rules.level, onChange: v => set({ level: v }) })));
-    rows.push(f('地圖', root.UI.dropdown({ label: '地圖', options: layoutOpts(), value: rules.layout, onChange: v => set({ layout: v }) })));
-    rows.push(f('主題', root.UI.dropdown({ label: '主題', options: THEME_DD, value: String(rules.theme), onChange: v => set({ theme: v }) })));
-    rows.push(f('時間', seg({ label: '時間', options: o.noUnlimited ? TIME_OPTS.slice(0, 3) : TIME_OPTS, value: rules.duration, onChange: v => set({ duration: v }) })));
+    if (!o.noMode) rows.push(f(T('rules.mode'), seg({ label: T('rules.mode'), options: modeOpts().map(x => Object.assign({}, x, { disabled: x.v === 'duel' && o.duelDisabled })), value: rules.mode, onChange: v => set({ mode: v }) })));
+    rows.push(f(T('rules.level'), seg({ label: T('rules.level'), cls: 'small', options: levelOpts(), value: rules.level, onChange: v => set({ level: v }) })));
+    rows.push(f(T('rules.map'), root.UI.dropdown({ label: T('rules.map'), options: layoutOpts(), value: rules.layout, onChange: v => set({ layout: v }) })));
+    rows.push(f(T('rules.theme'), root.UI.dropdown({ label: T('rules.theme'), options: themeDD(), value: String(rules.theme), onChange: v => set({ theme: v }) })));
+    rows.push(f(T('rules.time'), seg({ label: T('rules.time'), options: o.noUnlimited ? timeOpts().slice(0, 3) : timeOpts(), value: rules.duration, onChange: v => set({ duration: v }) })));
     return h('div', { class: 'rules-panel' }, rows);
   };
 
@@ -164,12 +165,12 @@
       oppBox.textContent = '';
       const rows = [];
       for (let i = 0; i < so.opponents; i++) {
-        rows.push(h('div', { class: 'ai-row' }, h('span', { class: 'name' }, '電腦 ' + (i + 1)),
-          root.UI.dropdown({ label: '電腦 ' + (i + 1) + ' 難度', cls: 'lvl', options: AI_DD, value: so.aiLevels[i], onChange: v => { so.aiLevels[i] = v; save(); } })));
+        rows.push(h('div', { class: 'ai-row' }, h('span', { class: 'name' }, T('solo.cpu', { n: i + 1 })),
+          root.UI.dropdown({ label: T('solo.cpuLevel', { n: i + 1 }), cls: 'lvl', options: aiDD(), value: so.aiLevels[i], onChange: v => { so.aiLevels[i] = v; save(); } })));
       }
       oppBox.appendChild(h('div', null,
-        f('電腦對手', stepper({ label: '電腦數量', min: 0, max: 3, value: so.opponents, onChange: v => { so.opponents = v; if (v === 0) so.mode = 'race'; save(); paintOpp(); paintPanel(); } })),
-        so.opponents ? h('div', { class: 'ai-rows' }, rows) : h('p', { class: 'muted small' }, '一個人慢慢玩也很好！想比賽就加電腦對手。')));
+        f(T('solo.opp'), stepper({ label: T('solo.count'), min: 0, max: 3, value: so.opponents, onChange: v => { so.opponents = v; if (v === 0) so.mode = 'race'; save(); paintOpp(); paintPanel(); } })),
+        so.opponents ? h('div', { class: 'ai-rows' }, rows) : h('p', { class: 'muted small' }, T('solo.alone'))));
     }
     function paintPanel() {
       panelBox.textContent = '';
@@ -179,18 +180,18 @@
         save();
         if ('mode' in patch || 'level' in patch) paintPanel();
       }, { duelDisabled: so.opponents === 0 }));
-      if (so.opponents === 0 && so.level === 'baby') panelBox.appendChild(h('p', { class: 'hint' }, '幼幼班一個人玩：不計時，想玩多久都可以。'));
+      if (so.opponents === 0 && so.level === 'baby') panelBox.appendChild(h('p', { class: 'hint' }, T('solo.babyHint')));
     }
     paintOpp(); paintPanel();
     return screenBox('', h('div', { class: 'wrap' },
-      topbar('一個人玩', () => go('home')),
+      topbar(T('home.solo'), () => go('home')),
       h('div', { class: 'room-grid' },
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
-          h('section', { class: 'card' }, h('h3', null, '你的小龍'), prof.el),
-          h('section', { class: 'card' }, h('h3', null, '對手'), oppBox)),
+          h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el),
+          h('section', { class: 'card' }, h('h3', null, T('solo.opponents')), oppBox)),
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
-          h('section', { class: 'card' }, h('h3', null, '規則'), panelBox))),
-      h('div', { class: 'sticky-cta' }, btn('開始遊戲', { cls: 'btn-pink btn-lg btn-block', icon: 'play', iconSize: 26, onClick: () => App.startSolo() }))));
+          h('section', { class: 'card' }, h('h3', null, T('rules.h')), panelBox))),
+      h('div', { class: 'sticky-cta' }, btn(T('solo.start'), { cls: 'btn-pink btn-lg btn-block', icon: 'play', iconSize: 26, onClick: () => App.startSolo() }))));
   };
 
   /* ---------- 單機開局 ---------- */
@@ -201,7 +202,7 @@
     const players = [{ name: myName(), dragon: st.dragon, kind: 'human' }];
     const ai = {};
     for (let i = 0; i < so.opponents; i++) {
-      players.push({ name: Art.dragonName(others[i]).replace('龍', '') + '・電腦', dragon: others[i], kind: 'ai', aiLevel: so.aiLevels[i] });
+      players.push({ name: T('ai.name', { dragon: T('dragon.short.' + others[i]) }), dragon: others[i], kind: 'ai', aiLevel: so.aiLevels[i] });
       ai[i + 1] = so.aiLevels[i];
     }
     const seed = Math.floor(Math.random() * 4294967296) >>> 0;
@@ -230,28 +231,33 @@
   App.openSettings = function () {
     if (App.settingsOpen) return;
     const st = App.store;
-    const bgmVol = volume({ label: '音樂音量', value: st.bgmVol, disabled: !st.bgm, onChange: v => { st.bgmVol = v; save(); applySettings(); } });
-    const sfxVol = volume({ label: '音效音量', value: st.sfxVol, disabled: !st.sfx, onChange: v => { st.sfxVol = v; save(); applySettings(); root.Sound.sfx('pop', 0); } });
-    const bgmSw = toggle({ label: '背景音樂', value: st.bgm, onChange: v => { st.bgm = v; save(); applySettings(); bgmVol.setDisabled(!v); } });
-    const sfxSw = toggle({ label: '音效', value: st.sfx, onChange: v => { st.sfx = v; save(); applySettings(); sfxVol.setDisabled(!v); if (v) root.Sound.sfx('pop', 0); } });
-    const vibSw = toggle({ label: '震動', value: st.vibrate, onChange: v => { st.vibrate = v; save(); if (v && navigator.vibrate) try { navigator.vibrate(40); } catch (e) { /* 忽略 */ } } });
-    const calmSw = toggle({ label: '減少動態', value: st.reduceMotion, onChange: v => { st.reduceMotion = v; save(); applySettings(); } });
-    const lineSw = toggle({ label: '瞄準虛線', value: st.aimLine, onChange: v => { st.aimLine = v; save(); } });
-    const aimSeg = seg({ label: '瞄準方式', options: [{ v: 'tap', label: '點哪射哪' }, { v: 'drag', label: '拖曳瞄準' }], value: st.aimMode, onChange: v => { st.aimMode = v; save(); } });
-    const f = (label, ctl, hint) => h('div', { class: 'field' }, h('span', { class: 'label' }, label, hint ? h('span', { class: 'muted small' }, hint) : null), h('div', { class: 'ctl' }, ctl));
-    const body = h('div', null,
-      h('h3', { style: { margin: '4px 0' } }, '聲音'),
-      f('背景音樂', [bgmSw, bgmVol]), f('音效', [sfxSw, sfxVol]),
-      h('h3', { style: { margin: '10px 0 4px' } }, '操作與輔助'),
-      f('瞄準方式', aimSeg, st.aimMode === 'tap' ? '' : ''),
-      h('p', { class: 'muted small' }, '點哪射哪：一點螢幕就發射。拖曳瞄準：按住移動瞄準，放開才發射。'),
-      f('瞄準虛線', lineSw),
-      navigator.vibrate ? f('震動', vibSw) : null,
-      f('減少動態', calmSw));
+    const build = () => {
+      const bgmVol = volume({ label: T('set.bgmVol'), value: st.bgmVol, disabled: !st.bgm, onChange: v => { st.bgmVol = v; save(); applySettings(); } });
+      const sfxVol = volume({ label: T('set.sfxVol'), value: st.sfxVol, disabled: !st.sfx, onChange: v => { st.sfxVol = v; save(); applySettings(); root.Sound.sfx('pop', 0); } });
+      const bgmSw = toggle({ label: T('set.bgm'), value: st.bgm, onChange: v => { st.bgm = v; save(); applySettings(); bgmVol.setDisabled(!v); } });
+      const sfxSw = toggle({ label: T('set.sfx'), value: st.sfx, onChange: v => { st.sfx = v; save(); applySettings(); sfxVol.setDisabled(!v); if (v) root.Sound.sfx('pop', 0); } });
+      const vibSw = toggle({ label: T('set.vibrate'), value: st.vibrate, onChange: v => { st.vibrate = v; save(); if (v && navigator.vibrate) try { navigator.vibrate(40); } catch (e) { /* 忽略 */ } } });
+      const calmSw = toggle({ label: T('set.calm'), value: st.reduceMotion, onChange: v => { st.reduceMotion = v; save(); applySettings(); } });
+      const lineSw = toggle({ label: T('set.aimLine'), value: st.aimLine, onChange: v => { st.aimLine = v; save(); } });
+      const aimSeg = seg({ label: T('set.aimMode'), options: [{ v: 'tap', label: T('set.aimTap') }, { v: 'drag', label: T('set.aimDrag') }], value: st.aimMode, onChange: v => { st.aimMode = v; save(); } });
+      const f = (label, ctl, hint) => h('div', { class: 'field' }, h('span', { class: 'label' }, label, hint ? h('span', { class: 'muted small' }, hint) : null), h('div', { class: 'ctl' }, ctl));
+      const body = h('div', null,
+        h('h3', { style: { margin: '4px 0' } }, T('set.sound')),
+        f(T('set.bgm'), [bgmSw, bgmVol]), f(T('set.sfx'), [sfxSw, sfxVol]),
+        h('h3', { style: { margin: '10px 0 4px' } }, T('set.controls')),
+        f(T('set.aimMode'), aimSeg),
+        h('p', { class: 'muted small' }, T('set.aimHelp')),
+        f(T('set.aimLine'), lineSw),
+        navigator.vibrate ? f(T('set.vibrate'), vibSw) : null,
+        f(T('set.calm'), calmSw));
+      return {
+        title: T('set.title'), content: body,
+        actions: [btn(T('set.reset'), { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); applySettings(); m.close(true); App.settingsOpen = false; toast(T('toast.resetDone')); App.openSettings(); } }),
+          btn(T('common.done'), { cls: 'btn-mint', onClick: () => m.close() })]
+      };
+    };
     const m = modal({
-      title: '設定', content: body, cls: 'dialog-lg',
-      actions: [btn('恢復預設', { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); applySettings(); m.close(true); App.settingsOpen = false; toast('已恢復預設設定'); App.openSettings(); } }),
-        btn('完成', { cls: 'btn-mint', onClick: () => m.close() })],
+      cls: 'dialog-lg', render: build,
       onClose: () => { App.settingsOpen = false; }
     });
     App.settingsOpen = true;
@@ -259,12 +265,13 @@
     m.close = function (silent) { App.settingsOpen = false; origClose(silent); };
   };
 
-  /* ---------- 連線狀態橫幅 ---------- */
+  /* ---------- 連線狀態橫幅（text 可為字串或函式，語言切換時重新取字） ---------- */
   App.banner = function (text, busy) {
     const b = $('banner');
     b.textContent = '';
+    App._banner = text ? { text, busy } : null;
     if (!text) return;
-    b.appendChild(h('div', { class: 'banner' }, busy ? h('span', { class: 'spin', html: Art.icon('refresh', 18) }) : null, h('span', { class: 'banner-txt' }, text)));
+    b.appendChild(h('div', { class: 'banner' }, busy ? h('span', { class: 'spin', html: Art.icon('refresh', 18) }) : null, h('span', { class: 'banner-txt' }, typeof text === 'function' ? text() : text)));
   };
 
   /* ---------- 返回鍵（Android／瀏覽器） ---------- */
@@ -284,6 +291,19 @@
     const gear = $('gear');
     gear.innerHTML = Art.icon('gear', 26);
     gear.addEventListener('click', () => { root.Sound.sfx('click'); App.openSettings(); });
+    /* 語言切換鈕：設定鈕左邊（同一排） */
+    root.I18N.mountToggle({ after: gear, id: 'b-lang' });
+    const lobbyLink = $('lobby-home-link');
+    const syncLobbyLink = () => { if (lobbyLink) lobbyLink.href = root.I18N.withLang(lobbyLink.getAttribute('data-base') || lobbyLink.href); };
+    if (lobbyLink) lobbyLink.setAttribute('data-base', lobbyLink.getAttribute('href'));
+    syncLobbyLink();
+    /* 切換語言：畫面重畫文字，不重置對局狀態 */
+    root.I18N.onChange(() => {
+      syncLobbyLink();
+      if (App.screen === 'game') { if (App.game && App.game.relocalize) App.game.relocalize(); }
+      else if (App.screen) go(App.screen, App.params, { quiet: true });
+      if (App._banner) App.banner(App._banner.text, App._banner.busy);
+    });
     document.addEventListener('pointerdown', () => root.Sound.unlock(), { passive: true });
     document.addEventListener('keydown', () => root.Sound.unlock(), { passive: true });
     applySettings();
@@ -303,6 +323,6 @@
     } else go('home');
   };
 
-  App.util = { myName, save, applySettings, topbar, screenBox, shuffle, LEVEL_DD, TIME_OPTS };
+  App.util = { myName, save, applySettings, topbar, screenBox, shuffle, get LEVEL_DD() { return levelOpts(); }, get TIME_OPTS() { return timeOpts(); } };
   document.addEventListener('DOMContentLoaded', () => App.boot());
 })(typeof self !== 'undefined' ? self : this);

@@ -9,6 +9,8 @@
   'use strict';
 
   var LEGAL = '.abcdefABCDEF#*+X';
+  var GROUP_KEY = { '動物': 'animal', '形狀': 'shape', '物品': 'thing', '圖案': 'pattern', '程序生成': 'gen' };
+  function tr(k, fb) { return root.I18N ? root.I18N.t(k, null, fb) : fb; }   // 名稱跟著語言走；伺服器端沒有 I18N 維持中文
   var X_MAX_RATIO = 0.2; // X 佔非空格的比例上限
 
   // ---------- 基本工具 ----------
@@ -763,11 +765,11 @@
     var out = [], i;
     for (i = 0; i < PATTERNS.length; i++) {
       var p = PATTERNS[i];
-      out.push({ id: p.id, name: p.name, group: p.group, obstacle: p.obstacle, special: p.special, kind: 'pattern' });
+      out.push({ id: p.id, name: tr('layout.' + p.id, p.name), group: tr('layout.group.' + (GROUP_KEY[p.group] || p.group), p.group), obstacle: p.obstacle, special: p.special, kind: 'pattern' });
     }
     for (i = 0; i < FAMILIES.length; i++) {
       var f = FAMILIES[i];
-      out.push({ id: f.id, name: f.name, group: '程序生成', obstacle: false, special: true, kind: 'family' });
+      out.push({ id: f.id, name: tr('layout.' + f.id, f.name), group: tr('layout.group.gen', '程序生成'), obstacle: false, special: true, kind: 'family' });
     }
     return out;
   }

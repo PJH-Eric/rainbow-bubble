@@ -25,7 +25,11 @@
 
   /* ---------- 難度表 ---------- */
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
-  const LEVEL_NAME = { baby: '幼幼班', easy: '簡單', normal: '普通', hard: '困難' };
+  /* 難度名稱：有 I18N 時跟著語言走（伺服器端沒有 I18N，維持中文） */
+  const LEVEL_NAME = {};
+  [['baby', '幼幼班'], ['easy', '簡單'], ['normal', '普通'], ['hard', '困難']].forEach(function (p) {
+    Object.defineProperty(LEVEL_NAME, p[0], { enumerable: true, get: function () { return root.I18N ? root.I18N.t('level.' + p[0], null, p[1]) : p[1]; } });
+  });
   const DIFF = {
     baby:   { assist: 0.8, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 7] },
     easy:   { assist: 0.7, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [6, 8] },
