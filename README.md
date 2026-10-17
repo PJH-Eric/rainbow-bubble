@@ -91,7 +91,7 @@ Render 免費方案閒置會休眠，首次連線約 30～60 秒；房間只存�
 ## 目錄
 
 ```
-server.js                HTTP ＋ WebSocket 入口、/health、/api/presence、CORS
+server.js                HTTP ＋ WebSocket 入口、/health、CORS
 lib/ws.js                自製 WebSocket（RFC 6455）
 lib/rooms.js             房間／席位／觀戰／邀請／聊天／權威對局（純邏輯，可不開網路測試）
 public/js/matchsnap.js         整場對局快照 snapshotAll／restoreAll（伺服器與瀏覽器共用）

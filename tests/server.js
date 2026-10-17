@@ -95,9 +95,6 @@ async function lobby(base, tag, patch, withSpec) {
   ok(/ 403 /.test(await rawGet(port, '/../public-x/a.txt')), '名稱以 public 開頭的旁邊資料夾也回 403');
   const health = await (await fetch(base + '/health')).json();
   ok(health.ok === true && health.game === 'rainbow-bubble', '/health 回報 ok 與遊戲名稱');
-  const pres = await (await fetch(base + '/api/presence')).json();
-  ok(pres.gameId === 'rainbow-bubble' && ['online', 'players', 'spectators', 'lobby', 'rooms'].every(k => Number.isInteger(pres[k]) && pres[k] >= 0) && !isNaN(Date.parse(pres.updatedAt)),
-    '/api/presence 符合遊戲大廳的統一格式');
   const opt = await fetch(base + '/health', { method: 'OPTIONS', headers: { Origin: 'https://x.test' } });
   ok(opt.status === 204 && opt.headers.get('access-control-allow-origin') === '*', 'allowOrigin=* 時 CORS 標頭正確');
   const sp = strict.server.address().port;

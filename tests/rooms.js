@@ -670,14 +670,6 @@ test('結束後電腦不再動（backToRoom 清掉 brain）；房間裡只有電
   assert.strictEqual(x.hub.roomView([...x.hub._rooms.values()][0], 'aaaaaaaa1').phase, 'room');
 });
 
-console.log('\n在線人數');
-test('stats 與 presence 格式', () => {
-  const { x } = twoPlayers();
-  x.join('lobby0001'); x.advance(20);
-  const s = x.hub.stats();
-  assert.deepStrictEqual(s, { online: 3, players: 2, spectators: 0, lobby: 1, rooms: 1 });
-});
-
 console.log('\nmatchsnap');
 test('snapshotAll 是深拷貝且可 JSON 往返；restoreAll 結果與原對局一致', () => {
   const m = Match.create({ mode: 'duel', level: 'normal', seed: 12345, layoutId: 'random', themeId: 1, duration: 120000, players: [{ name: 'a', dragon: 'sun' }, { name: 'b', dragon: 'moon' }, { name: 'c', dragon: 'frost' }] });

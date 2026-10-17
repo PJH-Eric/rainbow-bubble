@@ -60,7 +60,6 @@ function createServer(opt) {
     if (urlPath.indexOf('\0') >= 0) { res.writeHead(400); res.end(); return; }
     if (req.method === 'OPTIONS') { cors(req, res); res.writeHead(204); res.end(); return; }
     if (urlPath === '/health') { json(req, res, 200, { ok: true, game: 'rainbow-bubble', uptime: Math.round(process.uptime()) }); return; }
-    if (urlPath === '/api/presence') { json(req, res, 200, Object.assign({ gameId: 'rainbow-bubble' }, hub.stats(), { updatedAt: new Date().toISOString() })); return; }
     if (urlPath === '/') urlPath = '/index.html';
     const file = path.normalize(path.join(ROOT, urlPath));
     if (file !== ROOT && file.indexOf(ROOT + path.sep) !== 0) { res.writeHead(403); res.end('forbidden'); return; }
