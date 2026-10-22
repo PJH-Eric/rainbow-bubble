@@ -451,7 +451,12 @@
     onEnd() {
       if (this.over) return;
       this.over = true;
-      if (root.GameAnalytics && !this.spectator) root.GameAnalytics.end({ result: this.m.result && this.m.result.winner === this.slot ? 'win' : 'lose' });
+      if (root.GameAnalytics && !this.spectator) {
+        const ranks = this.m.result ? this.m.result.ranks : M.ranking(this.m);
+        const mine = ranks.find(row => row.s === this.slot);
+        const tied = ranks.filter(row => row.rank === 1).length > 1;
+        root.GameAnalytics.end({ result: mine && mine.rank === 1 ? (tied ? 'draw' : 'win') : 'lose' });
+      }
       this.clearHint();
       setTimeout(() => this.showResult(), 1100);
     }

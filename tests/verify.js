@@ -15,6 +15,29 @@ function t(name, fn) {
   catch (e) { console.error('  FAIL ' + name + '\n       ' + (e && e.stack || e)); process.exitCode = 1; }
 }
 
+t('GA4 結算依並列名次判定勝負，不將平手記為落敗', () => {
+  const events = [];
+  const scope = { UI: {}, Match: M, GameAnalytics: { end: params => events.push(params.result) } };
+  require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/game.js'), 'utf8'), {
+    self: scope, setTimeout() {}
+  });
+  for (const [slot, ranks, expected] of [
+    [1, [{ s: 0, rank: 1 }, { s: 1, rank: 1 }], 'draw'],
+    [1, [{ s: 1, rank: 1 }, { s: 0, rank: 2 }], 'win'],
+    [1, [{ s: 0, rank: 1 }, { s: 1, rank: 2 }], 'lose']
+  ]) {
+    const screen = Object.create(scope.GameScreen.prototype);
+    Object.assign(screen, { m: { result: { ranks } }, slot, clearHint() {} });
+    screen.onEnd(); screen.onEnd();
+    assert.equal(events.pop(), expected);
+    assert.equal(events.length, 0, '重複結算不重送');
+  }
+  const spectator = Object.create(scope.GameScreen.prototype);
+  Object.assign(spectator, { spectator: true, clearHint() {} });
+  spectator.onEnd();
+  assert.equal(events.length, 0, '觀戰不送結算');
+});
+
 /* 手工盤面：清空後用 put 擺放 */
 function blank(level, cols) {
   const b = R.newBoard({ seed: 1, level: level || 'normal', cols });
