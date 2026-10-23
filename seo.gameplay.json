@@ -1,0 +1,41 @@
+{
+  "zh-Hant": {
+    "name": "彩虹泡泡砲",
+    "summary": "用彩虹砲對準同顏色的泡泡，咻！一次消掉好多好多；3～5 歲也能玩。",
+    "modes": [
+      "幼幼班",
+      "單機練習",
+      "四段 AI",
+      "線上房間",
+      "觀戰",
+      "邀請連結"
+    ],
+    "controls": "點哪裡泡泡就飛向哪裡；右下角小泡泡可以換泡泡"
+  },
+  "zh-Hans": {
+    "name": "彩虹泡泡砲",
+    "summary": "用彩虹砲对准同颜色的泡泡，咻！一次消掉好多好多；3～5 岁也能玩。",
+    "modes": [
+      "幼幼班",
+      "单机练习",
+      "四段 AI",
+      "线上房间",
+      "观战",
+      "邀请连结"
+    ],
+    "controls": "点哪里泡泡就飞向哪里；右下角小泡泡可以换泡泡"
+  },
+  "en": {
+    "name": "Rainbow Bubble Blaster",
+    "summary": "Aim the rainbow cannon at same-colored bubbles and pop lots at once! Fun for ages 3 to 5, too.",
+    "modes": [
+      "Little Kids Mode",
+      "Solo Practice",
+      "Four AI Levels",
+      "Online Room",
+      "Spectate",
+      "Invite Link"
+    ],
+    "controls": "Bubbles fly wherever you tap; swap bubbles with the small bubble at the bottom right"
+  }
+}
