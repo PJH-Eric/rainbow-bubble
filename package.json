@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/analytics.js && node tests/localization.js && node tests/i18n.js && node tests/verify.js && node tests/rooms.js && node tests/server.js",
+    "test": "node tests/analytics.js && node tests/localization.js && node tests/i18n.js && node tests/verify.js && node tests/rooms.js && node tests/server.js && node tests/i18n-hans.js",
     "verify": "node tests/i18n.js && node tests/verify.js && node tests/rooms.js && node tests/server.js && node scripts/online-check.js && node scripts/netcode-check.js",
     "test:i18n": "node tests/i18n.js",
     "check:i18n": "node scripts/i18n-check.js",

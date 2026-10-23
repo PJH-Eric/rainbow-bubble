@@ -789,7 +789,7 @@
       s += tx + ' fill="url(#' + p + 'txt)" stroke="#d9569a" stroke-width="3" stroke-linejoin="round">' + label + '</text>';
     }
     if (en) { title(132, 50, 230, 'Rainbow'); title(184, 50, 420, 'Bubble Blaster'); }
-    else title(168, 82, 400, '彩虹泡泡砲');
+    else title(168, 82, 400, root.I18N && root.I18N.lang === 'zh-Hans' ? '彩虹泡泡炮' : '彩虹泡泡砲');
     // 泡泡裝飾
     function bub(x, y, r) {
       return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + p + 'bub)" stroke="#4a86d8" stroke-width="2.6"/><ellipse cx="' + n2(x - r * 0.35) + '" cy="' + n2(y - r * 0.4) + '" rx="' + n2(r * 0.3) + '" ry="' + n2(r * 0.18) + '" transform="rotate(-35 ' + n2(x - r * 0.35) + ' ' + n2(y - r * 0.4) + ')" fill="#fff"/>';
