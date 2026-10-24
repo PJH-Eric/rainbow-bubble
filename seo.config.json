@@ -8,6 +8,6 @@
   "genre": "泡泡射擊",
   "players": "1-4",
   "iconUrl": "https://pjh-eric.github.io/rainbow-bubble/favicon-96.png",
-  "ogImage": "https://pjh-eric.github.io/rainbow-bubble/og-image.png",
-  "ogImageAlt": "彩虹泡泡砲遊戲圖示"
+  "ogImage": "https://pjh-eric.github.io/rainbow-bubble/assets/images/cover.webp",
+  "ogImageAlt": "彩虹泡泡砲 遊戲封面"
 }
