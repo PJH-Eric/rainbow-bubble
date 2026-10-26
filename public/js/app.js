@@ -49,6 +49,7 @@
     App.el.textContent = '';
   }
   function go(name, params, opt) {
+    if (root.ServerOutage) root.ServerOutage.setScreen(name);
     clear();
     App.screen = name; App.params = params || null;
     const fn = App.screens[name];
