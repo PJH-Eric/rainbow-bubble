@@ -81,6 +81,7 @@
         h('div', { class: 'hero-cast' }, Art.DRAGONS.map(d => avatar(d.id, 70)))),
       h('nav', { class: 'home-menu', 'aria-label': T('home.menu') },
         btn(T('home.solo'), { cls: 'btn-pink btn-lg btn-block', icon: 'robot', iconSize: 28, onClick: () => go('solo') }),
+        btn(T('quest.entry.btn'), { cls: 'btn-sun btn-lg btn-block quest-entry', icon: 'flag', iconSize: 28, onClick: () => go('quest') }),
         btn(T('home.online'), { cls: 'btn-sky btn-lg btn-block', icon: 'users', iconSize: 28, onClick: () => go('lobby') }),
         btn(T('help.title'), { cls: 'btn-sun btn-lg btn-block', icon: 'help', iconSize: 28, onClick: () => go('help') })),
       sline.length ? h('p', { class: 'home-foot' }, T('home.stats') + sline.join('　')) : null
@@ -188,8 +189,6 @@
       topbar(T('home.solo'), () => go('home')),
       h('div', { class: 'room-grid' },
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
-          h('section', { class: 'card quest-entry' }, h('h3', null, T('quest.entry.h')), h('p', { class: 'muted small' }, T('quest.entry.d')),
-            h('div', { style: { marginTop: '10px' } }, btn(T('quest.entry.btn'), { cls: 'btn-sun btn-lg btn-block', icon: 'flag', iconSize: 26, onClick: () => go('quest') }))),
           h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el),
           h('section', { class: 'card' }, h('h3', null, T('solo.opponents')), oppBox)),
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
@@ -283,7 +282,7 @@
     if (root.UI.modalOpen()) { root.UI.closeTopModal(); return true; }
     switch (App.screen) {
       case 'help': case 'solo': case 'lobby': go('home'); return true;
-      case 'quest': go('solo'); return true;
+      case 'quest': go('home'); return true;
       case 'questLevels': go('quest'); return true;
       case 'room': root.Online && root.Online.confirmLeave(); return true;
       case 'game': if (App.game) { App.game.kind === 'solo' ? App.game.pauseMenu() : App.game.confirmExit(); } return true;

@@ -267,6 +267,10 @@ body.calm *, body.calm *::before, body.calm *::after { animation: none !importan
 }
 @media (max-height: 460px) and (orientation: landscape) {
   .home { gap: 8px; flex-direction: row; justify-content: center; flex-wrap: wrap; }
+  .home .hero { width: 44%; }
+  .home .hero-logo { width: 100%; }
+  .home-menu { width: 48%; gap: 8px; }
+  .home-foot { position: absolute; bottom: calc(4px + var(--safe-b)); margin: 0; }
   .hero-cast { display: none; }
   .hero-title { font-size: 2.4rem; }
   .btn-lg { min-height: 50px; }

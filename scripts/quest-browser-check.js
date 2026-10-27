@@ -1,6 +1,6 @@
 /* ===== scripts/quest-browser-check.js — 闖關模式瀏覽器實測（Playwright） =====
  * 用法：node scripts/quest-browser-check.js [網址，預設自己啟動本機伺服器 3197]
- * 流程（每種裝置尺寸各跑一次）：單機設定 → 闖關入口 → 四段難度 → 選關 → 目標卡 → 開局提示 → 真的打完一關 →
+ * 流程（每種裝置尺寸各跑一次）：首頁闖關入口 → 四段難度 → 選關 → 目標卡 → 開局提示 → 真的打完一關 →
  *   結算（星等、存檔、下一關）→ 暫停選單 → 失敗結算 → 關主關 → 英文介面無中文殘留；全程檢查無水平溢出與 JS 錯誤。
  * 截圖放在 shots/quest-*.png（已被 .gitignore 排除）。 */
 'use strict';
@@ -58,7 +58,7 @@ async function playOut(pg, maxShots) {
     base = 'http://127.0.0.1:3197';
   }
   await waitHealth(base);
-  const br = await chromium.launch();
+  const br = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
   const errs = [];
   const overflow = pg => pg.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1);
   const cjk = pg => pg.evaluate(() => /[㐀-鿿]/.test(document.getElementById('app').innerText));
@@ -72,14 +72,48 @@ async function playOut(pg, maxShots) {
     pg.on('console', m => { if (m.type() === 'error') errs.push(v.name + ' CONSOLE ' + m.text()); });
     const shot = n => pg.screenshot({ path: path.join(SHOTS, 'quest-' + v.name + '-' + n + '.png') });
 
-    /* 1. 首頁 → 單機 → 闖關入口 */
+    /* 1. 首頁 → 闖關入口，並確認兩種返回操作 */
     await pg.goto(base + '/');
     await pg.waitForSelector('.home-menu');
+    ok(await pg.locator('.home-menu .quest-entry').count() === 1, '首頁直接提供闖關入口');
+    ok(!(await overflow(pg)), '首頁沒有水平溢出（含闖關入口）');
+    if (v.name === 'phone-land') {
+      for (const lang of ['zh-Hant', 'zh-Hans', 'en']) {
+        await pg.evaluate(lang => I18N.setLang(lang), lang);
+        const visible = await pg.locator('.home-menu .btn').evaluateAll(buttons => buttons.every(button => {
+          const rect = button.getBoundingClientRect();
+          return rect.top >= 0 && rect.bottom <= window.innerHeight;
+        }));
+        ok(visible, lang + ' 手機橫向首頁按鈕完整顯示');
+      }
+      await pg.evaluate(() => I18N.setLang('zh-Hant'));
+      await pg.evaluate(() => {
+        App.store.stats.solo = { win: 9, play: 10 };
+        App.store.stats.online = { win: 9, play: 10 };
+        App.go('home');
+      });
+      const clearOfSettings = await pg.evaluate(() => {
+        const button = document.querySelector('.home-menu .btn').getBoundingClientRect();
+        const settings = document.getElementById('gear').getBoundingClientRect();
+        return button.right <= settings.left || button.left >= settings.right || button.top >= settings.bottom || button.bottom <= settings.top;
+      });
+      ok(clearOfSettings, '手機橫向首頁戰績不會讓選單與設定鈕重疊');
+    }
+    await shot('1-home-entry');
+    await pg.click('.home-menu .quest-entry');
+    await pg.waitForSelector('.q-lvl-card');
+    await pg.locator('[data-screen=quest] .topbar button').click();
+    ok(await pg.locator('[data-screen=home]').count() === 1, '難度頁返回按鈕回首頁');
+    await pg.click('.home-menu .quest-entry');
+    await pg.waitForSelector('.q-lvl-card');
+    await pg.goBack();
+    await pg.waitForSelector('[data-screen=home]');
+    ok(await pg.locator('[data-screen=home]').count() === 1, '難度頁瀏覽器返回鍵回首頁');
     await pg.click('.home-menu .btn-pink');
-    await pg.waitForSelector('.quest-entry .btn');
-    ok(!(await overflow(pg)), '單機設定沒有水平溢出（含闖關入口）');
-    await shot('1-solo-entry');
-    await pg.click('.quest-entry .btn');
+    ok(await pg.locator('[data-screen=solo] .quest-entry').count() === 0, '單機設定不再顯示闖關入口');
+    await pg.goBack();
+    await pg.waitForSelector('[data-screen=home]');
+    await pg.click('.home-menu .quest-entry');
     await pg.waitForSelector('.q-lvl-card');
     ok((await pg.$$('.q-lvl-card')).length === 4, '四段難度卡片');
     ok(!(await overflow(pg)), '難度選擇沒有水平溢出');
@@ -195,12 +229,11 @@ async function playOut(pg, maxShots) {
     await pg.evaluate(() => App.go('quest'));
     await pg.waitForSelector('.q-lvl-card');
     ok(!(await cjk(pg)), '英文難度選擇沒有中文殘留');
-    await pg.evaluate(() => App.go('questLevels', { level: 'normal' }));
+    await pg.evaluate(() => { App.store.quest.normal.stars = [2]; App.go('questLevels', { level: 'normal' }); });
     await pg.waitForSelector('.q-cell');
-    await pg.evaluate(() => { App.store.quest.normal.stars = [2]; });
-    await pg.click('.q-cell[data-no="2"]').catch(() => {});
-    await sleep(200);
-    const en = await pg.evaluate(() => (document.querySelector('.dialog-quest') || document.getElementById('app')).innerText);
+    await pg.click('.q-cell[data-no="2"]');
+    await pg.waitForSelector('.dialog-quest');
+    const en = await pg.innerText('.dialog-quest');
     ok(!/[㐀-鿿]/.test(en.replace(/[–·・]/g, '')), '英文目標卡沒有中文', en.replace(/\n/g, '|').slice(0, 120));
     await shot('12-en');
     await pg.evaluate(() => I18N.setLang('zh-Hant'));

@@ -1,8 +1,5 @@
 /* ===== 闖關模式：難度卡、選關格、目標卡、對局資訊欄、提示泡泡、結算 ===== */
 
-/* 單機設定裡的闖關入口 */
-.quest-entry { background: linear-gradient(135deg, #fff8dc, #ffeaf4); }
-
 /* 星星（有星星的實心黃、沒有的淡灰空心） */
 .q-stars { display: inline-flex; gap: 2px; align-items: center; }
 .q-star { display: inline-grid; color: #d9cfe8; }

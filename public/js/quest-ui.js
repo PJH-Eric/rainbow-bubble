@@ -1,5 +1,5 @@
 /* ===== quest-ui.js — 闖關模式的畫面：難度選擇、選關、開局目標卡（對局與結算在 game.js） =====
- * 流程：單機設定（闖關入口）→ quest（四段難度）→ questLevels（選關）→ 目標卡 → 對局 → 結算（下一關／再玩／回選關）
+ * 流程：首頁（闖關入口）→ quest（四段難度）→ questLevels（選關）→ 目標卡 → 對局 → 結算（下一關／再玩／回選關）
  * 進度只存本機（Store.quest*）。所有元件都是自繪（不用原生 select／捲軸）。 */
 (function (root) {
   'use strict';
@@ -47,7 +47,7 @@
         h('span', { class: 'q-lvl-meta' }, h('span', null, T('quest.progress', { n: cleared, total })), h('span', { class: 'q-lvl-stars' }, h('i', { html: Art.icon('star', 16) }), T('quest.starsTotal', { n: ts }))));
     });
     return App.util.screenBox('quest-screen', h('div', { class: 'wrap' },
-      App.util.topbar(T('quest.entry.h'), () => go('solo')),
+      App.util.topbar(T('quest.entry.h'), () => go('home')),
       h('p', { class: 'muted' }, T('quest.pick')),
       h('div', { class: 'q-lvl-grid' }, cards)));
   };
