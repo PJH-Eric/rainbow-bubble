@@ -188,6 +188,8 @@
       topbar(T('home.solo'), () => go('home')),
       h('div', { class: 'room-grid' },
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
+          h('section', { class: 'card quest-entry' }, h('h3', null, T('quest.entry.h')), h('p', { class: 'muted small' }, T('quest.entry.d')),
+            h('div', { style: { marginTop: '10px' } }, btn(T('quest.entry.btn'), { cls: 'btn-sun btn-lg btn-block', icon: 'flag', iconSize: 26, onClick: () => go('quest') }))),
           h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el),
           h('section', { class: 'card' }, h('h3', null, T('solo.opponents')), oppBox)),
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
@@ -219,9 +221,10 @@
   App.screens.game = function (p) {
     const gs = new root.GameScreen({
       kind: p.kind, cfg: p.cfg, slot: p.slot, ai: p.ai, t0Wall: p.t0Wall, serverNow: p.serverNow, goIn: p.goIn,
-      onAgain: () => (p.kind === 'solo' ? App.startSolo() : root.Online.again()),
-      onRoom: () => (p.kind === 'solo' ? go('solo') : root.Online.toRoom()),
-      onExit: () => (p.kind === 'solo' ? go('solo') : root.Online.abandonToLobby()),
+      onAgain: () => (p.quest ? App.beginQuest(p.quest) : p.kind === 'solo' ? App.startSolo() : root.Online.again()),
+      onNext: () => go('questLevels', { level: p.quest.level, open: p.quest.no + 1 }),
+      onRoom: () => (p.quest ? go('questLevels', { level: p.quest.level }) : p.kind === 'solo' ? go('solo') : root.Online.toRoom()),
+      onExit: () => (p.quest ? go('questLevels', { level: p.quest.level }) : p.kind === 'solo' ? go('solo') : root.Online.abandonToLobby()),
       onHome: () => (p.kind === 'solo' ? go('home') : root.Online.leaveToHome())
     });
     App.game = gs;
@@ -280,6 +283,8 @@
     if (root.UI.modalOpen()) { root.UI.closeTopModal(); return true; }
     switch (App.screen) {
       case 'help': case 'solo': case 'lobby': go('home'); return true;
+      case 'quest': go('solo'); return true;
+      case 'questLevels': go('quest'); return true;
       case 'room': root.Online && root.Online.confirmLeave(); return true;
       case 'game': if (App.game) { App.game.kind === 'solo' ? App.game.pauseMenu() : App.game.confirmExit(); } return true;
     }

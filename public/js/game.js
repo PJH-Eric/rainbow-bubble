@@ -27,9 +27,10 @@
       this.o = o; this.kind = o.kind; this.cfg = o.cfg; this.slot = o.slot == null ? 0 : o.slot;
       this.store = root.App.store;
       this.m = M.create(o.cfg);
+      this.quest = o.cfg.mode === 'quest' ? o.cfg.quest : null;      /* 闖關：本關的定義（單機專屬） */
       this.theme = Art.THEMES[o.cfg.themeId | 0] || Art.THEMES[0];
       this.spectator = this.slot < 0;
-      if (root.GameAnalytics && !this.spectator) root.GameAnalytics.start({ mode: this.kind, difficulty: this.m.level, players: this.m.players.length }, this.kind === 'online' ? o.cfg.seed : null);
+      if (root.GameAnalytics && !this.spectator) root.GameAnalytics.start(this.quest ? { mode: 'solo', variant: 'quest', difficulty: this.m.level, content_id: this.quest.id, players: 1 } : { mode: this.kind, difficulty: this.m.level, players: this.m.players.length }, this.kind === 'online' ? o.cfg.seed : null);
       this.paused = false; this.pausedAt = 0; this.pausedTotal = 0;
       this.lastShot = 0; this.lastAction = performance.now();
       this.keys = {}; this.over = false; this.resultShown = false; this.goShown = false; this.lastCount = 99;
@@ -117,7 +118,7 @@
       this.sideBtn = h('button', { type: 'button', class: 'icon-btn side-toggle', 'aria-label': T('game.showSide'), 'aria-expanded': 'false', onClick: () => this.toggleSide() },
         this.sideIcon = h('span', { html: Art.icon('panelShow', 22) }), this.sideBadge);
       this.timerEl = h('div', { class: 'board-time', role: 'timer' }, '0:00');
-      this.modeEl = h('span', { class: 'pill' }, modeName(this.cfg.mode) + '・' + R.LEVEL_NAME[this.cfg.level]);
+      this.modeEl = h('span', { class: 'pill' }, this.modeLabel());
       const solo = this.kind === 'solo';
       this.exitBtn = solo
         ? iconBtn('pause', T('game.pause'), () => this.pauseMenu(), 'board-pause')
@@ -143,6 +144,11 @@
       if (root.matchMedia && root.matchMedia('(min-width: 861px) and (min-aspect-ratio: 1/1)').matches) { this.root.classList.remove('side-closed'); this.syncSideIcon(); }
       if (!this.spectator) this.boardsEl.classList.add('can-play');
       this.renderSummary();
+      if (this.quest) this.showQuestHint();
+    }
+
+    modeLabel() {
+      return (this.quest ? T('quest.levelN', { n: this.quest.no }) : modeName(this.cfg.mode)) + '・' + R.LEVEL_NAME[this.cfg.level];
     }
 
     /** 資訊欄開關鈕：開著顯示「收起」雙箭頭（«），關著顯示「展開」雙箭頭（»） */
@@ -190,6 +196,7 @@
 
     /* ---------- 摘要 ---------- */
     renderSummary() {
+      if (this.quest) return this.renderQuestSummary();
       const m = this.m, rows = [];
       const order = m.players.map((p, i) => i).sort((a, b) => (m.boards[b].cleared - m.boards[a].cleared) || a - b);
       const max = Math.max(1, ...m.boards.map(b => b.cleared));
@@ -216,6 +223,40 @@
         m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageIn), h('span', null, T('stat.in'))) : null));
       this.sumEl.appendChild(h('div', { class: 'side-keys muted small keyline' },
         h('span', null, T('key.aim'), root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, T('key.fire'), root.UI.keycap(T('key.space'))), h('span', null, T('key.swap'), root.UI.keycap('S'))));
+    }
+
+    /* ---------- 闖關：資訊欄與提示 ---------- */
+    renderQuestSummary() {
+      const b = this.m.boards[0], q = b.quest, prog = R.questProgress(b), QU = root.QuestUI;
+      const pct = prog.need ? Math.min(100, Math.round(prog.cur / prog.need * 100)) : 0;
+      this.sumEl.textContent = '';
+      this.sumEl.appendChild(h('div', { class: 'sum-meta' },
+        h('div', null, h('b', null, T('quest.levelN', { n: this.quest.no })), '・', R.LEVEL_NAME[this.m.level], this.quest.boss ? h('span', { class: 'pill pink q-pill' }, T('quest.boss')) : null),
+        h('div', { class: 'muted small' }, T('game.map') + QU.layoutName(this.quest) + '・' + this.theme.name)));
+      this.sumEl.appendChild(h('div', { class: 'q-goal' }, QU.goalIcon(q, 38),
+        h('div', { class: 'q-goal-main' }, h('b', null, T('quest.goal.h')), h('div', { class: 'small' }, QU.goalText(q)),
+          h('div', { class: 'sum-bar' }, h('i', { style: { width: pct + '%' } })),
+          h('span', { class: 'q-prog' }, T('quest.hud.progress', { cur: prog.cur, need: prog.need })))));
+      this.sumEl.appendChild(h('div', { class: 'q-shots' + (q.shots && q.shots - b.shots <= 3 ? ' low' : '') }, q.shots ? T('quest.shotsLeft', { n: Math.max(0, q.shots - b.shots) }) : T('quest.shotsUsed', { n: b.shots })));
+      if (q.mini) this.sumEl.appendChild(h('div', { class: 'q-mini' + (R.questMini(b) ? ' ok' : '') },
+        h('span', { class: 'q-mini-ico', html: root.Art.icon(R.questMini(b) ? 'check' : 'star', 18) }),
+        h('div', null, h('b', null, T('quest.mini.h')), h('div', { class: 'small' }, QU.miniText(q.mini)))));
+      this.sumEl.appendChild(h('div', { class: 'side-keys muted small keyline' },
+        h('span', null, T('key.aim'), root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, T('key.fire'), root.UI.keycap(T('key.space'))), h('span', null, T('key.swap'), root.UI.keycap('S'))));
+    }
+    /** 新機制第一次出現時，開局彈一句提示泡泡；看過就記起來，之後不再出現 */
+    showQuestHint() {
+      const key = this.quest.hint;
+      if (!key || root.Store.questHintSeen(this.store, key)) return;
+      root.Store.questHintMark(this.store, key);
+      this.hintBubble = h('div', { class: 'q-hint', role: 'status', 'data-hint': key, onClick: () => this.hideQuestHint() },
+        h('span', { class: 'q-hint-ico', html: root.Art.icon('help', 22) }), h('span', { class: 'q-hint-txt', 'data-k': key }, T('quest.hint.' + key)));
+      (this.views[this.slot].el || this.boardsEl).appendChild(this.hintBubble);
+      this.hintT = setTimeout(() => this.hideQuestHint(), 9000);
+    }
+    hideQuestHint() {
+      clearTimeout(this.hintT);
+      if (this.hintBubble) { const el = this.hintBubble; this.hintBubble = null; el.classList.add('out'); setTimeout(() => el.remove(), 250); }
     }
 
     /* ---------- 輸入 ---------- */
@@ -280,7 +321,7 @@
       if (!this.canAct()) return;
       const now = performance.now();
       if (now - this.lastShot < SHOT_GAP) return;
-      this.lastShot = now; this.lastAction = now; this.clearHint();
+      this.lastShot = now; this.lastAction = now; this.clearHint(); this.hideQuestHint();
       a = R.clampAngle(a);
       if (this.kind === 'solo') this.dispatch(M.input(this.m, this.slot, { t: 'shot', a }, this.mt()));
       else {
@@ -400,7 +441,11 @@
 
     updateHud(t) {
       const m = this.m;
-      if (this.cfg.duration > 0) {
+      if (this.quest) {
+        const b = m.boards[0], q = b.quest;
+        this.timerEl.textContent = q.shots ? T('quest.shotsLeft', { n: Math.max(0, q.shots - b.shots) }) : T('quest.shotsUsed', { n: b.shots });
+        this.timerEl.classList.toggle('low', !!q.shots && q.shots - b.shots <= 3 && !this.over);
+      } else if (this.cfg.duration > 0) {
         const left = Math.max(0, this.cfg.duration - Math.max(0, t));
         this.timerEl.textContent = fmtTime(left);
         this.timerEl.classList.toggle('low', left < 15000 && !this.over);
@@ -434,7 +479,7 @@
           actions: [
             btn(T('pause.resume'), { cls: 'btn-pink btn-lg pause-main', icon: 'play', onClick: () => mo.close() }),
             btn(T('pause.restart'), { cls: 'btn-sky', icon: 'refresh', onClick: () => { mo.close(true); resume(); this.o.onAgain(); } }),
-            btn(T('pause.room'), { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
+            btn(this.quest ? T('quest.toLevels') : T('pause.room'), { cls: 'btn-ghost', icon: 'back', onClick: () => { mo.close(true); resume(); this.o.onExit(); } })
           ]
         })
       });
@@ -451,7 +496,9 @@
     onEnd() {
       if (this.over) return;
       this.over = true;
-      if (root.GameAnalytics && !this.spectator) {
+      if (root.GameAnalytics && !this.spectator && this.quest) {
+        root.GameAnalytics.end({ result: this.m.result && this.m.result.quest && this.m.result.quest.win ? 'win' : 'lose' });
+      } else if (root.GameAnalytics && !this.spectator) {
         const ranks = this.m.result ? this.m.result.ranks : M.ranking(this.m);
         const mine = ranks.find(row => row.s === this.slot);
         const tied = ranks.filter(row => row.rank === 1).length > 1;
@@ -463,6 +510,7 @@
     showResult() {
       if (this.dead || this.resultShown) return;
       this.resultShown = true;
+      if (this.quest) return this.showQuestResult();
       const r = this.m.result || { ranks: M.ranking(this.m), winner: 0, reason: 'time', mode: this.m.mode };
       const ranks = r.ranks;
       const me = this.spectator ? null : ranks.find(x => x.s === this.slot);
@@ -473,6 +521,48 @@
       if (!this.spectator) root.App.recordResult(this.kind, !!win);
       this.renderResult();
     }
+    /* ---------- 闖關結算 ---------- */
+    showQuestResult() {
+      const q = (this.m.result && this.m.result.quest) || { win: false, stars: 0 };
+      const rec = q.win ? root.Store.questRecord(this.store, this.quest.level, this.quest.no, q.stars) : { first: false, improved: false, stars: 0 };
+      this.resCtx = { quest: true, q, rec, reason: this.m.result ? this.m.result.reason : '' };
+      root.Sound.sfx(q.win ? 'win' : 'lose');
+      this.renderQuestResult();
+    }
+    renderQuestResult() {
+      const { q, rec, reason } = this.resCtx, QU = root.QuestUI, def = this.quest;
+      const hadFocus = this.overlay.querySelector('.result-card button:focus');
+      const fidx = hadFocus ? Array.from(this.overlay.querySelectorAll('.result-card button')).indexOf(hadFocus) : 0;
+      this.overlay.textContent = '';
+      const hasNext = q.win && def.no < root.Quests.count(def.level);
+      const finished = q.win && def.no >= root.Quests.count(def.level);
+      const dragon = this.cfg.players[0].dragon;
+      const lines = [];
+      let lead;
+      if (!q.win) lead = T(reason === 'fail-bottom' ? 'quest.res.rBottom' : 'quest.res.rShots');
+      else if (q.shotsMax) lead = T('quest.res.used', { n: q.shots }) + '・' + T('quest.res.left', { n: Math.max(0, q.shotsMax - q.shots) });
+      else lead = T('quest.res.used', { n: q.shots });
+      lines.push(h('div', { class: 'q-res-line' }, lead));
+      if (def.mini) lines.push(h('div', { class: 'q-mini' + (q.mini && q.win ? ' ok' : '') },
+        h('span', { class: 'q-mini-ico', html: root.Art.icon(q.mini && q.win ? 'check' : 'star', 18) }),
+        h('div', { class: 'small' }, T(q.mini && q.win ? 'quest.res.miniOk' : 'quest.res.miniNo', { t: QU.miniText(def.mini) }))));
+      const card = h('div', { class: 'dialog result-card quest-result', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('quest.res.win') },
+        h('div', { class: 'big-result' },
+          h('img', { class: 'result-dragon', alt: '', src: root.Art.svgUrl(root.Art.dragonSVG(dragon, q.win ? 'cheer' : 'sad')) }),
+          h('div', { class: 'head' }, T(q.win ? 'quest.res.win' : 'quest.res.lose')),
+          q.win ? h('div', { class: 'q-res-stars' }, QU.stars(q.stars, 44)) : null,
+          q.win && rec.improved && !rec.first && q.stars > 0 ? h('div', { class: 'pill sun' }, T('quest.res.newBest')) : null,
+          finished ? h('div', { class: 'pill pink' }, T('quest.res.allDone')) : null),
+        h('div', { class: 'q-res-body' }, lines),
+        h('div', { class: 'result-actions' },
+          hasNext ? btn(T('quest.res.next'), { cls: 'btn-pink btn-lg', icon: 'play', onClick: () => this.o.onNext() }) : null,
+          btn(q.win ? T('quest.res.again') : T('quest.res.retry'), { cls: q.win ? 'btn-sky' : 'btn-pink btn-lg', icon: 'refresh', onClick: () => this.o.onAgain() }),
+          btn(T('quest.toLevels'), { cls: 'btn-ghost', icon: 'list', onClick: () => this.o.onRoom() }),
+          btn(T('res.home'), { cls: 'btn-ghost', icon: 'home', onClick: () => this.o.onHome() })));
+      this.overlay.appendChild(h('div', { class: 'result-mask' }, card));
+      const btns = card.querySelectorAll('button'); const first = btns[Math.max(0, fidx)] || btns[0]; if (first) first.focus();
+    }
+
     /** 結算畫面（語言切換時會重畫，不重複記錄戰績） */
     renderResult() {
       const { r, ranks, me, win, tie } = this.resCtx;
@@ -530,7 +620,7 @@
       lab(this.sideClose, 'game.hideSide');
       lab(this.exitBtn, this.kind === 'solo' ? 'game.pause' : 'game.leave');
       this.syncSideIcon();
-      this.modeEl.textContent = modeName(this.cfg.mode) + '・' + R.LEVEL_NAME[this.cfg.level];
+      this.modeEl.textContent = this.modeLabel();
       if (this.specPill) this.specPill.textContent = T('game.spectating');
       this.cfg.players.forEach((p, s) => { const el = this.boardsEl.querySelector('.bt-name[data-s="' + s + '"]'); if (el) el.textContent = pname(p) + (p.kind === 'ai' ? ' 🤖' : ''); });
       if (this.chatInput) {
@@ -540,13 +630,14 @@
       }
       if (this.chatLog && root.Online) { this.chatLog.textContent = ''; root.Online.chat.forEach(m => this.addChat(m, true)); }
       this.updateHud(this.mt());
-      if (this.resultShown && this.resCtx) this.renderResult();
+      if (this.quest) { this.sumEl && this.renderSummary(); const hk = this.hintBubble && this.hintBubble.querySelector('.q-hint-txt'); if (hk) hk.textContent = T('quest.hint.' + hk.getAttribute('data-k')); }
+      if (this.resultShown && this.resCtx) (this.resCtx.quest ? this.renderQuestResult() : this.renderResult());
     }
 
     destroy() {
       this.dead = true;
       cancelAnimationFrame(this.raf);
-      clearTimeout(this.goT);
+      clearTimeout(this.goT); clearTimeout(this.hintT);
       if (this.onKey) { root.removeEventListener('keydown', this.onKey); root.removeEventListener('keyup', this.onKey); }
       if (this.onVis) document.removeEventListener('visibilitychange', this.onVis);
       (this.ros || []).forEach(r => r.disconnect());

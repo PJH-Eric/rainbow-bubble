@@ -31,10 +31,25 @@
     return d[0] + brain.rng() * (d[1] - d[0]);
   }
 
+  /** 闖關：依目標加分（炸星星、救獎勵、指定顏色），讓電腦會朝目標打；也用在關卡校準模擬 */
+  function questBonus(board, res) {
+    const g = board.quest.goal;
+    let n = 0;
+    const all = res.popped.concat(res.dropped);
+    for (const o of all) {
+      if (o.how === 'fizzle' || !Rules.isBubble(o.v)) continue;
+      if (g.type === 'star' && Rules.modOf(o.v) === 1) n += 30;
+      else if (g.type === 'bonus' && Rules.modOf(o.v) === 2) n += 30;
+      else if (g.type === 'color' && Rules.colorOf(o.v) === g.color) n += 14;
+    }
+    return n;
+  }
+
   /** 評分：越高越好 */
   function score(board, res, brain, mode) {
     const p = brain.p;
     let s = res.gained * 10;
+    if (board.quest) s += questBonus(board, res);
     if (res.fullClear) s += 5000;
     if (mode === 'duel' && p.attack) s += Rules.attackFor(res.gained, board.cols, board.cfg.mult) * 6 * p.attack;
     /* 越高（離底線越遠）越好：落點列數越小越安全 */

@@ -578,6 +578,108 @@
     return 'abc'.charAt(Math.floor(d / 1.4) % 3);
   }));
 
+  // ===== 關主（闖關模式每 10 關的大圖案；不出現在自由玩的地圖清單，也不會被隨機抽到） =====
+  var BOSS = [];
+  function PB(id, name, rows) {
+    var joined = rows.join('');
+    BOSS.push({ id: id, name: name, group: '關主', rows: rows, boss: true, obstacle: joined.indexOf('X') >= 0, special: /[A-F*+]/.test(joined) });
+  }
+  // 10 欄 × 10 列的大圖：fn(dx, y) 的 dx 以盤面中線為 0（右正），y 由天花板往下（單位＝一格寬）
+  function pic(fn) { return grid(10, 10, function (r, c, x) { return fn(x - 4.5, r * 0.866, r, c) || '.'; }); }
+  function hyp(a, b) { return Math.sqrt(a * a + b * b); }
+  function ell(dx, y, cx, cy, rx, ry) { var a = (dx - cx) / rx, b = (y - cy) / ry; return a * a + b * b <= 1; }
+
+  PB('boss-rainbow', '大彩虹', pic(function (dx, y) {          // 倒掛的彩虹拱門：由內向外六道顏色
+    var d = hyp(dx, y + 0.4);
+    if (d < 1.6 || d >= 7.6) return '';
+    return 'abcdef'.charAt(Math.min(5, Math.floor((d - 1.6) / 1.0)));
+  }));
+  PB('boss-sun', '大太陽', [   // 圓臉＋四面八方的光芒
+    '.b..bb..b.',
+    '.b.bbb.b.',
+    '.b.aaaa.b.',
+    '.aaaaaaa.',
+    'baaaaaaaab',
+    '.aaaCaaa.',
+    'baaaaaaaab',
+    '.aaaaaaa.',
+    '.b.aaaa.b.',
+    '.b.bbb.b.'
+  ]);
+  PB('boss-flower', '大花朵', pic(function (dx, y) {            // 六片花瓣繞著花心（最上面的花瓣碰到天花板）
+    var cy = 3.7, d = hyp(dx, y - cy), k, ang;
+    if (d < 1.15) return 'c';
+    for (k = 0; k < 6; k++) {
+      ang = -Math.PI / 2 + k * Math.PI / 3;
+      if (ell(dx, y, 2.5 * Math.cos(ang), cy + 2.5 * Math.sin(ang), 1.35, 1.35)) return k % 2 ? 'b' : 'a';
+    }
+    return d < 2.0 ? 'd' : '';
+  }));
+  PB('boss-heart', '大愛心', pic(function (dx, y) {             // 大愛心：兩個圓頂在天花板
+    var X = dx / 3.2, Y = -(y - 3.7) / 3.2;
+    var f = Math.pow(X * X + Y * Y - 1, 3) - X * X * Y * Y * Y;
+    if (f > 0) return '';
+    return (X * X + Y * Y) < 0.28 ? 'b' : 'a';
+  }));
+  PB('boss-star', '大星星', [   // 五個尖角的大星星
+    '....aa....',
+    '...aaa...',
+    '...aaaa...',
+    'aaaaaaaaa',
+    '.aaaaaaaa.',
+    '..aabaa..',
+    '..aabbaa..',
+    '..aaaaa..',
+    '.aaa..aaa.',
+    '.aaa.aaa.'
+  ]);
+  PB('boss-cat', '大貓臉', pic(function (dx, y) {               // 圓圓的貓臉＋兩隻尖耳朵＋眼睛鼻子
+    var ear = function (cx) { return y < 2.7 && Math.abs(dx - cx) < 0.35 + y * 0.45 && Math.abs(dx - cx) < 1.5; };
+    if (ear(-2.7) || ear(2.7)) return y > 1.2 ? 'b' : 'c';
+    if (!ell(dx, y, 0, 4.4, 4.3, 3.3)) return '';
+    if (ell(dx, y, -1.7, 4.0, 0.7, 0.8) || ell(dx, y, 1.7, 4.0, 0.7, 0.8)) return '';
+    if (ell(dx, y, 0, 5.2, 0.55, 0.45)) return 'C';
+    return 'a';
+  }));
+  PB('boss-butterfly', '大蝴蝶', pic(function (dx, y) {         // 兩對翅膀＋身體（身體一路連到天花板）
+    var w = Math.abs(dx);
+    if (w < 0.55) return 'c';
+    if (ell(w, y, 2.7, 2.6, 2.3, 2.4)) return ell(w, y, 2.7, 2.6, 1.0, 1.0) ? 'd' : 'a';
+    if (ell(w, y, 2.3, 6.0, 1.8, 1.8)) return ell(w, y, 2.3, 6.0, 0.7, 0.7) ? 'e' : 'b';
+    return '';
+  }));
+  PB('boss-balloons', '氣球串', pic(function (dx, y) {          // 四顆大氣球，用細繩吊在天花板上
+    var B = [[-3.4, 3.1, 'a'], [-1.1, 5.6, 'b'], [1.4, 3.4, 'c'], [3.6, 5.2, 'd']], i;
+    for (i = 0; i < B.length; i++) {
+      if (ell(dx, y, B[i][0], B[i][1], 1.45, 1.7)) return B[i][2];
+      if (y < B[i][1] && Math.abs(dx - B[i][0]) < 0.55) return 'f';
+    }
+    return '';
+  }));
+  PB('boss-rocket', '大火箭', [   // 尖頭朝上，有窗戶、尾翼與火焰
+    '....bb....',
+    '...bbb...',
+    '...bbbb...',
+    '..aaaaa..',
+    '..aaCCaa..',
+    '..aaCaa..',
+    '.daaaaaad.',
+    'ddaaaaadd',
+    'dd.eeee.dd',
+    '...eee...'
+  ]);
+  PB('boss-castle', '大城堡', [   // 三座塔樓、城牆與城門
+    'b.b.bb.b.b',
+    'bbb.b.bbb',
+    'aaa.aa.aaa',
+    'aCa.a.aCa',
+    'aaaaaaaaaa',
+    'ccccccccc',
+    'cccc..cccc',
+    'cccc.cccc',
+    'cccc..cccc',
+    'cccc.cccc'
+  ]);
   // ---------- 程序生成家族 ----------
   function ri(rng, a, b) { return a + Math.floor(rng() * (b - a + 1)); } // 含頭尾的整數
 
@@ -776,6 +878,7 @@
 
   function findPattern(id) {
     for (var i = 0; i < PATTERNS.length; i++) if (PATTERNS[i].id === id) return PATTERNS[i];
+    for (i = 0; i < BOSS.length; i++) if (BOSS[i].id === id) return BOSS[i];
     return null;
   }
   function findFamily(id) {
@@ -828,6 +931,7 @@
 
   var api = {
     PATTERNS: PATTERNS,
+    BOSS: BOSS,
     FAMILIES: FAMILIES,
     list: list,
     resolve: resolve,

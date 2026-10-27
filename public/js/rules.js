@@ -106,6 +106,7 @@
     o.cur = Object.assign({}, b.cur);
     o.nxt = Object.assign({}, b.nxt);
     o.colors = b.colors.slice();
+    if (b.qCol) o.qCol = Object.assign({}, b.qCol);
     return o;
   }
 
@@ -153,6 +154,8 @@
     return false;
   };
   function genItem(b, idx) {
+    /* 闖關：教學關可以指定第幾發一定是什麼泡泡（force = { 發序: { k, c } }） */
+    if (b.quest && b.quest.force && b.quest.force[idx]) return Object.assign({ c: 0 }, b.quest.force[idx]);
     const r1 = rand01(b.queueSeed, idx * 3 + 1);
     const r2 = rand01(b.queueSeed, idx * 3 + 2);
     const present = presentColors(b);
@@ -184,8 +187,9 @@
     const cfg = DIFF[level];
     const cols = opt.cols || cfg.cols;
     const rng = mulberry32(hash2(opt.seed, 17));
+    const maxRows = opt.maxRows > 0 ? opt.maxRows : cfg.rows[1];
     const b = {
-      level, cfg, cols, parity: 0, rows: [], colors: cfg.colors.slice(),
+      level, cfg, cols, parity: 0, rows: [], colors: cfg.colors.slice(0, opt.colors > 0 ? Math.min(opt.colors, cfg.colors.length) : cfg.colors.length),
       seed: opt.seed >>> 0, queueSeed: hash2(opt.seed, 99), shots: 0, miss: 0, cleared: 0, combo: 0,
       maxCombo: 0, hits: 0, best: 0, dropN: 0, descents: 0, rains: 0, protect: 0, fullClear: false, layoutId: '', layoutName: '', garbageIn: 0, garbageOut: 0,
       cur: { k: 'n', c: 1 }, nxt: { k: 'n', c: 1 }
@@ -194,11 +198,11 @@
     const Tiers = root.LayoutTiers || (typeof require === 'function' ? require('./layout-tiers.js') : null);
     /* 泡泡數量不能太少（普通常常只有 30 幾顆就很快清完）：隨機版型數量低於下限就換一張（最多 12 次，固定指定版型不換） */
     const minCount = MIN_COUNT[level] || 50;
-    const countOf = l => { let n = 0; l.rows.slice(0, cfg.rows[1]).forEach(str => { for (let i = 0; i < str.length; i++) if ('abcdefABCDEF#*+'.indexOf(str[i]) >= 0) n++; }); return n; };
+    const countOf = l => { let n = 0; l.rows.slice(0, maxRows).forEach(str => { for (let i = 0; i < str.length; i++) if ('abcdefABCDEF#*+'.indexOf(str[i]) >= 0) n++; }); return n; };
     let lay = null;
     for (let attempt = 0; attempt < 12; attempt++) {
       const lrng = attempt === 0 ? rng : mulberry32(hash2(opt.seed, 5000 + attempt));
-      lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng: lrng, noObstacles: level === 'baby', allow: Tiers && Tiers[level] ? Tiers[level] : null });
+      lay = Layouts.resolve(opt.layoutId || 'random', { cols, rng: lrng, noObstacles: opt.noObs != null ? !!opt.noObs : level === 'baby', allow: Tiers && Tiers[level] ? Tiers[level] : null });
       if (opt.layoutId && opt.layoutId !== 'random') break;
       if (countOf(lay) >= minCount * 0.6) break;      /* 差不多夠就用，不夠的部分下面補泡泡 */
     }
@@ -209,7 +213,7 @@
     /* 版型只有 6 個顏色槽；顏色比 6 種多時，約 2 成的格子改抽其他顏色，讓每種造型都會出現 */
     const slotColor = k => (perm.length > 6 && rng() < Math.min(0.6, 0.12 * (perm.length - 5)) ? perm[Math.floor(rng() * perm.length)] : perm[k % perm.length]);
     const randColor = () => b.colors[Math.floor(rng() * b.colors.length)];
-    lay.rows.slice(0, cfg.rows[1]).forEach((str, r) => {
+    lay.rows.slice(0, maxRows).forEach((str, r) => {
       const row = [];
       for (let c = 0; c < str.length; c++) {
         const ch = str[c];
@@ -232,7 +236,7 @@
     /* 數量補足：版型的泡泡不到下限，就從上往下把「貼著現有泡泡或天花板」的空格補上去（保持原本的形狀，只是更滿） */
     {
       const tr2 = mulberry32(hash2(opt.seed, 919));
-      const lim = Math.min(cfg.rows[1], MAX_ROWS);
+      const lim = Math.min(maxRows, MAX_ROWS);
       for (let r = 0; r < lim; r++) ensureRow(b, r);
       for (let guard = 0; guard < 400 && bubbleCount(b) < target; guard++) {
         let done = false;
@@ -284,6 +288,7 @@
     ensureAnchored(b, mulberry32(hash2(opt.seed, 1201)));
     if (opt.count > 0) trimTo(b, target, tr1);
     ensureStartable(b, rng);
+    if (opt.quest) attachQuest(b, opt.quest);
     b.cur = genItem(b, 0);
     b.nxt = genItem(b, 1);
     b.qIdx = 2;
@@ -676,6 +681,7 @@
     b.nxt = genItem(b, b.qIdx++);
     /* 盤面清光 */
     if (bubbleCount(b) === 0) { b.fullClear = true; res.fullClear = true; }
+    else if (b.quest && !b.quest.rescue) { if (lowestRow(b) >= LINE_ROW) b.qBottom = true; }   /* 闖關：觸底直接失敗，不沖泡泡 */
     else if (b.protect === 0) res.rain = rain(b);
     /* 只剩彩虹／星星之類的情況：發射序列要有盤面上存在的顏色 */
     trimRows(b);
@@ -687,10 +693,11 @@
       const pc = presentColors(b);
       b.nxt = { k: 'n', c: pc[hash2(b.queueSeed, b.qIdx + 7) % pc.length] };
     }
+    if (b.quest) questUpdate(b, res, item);
     return res;
   }
 
-  function swapItems(b) { const t = b.cur; b.cur = b.nxt; b.nxt = t; }
+  function swapItems(b) { const t = b.cur; b.cur = b.nxt; b.nxt = t; if (b.quest) b.qSwaps++; }
 
   /* ---------- 送來的泡泡（對打） ---------- */
   /** 在盤面頂端塞入 count 顆泡泡：只塞整列（天花板那排永遠是滿的），湊不滿一列的零頭補進最上面、貼著現有泡泡的空格。
@@ -744,6 +751,95 @@
     return applyShot(c, angle);
   }
 
+
+  /* ---------- 闖關（quest） ----------
+   * 關卡定義 def（public/js/quests-data.js）→ 盤面。目標、發射數、星等都由盤面計數決定，
+   * 單機、電腦模擬校準與測試共用同一份判定。 */
+  const GOAL_TYPES = ['clear', 'star', 'bonus', 'color'];
+  const MINI_IDS = ['drop8', 'streak3', 'noswap', 'star2', 'nodescent'];
+  function countMark(b, m) {
+    let n = 0;
+    for (const row of b.rows) for (const v of row) if (isBubble(v) && modOf(v) === m) n++;
+    return n;
+  }
+  function questOpts(def) {
+    return {
+      seed: def.seed, level: def.level, layoutId: def.layout, colors: def.colors, maxRows: def.rows, noObs: def.noObs, cols: def.cols,
+      stars: def.stars, bonus: def.bonus,
+      quest: { id: def.id, goal: def.goal, shots: def.shots > 0 ? def.shots : 0, ref: def.ref || 0, mini: def.mini || '', rescue: !!def.rescue, force: def.force || null, boss: !!def.boss }
+    };
+  }
+  function newQuestBoard(def) { return newBoard(questOpts(def)); }
+  function attachQuest(b, quest) {
+    b.quest = Object.assign({}, quest);
+    b.quest.starTotal = countMark(b, 1);
+    b.quest.bonusTotal = countMark(b, 2);
+    b.quest.total = bubbleCount(b);
+    b.qCol = {}; b.qSwaps = 0; b.qDropMax = 0; b.qStarMax = 0; b.qBottom = false; b.qDone = null;
+  }
+  function questGoalMet(b) {
+    const q = b.quest, g = q.goal;
+    if (g.type === 'star') return q.starTotal > 0 && countMark(b, 1) === 0;
+    if (g.type === 'bonus') return countMark(b, 2) <= q.bonusTotal - g.n;
+    if (g.type === 'color') return (b.qCol[g.color] || 0) >= g.n;
+    return bubbleCount(b) === 0;
+  }
+  /** 目前進度：{ cur, need }（資訊欄顯示用） */
+  function questProgress(b) {
+    const q = b.quest, g = q.goal;
+    if (g.type === 'star') return { cur: q.starTotal - countMark(b, 1), need: q.starTotal };
+    if (g.type === 'bonus') return { cur: Math.min(g.n, q.bonusTotal - countMark(b, 2)), need: g.n };
+    if (g.type === 'color') return { cur: Math.min(g.n, b.qCol[g.color] || 0), need: g.n };
+    const total = q.total || 0;
+    return { cur: total ? Math.max(0, total - bubbleCount(b)) : 0, need: total };
+  }
+  function questVerdict(b) {
+    const q = b.quest;
+    if (questGoalMet(b) || b.fullClear) return 'win';
+    if (b.qBottom) return 'fail-bottom';
+    if (q.shots > 0 && b.shots >= q.shots) return 'fail-shots';
+    return null;
+  }
+  function questUpdate(b, res, item) {
+    let stars = 0;
+    for (const o of res.popped.concat(res.dropped)) {
+      if (o.how === 'fizzle' || !isBubble(o.v)) continue;
+      /* 星星泡泡、閃電泡泡本身只是工具，不算消除顏色，也不算「炸掉的星星」 */
+      if ((item.k === 'star' || item.k === 'laser') && o.r === res.land.r && o.c === res.land.c) continue;
+      const col = colorOf(o.v);
+      b.qCol[col] = (b.qCol[col] || 0) + 1;
+      if (modOf(o.v) === 1) stars++;
+    }
+    if (res.dropped.length > b.qDropMax) b.qDropMax = res.dropped.length;
+    if (stars > b.qStarMax) b.qStarMax = stars;
+    b.qDone = questVerdict(b);
+    res.quest = { done: b.qDone };
+  }
+  /** 這關的額外小目標是否達成 */
+  function questMini(b) {
+    switch (b.quest.mini) {
+      case 'drop8': return b.qDropMax >= 8;
+      case 'streak3': return b.maxCombo >= 3;
+      case 'noswap': return b.qSwaps === 0;
+      case 'star2': return b.qStarMax >= 2;
+      case 'nodescent': return b.descents === 0;
+      default: return true;
+    }
+  }
+  /** 星等：0 = 沒過關。有發射數上限看剩餘 30%；不限發射數（幼幼班）看已用發射數對參考值 */
+  function questStars(b) {
+    const q = b.quest;
+    if (!q || b.qDone !== 'win') return 0;
+    const mini = questMini(b);
+    let two, ok3;
+    if (q.shots > 0) { two = q.shots - b.shots >= Math.ceil(q.shots * 0.3); ok3 = true; }
+    else { two = b.shots <= Math.ceil((q.ref || 1) * 1.5); ok3 = b.shots <= (q.ref || 0); }
+    return two && mini && ok3 ? 3 : two ? 2 : 1;
+  }
+  function questSummary(b) {
+    return { id: b.quest.id, win: b.qDone === 'win', verdict: b.qDone, stars: questStars(b), shots: b.shots, shotsMax: b.quest.shots, mini: questMini(b), miniId: b.quest.mini, ref: b.quest.ref };
+  }
+
   /* ---------- 雜湊（對帳用） ---------- */
   function boardHash(b) {
     let h = hash2(b.cols, b.parity * 131 + b.shots);
@@ -780,6 +876,7 @@
     mulberry32, hash2, rand01, clampAngle,
     colorOf, modOf, isBubble, offOf, rowLen, cx, cy, get, neighbors, inBoard, shooterPos,
     cloneBoard, bubbleCount, lowestRow, presentColors,
+    GOAL_TYPES, MINI_IDS, questOpts, newQuestBoard, questProgress, questMini, questStars, questSummary, countMark,
     newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating, settle, laserLine, genItem
   };
   root.Rules = api;

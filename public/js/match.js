@@ -26,6 +26,7 @@
   function boardSeed(seed, i) { return i === 0 ? seed >>> 0 : (Math.imul((seed >>> 0) ^ (i * 0x9E3779B1), 0x85EBCA6B) ^ Math.imul(i + 1, 0xC2B2AE35)) >>> 0; }
   /** 每人盤面不同，但泡泡數、星星數、獎勵泡泡數都跟第 0 位一樣（公平） */
   function boardsFor(cfg, n) {
+    if (cfg.mode === 'quest') return [Rules.newQuestBoard(cfg.quest)];   /* 闖關：單盤面，由關卡定義決定一切 */
     const base = { level: cfg.level, layoutId: cfg.layoutId };
     const first = Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, 0) }, base));
     const marks = m => { let k = 0; first.rows.forEach(row => row.forEach(v => { if (Rules.isBubble(v) && Rules.modOf(v) === m) k++; })); return k; };
@@ -45,9 +46,10 @@
       slot: i, name: p.name || '', dragon: p.dragon || 'rainbow', kind: p.kind || 'human', aiLevel: p.aiLevel || null
     }));
     const m = {
-      mode: cfg.mode === 'duel' ? 'duel' : 'race',
+      mode: cfg.mode === 'duel' ? 'duel' : cfg.mode === 'quest' ? 'quest' : 'race',
+      quest: cfg.mode === 'quest' ? cfg.quest : null,
       level: cfg.level || 'normal', seed: cfg.seed >>> 0, layoutId: cfg.layoutId || 'random', themeId: cfg.themeId | 0,
-      duration: cfg.duration == null ? 180000 : cfg.duration,
+      duration: cfg.mode === 'quest' ? 0 : (cfg.duration == null ? 180000 : cfg.duration),
       players,
       boards: boardsFor(cfg, players.length),
       pending: players.map(() => []),
@@ -137,6 +139,7 @@
     if (m.over) return [];
     const rank = ranking(m);
     const ev = { e: 'end', t, result: { reason, t: Math.round(t || 0), ranks: rank, winner: rank[0].s, mode: m.mode, layoutName: m.boards[0].layoutName } };
+    if (m.mode === 'quest') ev.result.quest = Rules.questSummary(m.boards[0]);
     apply(m, ev);
     return [{ ev, res: null }];
   }
@@ -183,7 +186,8 @@
         }
       }
     }
-    if (res.fullClear) out.push.apply(out, endMatch(m, t, 'clear'));
+    if (m.mode === 'quest' && b.qDone) out.push.apply(out, endMatch(m, t, b.qDone));
+    else if (res.fullClear) out.push.apply(out, endMatch(m, t, 'clear'));
     return out;
   }
 
