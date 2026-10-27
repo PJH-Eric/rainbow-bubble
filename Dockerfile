@@ -1,6 +1,6 @@
 # 彩虹泡泡砲 後端（Cloud Run／任何容器平台）
 # 專案零依賴，不需要 npm install；只打包執行需要的檔案。
-FROM node:22-alpine
+FROM node:26.12.1-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production
