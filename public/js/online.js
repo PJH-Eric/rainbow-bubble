@@ -211,6 +211,7 @@
     }
 
     ui.statusBox = h('span', { class: 'lobby-status' });
+    ui.onlineCountBox = h('span', { class: 'lobby-online-count', role: 'status', 'aria-live': 'polite', hidden: true });
     ui.wakeBox = h('div');
     ui.noticeBox = h('div');
     ui.inviteBox = h('div');
@@ -220,7 +221,14 @@
     const prof = App.profileEditor({ onChange: syncProfile });
     ui.profileCard.appendChild(prof.el);
 
+    ui.paintOnlineCount = () => {
+      const count = App.onlineCount;
+      ui.onlineCountBox.hidden = !Number.isInteger(count);
+      ui.onlineCountBox.textContent = Number.isInteger(count) ? T('lobby.onlineCount', { n: count }) : '';
+    };
     ui.paintStatus = () => {
+      if (!online()) App.onlineCount = null;
+      ui.paintOnlineCount();
       const si = statusInfo();
       ui.statusBox.textContent = '';
       ui.statusBox.appendChild(h('span', { class: 'status ' + si.cls, role: 'status' }, h('i'), si.text));
@@ -343,7 +351,7 @@
       ui.wakeBox, ui.noticeBox, ui.inviteBox,
       ui.grid = h('div', { class: 'room-grid lobby-grid' },
         h('div', { class: 'col' }, ui.profileCard, ui.actionCard),
-        h('section', { class: 'card' }, h('h3', null, T('lobby.rooms'), h('span', { class: 'grow' }), refresh), ui.listBox))));
+        h('section', { class: 'card' }, h('h3', null, T('lobby.rooms'), h('span', { class: 'grow' }), refresh), ui.onlineCountBox, ui.listBox))));
     ui.paintStatus(); ui.paintNotice(); ui.paintList(); ui.paintInvite();
     Net.open(profile());
     if (online()) { Net.send({ type: 'lobbySub' }); askInvite(); }
@@ -611,7 +619,11 @@
     });
     Net.on('rooms', m => {
       App.rooms = m.rooms || [];
-      if (App.lobbyUI && App.screen === 'lobby' && App.lobbyUI.paintList) App.lobbyUI.paintList();
+      App.onlineCount = Number.isInteger(m.online) && m.online >= 0 ? m.online : null;
+      if (App.lobbyUI && App.screen === 'lobby') {
+        App.lobbyUI.paintOnlineCount();
+        if (App.lobbyUI.paintList) App.lobbyUI.paintList();
+      }
     });
     Net.on('room', m => {
       App.room = m.room || null;
