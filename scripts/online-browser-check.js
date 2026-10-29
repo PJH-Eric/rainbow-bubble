@@ -47,7 +47,7 @@ async function ctxPage(browser, vp, tag) {
 }
 
 (async () => {
-  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT) }), stdio: ['ignore', 'pipe', 'pipe'] });
+  const srv = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({ GAME_GO_IN: '800', GAME_DURATION_SCALE: '0.25' }, process.env, { PORT: String(PORT) }), stdio: ['ignore', 'pipe', 'pipe'] });
   srv.stderr.on('data', d => process.stderr.write(d));
   let browser;
   try {
@@ -170,7 +170,7 @@ async function ctxPage(browser, vp, tag) {
     await btn(a, '開始遊戲').click();
     for (const p of [a, b, s]) await p.waitForSelector('.game', { timeout: 10000 });
     ok(true, '三個人都進入對局畫面');
-    await wait(3600);
+    await wait(1200);
     ok(await a.locator('.bslot').count() === 2 && await s.locator('.bslot').count() === 2, '玩家與觀戰者都看到 2 塊盤面');
     ok(await s.locator('.bslot.mine').count() === 0 && await s.getByText('觀戰中').count() >= 1, '觀戰者沒有自己的盤面、顯示觀戰中');
 
@@ -336,7 +336,7 @@ async function ctxPage(browser, vp, tag) {
     await s.waitForFunction(() => document.querySelectorAll('.seat:not(.empty)').length === 2);
     await btn(s, '開始遊戲').click();
     await s.waitForSelector('.game', { timeout: 10000 });
-    await wait(3600);
+    await wait(1200);
     ok(await s.locator('.bslot').count() === 2, '對局畫面有 2 塊盤面（我 + 電腦）');
     ok((await s.locator('.bslot .bt-name').allTextContents()).some(t => t.includes('🤖')), 'HUD 的電腦名字帶 🤖');
     await s.waitForFunction(() => App.game && App.game.m && App.game.m.boards[1].shots >= 3, null, { timeout: 40000 });

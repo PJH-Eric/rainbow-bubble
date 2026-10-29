@@ -137,7 +137,7 @@ async function lobby(base, tag, patch, withSpec) {
   A.send({ type: 'start' });
   const [sa, sb, ss] = await Promise.all([A.waitFor('start'), B.waitFor('start'), S.waitFor('start')]);
   ok(sa.slot === 0 && sb.slot === 1 && ss.slot === -1, 'start：玩家 slot 依座位順序、觀戰者 slot=-1');
-  ok(sa.goIn === 3000 && Math.abs(sa.t0Wall - (Date.now() + 3000)) < 800, 'start：t0Wall = 伺服器時間 + 3 秒');
+  ok(sa.goIn === 3000 && Math.abs(sa.t0Wall - sa.serverNow - 3000) < 800, 'start：t0Wall = 伺服器時間 + 3 秒');
   ok(sa.cfg.mode === 'duel' && sa.cfg.level === 'normal' && sa.cfg.layoutId === 'checker' && sa.cfg.themeId === 4 && sa.cfg.duration === 120000
     && sa.cfg.players.length === 2 && sa.cfg.players[1].dragon === 'cloud' && Number.isInteger(sa.cfg.seed), 'start：cfg 欄位齊全');
   await wait(800);

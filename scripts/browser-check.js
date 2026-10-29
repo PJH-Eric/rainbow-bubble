@@ -51,8 +51,10 @@ async function waitHealth(base) {
   };
   const overflow = pg => pg.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1);
 
-  for (const v of VIEWS) {
-    console.log('\n[' + v.name + ' ' + v.w + '×' + v.h + ']');
+  /* 各裝置尺寸各開一個 context 並行跑；輸出先收集，跑完依尺寸順序一次印出 */
+  const reports = await Promise.all(VIEWS.map(async v => {
+    const lines = ['\n[' + v.name + ' ' + v.w + '×' + v.h + ']'];
+    const ok = (c, name, extra) => { if (c) { pass++; lines.push('  ok  ' + name); } else { fail++; lines.push('  FAIL ' + name + (extra ? '  ' + extra : '')); } };
     const { ctx, pg } = await mk(v);
     await pg.goto(base + '/');
     await pg.waitForSelector('.home-menu');
@@ -136,7 +138,9 @@ async function waitHealth(base) {
     await pg.waitForSelector('.home-menu');
     ok(true, '回到首頁');
     await ctx.close();
-  }
+    return lines;
+  }));
+  reports.forEach(lines => lines.forEach(l => console.log(l)));
   await br.close();
   if (child) child.kill();
   ok(errs.length === 0, '沒有 JS 錯誤 / console error', errs.slice(0, 5).join(' || '));

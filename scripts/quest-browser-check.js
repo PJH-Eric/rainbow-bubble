@@ -36,7 +36,7 @@ async function playOut(pg, maxShots) {
   return pg.evaluate(async (max) => {
     const g = App.game;
     const brain = AI.createBrain('normal', 5);
-    brain.p = Object.assign({}, brain.p, { step: 300 });
+    brain.p = Object.assign({}, brain.p, { step: 120 });
     let n = 0;
     while (!g.over && n < max) {
       while (!g.canAct() && !g.over) await new Promise(r => setTimeout(r, 60));
@@ -45,7 +45,7 @@ async function playOut(pg, maxShots) {
       if (d.swap) g.swap();
       g.fire(d.a);
       n++;
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 120));
     }
     return { over: g.over, shots: g.m.boards[0].shots, reason: g.m.result && g.m.result.reason };
   }, maxShots);
@@ -63,8 +63,10 @@ async function playOut(pg, maxShots) {
   const overflow = pg => pg.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1);
   const cjk = pg => pg.evaluate(() => /[㐀-鿿]/.test(document.getElementById('app').innerText));
 
-  for (const v of VIEWS) {
-    console.log('\n[' + v.name + ' ' + v.w + '×' + v.h + ']');
+  /* 各裝置尺寸各開一個 context 並行跑；輸出先收集，跑完依尺寸順序一次印出 */
+  const reports = await Promise.all(VIEWS.map(async v => {
+    const lines = ['\n[' + v.name + ' ' + v.w + '×' + v.h + ']'];
+    const ok = (c, name, extra) => { if (c) { pass++; lines.push('  ok  ' + name); } else { fail++; lines.push('  FAIL ' + name + (extra ? '  ' + extra : '')); } };
     const ctx = await br.newContext({ viewport: { width: v.w, height: v.h }, hasTouch: v.name.startsWith('phone') || v.name.startsWith('tablet') });
     await ctx.addInitScript('window.__GO_IN = 300');
     const pg = await ctx.newPage();
@@ -238,7 +240,9 @@ async function playOut(pg, maxShots) {
     await shot('12-en');
     await pg.evaluate(() => I18N.setLang('zh-Hant'));
     await ctx.close();
-  }
+    return lines;
+  }));
+  reports.forEach(lines => lines.forEach(l => console.log(l)));
 
   await br.close();
   if (child) child.kill();

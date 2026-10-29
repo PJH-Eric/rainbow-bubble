@@ -7,7 +7,7 @@ const ROOT = path.join(__dirname, '..'), SHOTS = path.join(ROOT, 'shots');
 fs.mkdirSync(SHOTS, { recursive: true });
 let fail = 0;
 const ok = (c, n, x) => { console.log((c ? '  ok  ' : '  FAIL ') + n + (c || !x ? '' : '  ' + x)); if (!c) fail++; };
-const GO = Number(process.env.GAME_GO_IN) || 3000;
+const GO = Number(process.env.GAME_GO_IN) || 600;
 const VIEWS = [['desktop', 1366, 768], ['tablet-land', 1180, 820], ['tablet-port', 820, 1180], ['phone-port', 390, 844], ['phone-small', 340, 600], ['phone-land', 844, 390]];
 (async () => {
   const child = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: '3192' }), stdio: 'ignore' });
@@ -15,7 +15,10 @@ const VIEWS = [['desktop', 1366, 768], ['tablet-land', 1180, 820], ['tablet-port
   for (let i = 0; i < 40; i++) { try { if ((await fetch(base + '/health')).ok) break; } catch (e) { /* 等 */ } await new Promise(r => setTimeout(r, 150)); }
   const br = await chromium.launch();
   const errs = [];
-  for (const [name, w, h] of VIEWS) {
+  /* 各裝置尺寸各開一個 context 並行跑；輸出先收集，跑完依尺寸順序一次印出 */
+  const reports = await Promise.all(VIEWS.map(async ([name, w, h]) => {
+    const lines = [];
+    const ok = (c, n, x) => { lines.push((c ? '  ok  ' : '  FAIL ') + n + (c || !x ? '' : '  ' + x)); if (!c) fail++; };
     const ctx = await br.newContext({ viewport: { width: w, height: h } });
     await ctx.addInitScript('window.__GO_IN = ' + GO);
     const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(name + ' ' + e.message));
@@ -43,7 +46,9 @@ const VIEWS = [['desktop', 1366, 768], ['tablet-land', 1180, 820], ['tablet-port
       await pg.evaluate(() => App.go('home')); await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
     }
     await ctx.close();
-  }
+    return lines;
+  }));
+  reports.forEach(lines => lines.forEach(l => console.log(l)));
   ok(errs.length === 0, '沒有 JS 錯誤', errs.join('|'));
   await br.close(); child.kill();
   console.log(fail ? '\n有失敗' : '\n全部通過'); process.exit(fail ? 1 : 0);
