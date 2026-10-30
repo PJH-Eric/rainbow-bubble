@@ -546,7 +546,7 @@
       if (def.mini) lines.push(h('div', { class: 'q-mini' + (q.mini && q.win ? ' ok' : '') },
         h('span', { class: 'q-mini-ico', html: root.Art.icon(q.mini && q.win ? 'check' : 'star', 18) }),
         h('div', { class: 'small' }, T(q.mini && q.win ? 'quest.res.miniOk' : 'quest.res.miniNo', { t: QU.miniText(def.mini) }))));
-      const card = h('div', { class: 'dialog result-card quest-result', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('quest.res.win') },
+      const card = h('div', { class: 'dialog result-card quest-result', 'data-result-share': '', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('quest.res.win') },
         h('div', { class: 'big-result' },
           h('img', { class: 'result-dragon', alt: '', src: root.Art.svgUrl(root.Art.dragonSVG(dragon, q.win ? 'cheer' : 'sad')) }),
           h('div', { class: 'head' }, T(q.win ? 'quest.res.win' : 'quest.res.lose')),
@@ -594,7 +594,7 @@
       if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, T('res.tSendRecv')));
       const stats = h('div', { class: 'stat-grid', 'aria-label': this.spectator ? T('res.statsOf', { name: nameOf(ranks[0]) }) : T('res.yourStats') }, tiles);
       const dragon = this.spectator ? ranks[0].dragon : this.cfg.players[this.slot].dragon;
-      const card = h('div', { class: 'dialog result-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('res.aria') },
+      const card = h('div', { class: 'dialog result-card', 'data-result-share': '', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('res.aria') },
         h('div', { class: 'big-result' },
           h('img', { class: 'result-dragon', alt: '', src: Art.svgUrl(Art.dragonSVG(dragon, win || this.spectator ? 'cheer' : 'sad')) }),
           h('div', { class: 'head' }, head),
