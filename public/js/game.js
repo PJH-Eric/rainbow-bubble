@@ -78,9 +78,9 @@
       /* 左側資訊欄 */
       this.sumEl = h('div', { class: 'summary' });
       const chatBox = this.kind === 'online' ? this.buildChat() : null;
+      this.sideClose = iconBtn('panelHide', T('game.hideSide'), () => this.toggleSide(false), 'side-close');
       this.side = h('aside', { class: 'game-side', 'aria-label': T('game.info') },
-        h('div', { class: 'side-head' }, this.sideTitle = h('b', null, T('game.info')),
-          this.sideClose = iconBtn('panelHide', T('game.hideSide'), () => this.toggleSide(false), 'side-close')),
+        h('div', { class: 'side-head' }, this.sideTitle = h('b', null, T('game.info'))),
         this.sumEl, chatBox);
 
       /* 盤面 */
@@ -137,7 +137,7 @@
       this.pingEl = this.kind === 'online' ? h('div', { class: 'ping' }, '-- ms') : null;
       this.overlay = h('div', { class: 'g-overlay', 'aria-live': 'assertive' });
       this.main = h('main', { class: 'game-main' }, this.hud, this.boardsEl);
-      this.root.appendChild(this.side); this.root.appendChild(this.main);
+      this.root.appendChild(this.side); this.root.appendChild(this.sideClose); this.root.appendChild(this.main);
       this.root.appendChild(this.overlay);
       if (this.pingEl) this.root.appendChild(this.pingEl);
       /* 寬螢幕預設展開資訊欄 */

@@ -385,6 +385,7 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
 .badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #ff4d6d; color: #fff; font-size: .75rem; font-weight: 900; display: grid; place-items: center; border: 2px solid #fff; }
 .badge[hidden] { display: none; }
 .side-toggle { position: relative; }
+.side-close { display: none; }
 
 /* ---------- 對局 ---------- */
 .game { position: absolute; inset: 0; display: flex; background-size: cover; background-position: center; overflow: hidden; }
@@ -536,10 +537,11 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .game-main { padding-left: calc(8px + var(--safe-l)); }
   /* 抽屜打開時，關閉鈕（雙箭頭）在抽屜標題列裡，上方的開關鈕不重複顯示 */
   .game:not(.side-closed) .hud .side-toggle { display: none; }
+  .game:not(.side-closed) > .side-close { display: grid; position: absolute; top: calc(10px + var(--safe-t)); left: calc(min(86vw, 330px) - 61px); z-index: 30; }
 }
-/* 手機窄版資訊欄會延伸到右上工具列下方，標題列需避開語系與設定按鈕 */
+/* 手機窄版將關閉鈕放進獨立高層，並移至語系按鈕左側保留兩者觸控區 */
 @media (max-width: 460px) {
-  .game:not(.side-closed) .game-side { padding-top: calc(66px + var(--safe-t)); }
+  .game:not(.side-closed) > .side-close { left: calc(min(86vw, 330px) - 136px - var(--safe-r)); z-index: 2147483002; }
 }
 /* 多人（3～4 人）：自己的盤面在左側佔滿高度，其他人固定排成右邊一直列（所有裝置、橫直向） */
 .boards.l-main { grid-auto-flow: row; grid-template-columns: minmax(0, 4.4fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
