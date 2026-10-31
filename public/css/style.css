@@ -537,6 +537,10 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   /* 抽屜打開時，關閉鈕（雙箭頭）在抽屜標題列裡，上方的開關鈕不重複顯示 */
   .game:not(.side-closed) .hud .side-toggle { display: none; }
 }
+/* 手機窄版資訊欄會延伸到右上工具列下方，標題列需避開語系與設定按鈕 */
+@media (max-width: 460px) {
+  .game:not(.side-closed) .game-side { padding-top: calc(66px + var(--safe-t)); }
+}
 /* 多人（3～4 人）：自己的盤面在左側佔滿高度，其他人固定排成右邊一直列（所有裝置、橫直向） */
 .boards.l-main { grid-auto-flow: row; grid-template-columns: minmax(0, 4.4fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .boards.l-main .bslot.mine { grid-column: 1; grid-row: 1; }
