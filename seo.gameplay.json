@@ -1,7 +1,7 @@
 {
   "zh-Hant": {
     "name": "彩虹泡泡砲",
-    "summary": "用彩虹砲對準同顏色的泡泡，咻！一次消掉好多好多；3～5 歲也能玩。",
+    "summary": "瞄準發射，連成三顆以上同色泡泡就能消除，懸空泡泡也會落下。可單機闖關、挑戰四段電腦或邀朋友多人對戰，也能觀戰。",
     "modes": [
       "幼幼班",
       "單機練習",
@@ -14,7 +14,7 @@
   },
   "zh-Hans": {
     "name": "彩虹泡泡砲",
-    "summary": "用彩虹砲对准同颜色的泡泡，咻！一次消掉好多好多；3～5 岁也能玩。",
+    "summary": "瞄准发射，连成三个以上同色泡泡就能消除，悬空泡泡也会落下。可单机闯关、挑战四段电脑或邀请朋友多人对战，也能观战。",
     "modes": [
       "幼幼班",
       "单机练习",
@@ -27,7 +27,7 @@
   },
   "en": {
     "name": "Rainbow Bubble Blaster",
-    "summary": "Aim the rainbow cannon at same-colored bubbles and pop lots at once! Fun for ages 3 to 5, too.",
+    "summary": "Aim and shoot: match three or more bubbles to pop them, and unsupported bubbles fall. Clear solo levels, take on four AI levels, or play and spectate with friends online.",
     "modes": [
       "Little Kids Mode",
       "Solo Practice",

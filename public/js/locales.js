@@ -12,8 +12,8 @@
   'use strict';
 
   var zh = {
-    "meta.title": "彩虹泡泡砲｜免費線上多人泡泡射擊",
-    "meta.desc": "免費免下載的彩虹泡泡砲，瞄準同色泡泡連線消除，點哪裡就射向哪裡。幼幼班也能輕鬆上手，可單機練習、挑戰電腦或線上多人競賽，支援觀戰及邀請連結，手機平板可玩。",
+    "meta.title": "彩虹泡泡砲｜免費線上泡泡龍・多人射擊",
+    "meta.desc": "免費線上玩彩虹泡泡砲！發射同色泡泡，連接三顆以上即可消除。支援單機闖關、四段電腦與多人對戰，可觀戰或邀朋友同樂，手機平板免下載。",
     "app.name": "彩虹泡泡砲",
     "quest.entry.h": "闖關模式",
     "quest.shots.h": "發射數",
@@ -538,8 +538,8 @@
   };
 
   var en = {
-    "meta.title": "Rainbow Bubble Blaster",
-    "meta.desc": "Rainbow Bubble Blaster: a cute bubble shooter with solo play against bots, online rooms, spectating and invite links.",
+    "meta.title": "Rainbow Bubble Blaster | Free Online Bubble Shooter",
+    "meta.desc": "Play Rainbow Bubble Blaster online for free. Match and pop three or more bubbles, clear solo levels, challenge four AI levels, or play with friends online—no download needed.",
     "app.name": "Rainbow Bubble Blaster",
     "quest.entry.h": "Quest Mode",
     "quest.shots.h": "Shots",
@@ -1069,8 +1069,8 @@
 // 由繁體中文介面字典轉換；動態參數（暱稱、分數等）維持原值。
 (function (root) {
   var hans = {
-    "meta.title": "彩虹泡泡砲｜免费线上多人泡泡射击",
-    "meta.desc": "免费免下载的彩虹泡泡砲，瞄准同色泡泡连线消除，点哪里就射向哪里。幼幼班也能轻松上手，可单机练习、挑战电脑或线上多人竞赛，支援观战及邀请连结，手机平板可玩。",
+    "meta.title": "彩虹泡泡砲｜免费在线泡泡龙・多人射击",
+    "meta.desc": "免费在线玩彩虹泡泡砲！发射同色泡泡，连接三个以上即可消除。支持单机闯关、四段电脑与多人对战，可观战或邀请朋友同乐，手机平板免下载。",
     "app.name": "彩虹泡泡砲",
     "quest.entry.h": "闯关模式",
     "quest.shots.h": "发射数",
