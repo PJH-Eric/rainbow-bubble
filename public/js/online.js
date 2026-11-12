@@ -582,7 +582,31 @@
   }
 
   /* ================= 伺服器訊息 ================= */
+  /* ---------- 大廳聊天室（左下氣泡） ---------- */
+  function initLobbyChat() {
+    if (!root.LobbyChat || App.lobbyChat) return;
+    const chat = App.lobbyChat = root.LobbyChat.create({
+      game: 'rainbow-bubble',
+      active: () => App.screen === 'lobby',
+      getName: () => U.myName(),
+      setName: n => { App.store.nickname = n.slice(0, 10); U.save(); syncProfile(); if (App.lobbyUI && App.screen === 'lobby' && App.lobbyUI.paintProfile) App.lobbyUI.paintProfile(); },
+      join: name => Net.send({ type: 'lobbychat', op: 'join', name }),
+      leave: () => Net.send({ type: 'lobbychat', op: 'leave' }),
+      send: (text, name) => Net.send({ type: 'lobbychat', op: 'send', text, name }),
+      joinRoom: code => joinRoom(code, 'player')
+    });
+    chat.setConnected(Net.connected);
+    Net.onStatus(s => chat.setConnected(s === 'open'));
+    Net.on('lobbychat', m => {
+      if (m.op === 'history') chat.history(m.history, m.online);
+      else if (m.op === 'msg') chat.add(m.msg);
+      else if (m.op === 'online') chat.online(m.online);
+      else if (m.op === 'error') chat.error(m.code);
+    });
+  }
+
   function init() {
+    initLobbyChat();
     Net.onStatus((s, detail) => {
       App.netStatus = s;
       wakeSecs = s === 'waking' ? (detail || 0) : 0;

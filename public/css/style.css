@@ -676,3 +676,12 @@ body { background: linear-gradient(180deg, #bfe8ff 0, #e9f8ff 45%, #fff1f8 100%)
   .dialog-pause .dialog-actions { grid-template-columns: 1.2fr 1fr 1.3fr; padding: 8px 16px 12px; }
   .dialog-pause .pause-main { grid-column: auto; min-height: 48px; }
 }
+
+/* ---------- 大廳聊天室：套用彩虹泡泡砲配色 ---------- */
+body .lc-root {
+  --lc-accent: var(--pink-d); --lc-accent-ink: #fff;
+  --lc-panel-bg: var(--card); --lc-panel-solid: var(--card);
+  --lc-ink: var(--ink); --lc-muted: var(--ink2); --lc-line: var(--line);
+  --lc-field-bg: var(--paper); --lc-sys-bg: rgba(255, 126, 182, .14); --lc-name: var(--grape-d);
+  --lc-font: var(--font); --lc-radius: var(--r); --lc-z: 95;
+}

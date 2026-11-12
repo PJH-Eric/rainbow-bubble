@@ -56,6 +56,7 @@
     if (!fn) throw new Error('沒有這個畫面：' + name);
     const el = fn(params || {});
     if (el) { el.setAttribute('data-screen', name); App.el.appendChild(el); }
+    if (App.lobbyChat) App.lobbyChat.refresh();
     const lobbyLink = $('lobby-home-link');
     if (lobbyLink) lobbyLink.hidden = name !== 'home';
     if (name !== 'game') root.Sound.bgm(name === 'home' ? 'a' : 'c');
@@ -242,6 +243,8 @@
       const vibSw = toggle({ label: T('set.vibrate'), value: st.vibrate, onChange: v => { st.vibrate = v; save(); if (v && navigator.vibrate) try { navigator.vibrate(40); } catch (e) { /* 忽略 */ } } });
       const calmSw = toggle({ label: T('set.calm'), value: st.reduceMotion, onChange: v => { st.reduceMotion = v; save(); applySettings(); } });
       const lineSw = toggle({ label: T('set.aimLine'), value: st.aimLine, onChange: v => { st.aimLine = v; save(); } });
+      const lc = App.lobbyChat;
+      const chatSw = lc ? toggle({ label: lc.text('set'), value: lc.isEnabled(), onChange: v => lc.setEnabled(v) }) : null;
       const aimSeg = seg({ label: T('set.aimMode'), options: [{ v: 'tap', label: T('set.aimTap') }, { v: 'drag', label: T('set.aimDrag') }], value: st.aimMode, onChange: v => { st.aimMode = v; save(); } });
       const f = (label, ctl, hint) => h('div', { class: 'field' }, h('span', { class: 'label' }, label, hint ? h('span', { class: 'muted small' }, hint) : null), h('div', { class: 'ctl' }, ctl));
       const body = h('div', null,
@@ -252,10 +255,11 @@
         h('p', { class: 'muted small' }, T('set.aimHelp')),
         f(T('set.aimLine'), lineSw),
         navigator.vibrate ? f(T('set.vibrate'), vibSw) : null,
-        f(T('set.calm'), calmSw));
+        f(T('set.calm'), calmSw),
+        lc ? f(lc.text('set'), chatSw, lc.text('setSub')) : null);
       return {
         title: T('set.title'), content: body,
-        actions: [btn(T('set.reset'), { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); applySettings(); m.close(true); App.settingsOpen = false; toast(T('toast.resetDone')); App.openSettings(); } }),
+        actions: [btn(T('set.reset'), { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); if (App.lobbyChat) App.lobbyChat.setEnabled(true); applySettings(); m.close(true); App.settingsOpen = false; toast(T('toast.resetDone')); App.openSettings(); } }),
           btn(T('common.done'), { cls: 'btn-mint', onClick: () => m.close() })]
       };
     };
