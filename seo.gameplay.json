@@ -1,41 +1,20 @@
 {
   "zh-Hant": {
     "name": "彩虹泡泡砲",
-    "summary": "瞄準發射，連成三顆以上同色泡泡就能消除，懸空泡泡也會落下。可單機闖關、挑戰四段電腦或邀朋友多人對戰，也能觀戰。",
-    "modes": [
-      "幼幼班",
-      "單機練習",
-      "四段 AI",
-      "線上房間",
-      "觀戰",
-      "邀請連結"
-    ],
+    "summary": "瞄準發射，連成三顆以上同色泡泡就能消除，懸空泡泡也會落下。可離線單機闖關或挑戰四段本機電腦對手。",
+    "modes": ["單機模式", "闖關模式"],
     "controls": "點哪裡泡泡就飛向哪裡；右下角小泡泡可以換泡泡"
   },
   "zh-Hans": {
     "name": "彩虹泡泡砲",
-    "summary": "瞄准发射，连成三个以上同色泡泡就能消除，悬空泡泡也会落下。可单机闯关、挑战四段电脑或邀请朋友多人对战，也能观战。",
-    "modes": [
-      "幼幼班",
-      "单机练习",
-      "四段 AI",
-      "线上房间",
-      "观战",
-      "邀请连结"
-    ],
+    "summary": "瞄准发射，连成三个以上同色泡泡就能消除，悬空泡泡也会落下。可离线单机闯关或挑战四段本机电脑对手。",
+    "modes": ["单机模式", "闯关模式"],
     "controls": "点哪里泡泡就飞向哪里；右下角小泡泡可以换泡泡"
   },
   "en": {
     "name": "Rainbow Bubble Blaster",
-    "summary": "Aim and shoot: match three or more bubbles to pop them, and unsupported bubbles fall. Clear solo levels, take on four AI levels, or play and spectate with friends online.",
-    "modes": [
-      "Little Kids Mode",
-      "Solo Practice",
-      "Four AI Levels",
-      "Online Room",
-      "Spectate",
-      "Invite Link"
-    ],
+    "summary": "Aim and shoot: match three or more bubbles to pop them, and unsupported bubbles fall. Play solo or clear levels offline, with four difficulty levels of local computer opponents.",
+    "modes": ["Solo", "Quest"],
     "controls": "Bubbles fly wherever you tap; swap bubbles with the small bubble at the bottom right"
   }
 }

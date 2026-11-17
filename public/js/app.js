@@ -41,7 +41,7 @@
     root.Sound.apply();
     document.body.classList.toggle('calm', !!st.reduceMotion);
   }
-  App.recordResult = (kind, win) => root.Store.record(App.store, kind === 'solo' ? 'solo' : 'online', !!win);
+  App.recordResult = win => root.Store.record(App.store, 'solo', !!win);
 
   /* ---------- 畫面切換 ---------- */
   function clear() {
@@ -49,22 +49,19 @@
     App.el.textContent = '';
   }
   function go(name, params, opt) {
-    if (root.ServerOutage) root.ServerOutage.setScreen(name);
     clear();
     App.screen = name; App.params = params || null;
     const fn = App.screens[name];
     if (!fn) throw new Error('沒有這個畫面：' + name);
     const el = fn(params || {});
     if (el) { el.setAttribute('data-screen', name); App.el.appendChild(el); }
-    if (App.lobbyChat) App.lobbyChat.refresh();
-    const lobbyLink = $('lobby-home-link');
-    if (lobbyLink) lobbyLink.hidden = name !== 'home';
+    const portalLink = $('lobby-home-link');
+    if (portalLink) portalLink.hidden = name !== 'home';
     if (name !== 'game') root.Sound.bgm(name === 'home' ? 'a' : 'c');
     if (!(opt && opt.quiet)) { const t = App.el.querySelector('h1,h2'); if (t) { t.setAttribute('tabindex', '-1'); try { t.focus({ preventScroll: true }); } catch (e) { /* 忽略 */ } } }
     return el;
   }
   App.go = go;
-  App.rerender = () => { if (App.screen === 'lobby' || App.screen === 'room') go(App.screen, App.params, { quiet: true }); };
   const screenBox = (cls, kids) => h('main', { class: 'screen ' + (cls || '') }, kids);
   const topbar = (title, backFn, extra) => h('div', { class: 'topbar' }, backFn ? root.UI.iconBtn('back', T('common.back'), backFn) : null, h('h2', null, title), extra);
   const img = (svg, cls, size) => h('img', { class: cls || '', alt: '', draggable: 'false', src: Art.svgUrl(svg), width: size, height: size });
@@ -73,7 +70,6 @@
   App.screens.home = function () {
     const st = App.store.stats, sline = [];
     if (st.solo) sline.push(T('home.statSolo', { w: st.solo.win, p: st.solo.play }));
-    if (st.online) sline.push(T('home.statOnline', { w: st.online.win, p: st.online.play }));
     return screenBox('home center', [
       h('div', { class: 'hero' },
         h('img', { class: 'hero-logo', alt: T('app.name'), src: Art.svgUrl(Art.logoSVG()) }),
@@ -83,7 +79,6 @@
       h('nav', { class: 'home-menu', 'aria-label': T('home.menu') },
         btn(T('home.solo'), { cls: 'btn-pink btn-lg btn-block', icon: 'robot', iconSize: 28, onClick: () => go('solo') }),
         btn(T('quest.entry.btn'), { cls: 'btn-sun btn-lg btn-block quest-entry', icon: 'flag', iconSize: 28, onClick: () => go('quest') }),
-        btn(T('home.online'), { cls: 'btn-sky btn-lg btn-block', icon: 'users', iconSize: 28, onClick: () => go('lobby') }),
         btn(T('help.title'), { cls: 'btn-sun btn-lg btn-block', icon: 'help', iconSize: 28, onClick: () => go('help') })),
       sline.length ? h('p', { class: 'home-foot' }, T('home.stats') + sline.join('　')) : null
     ]);
@@ -145,12 +140,12 @@
     };
   };
 
-  /* ---------- 規則面板（單機與線上房間共用） ---------- */
+  /* ---------- 單機規則面板 ---------- */
   App.rulesPanel = function (rules, set, o) {
     o = o || {};
     const f = (label, ctl) => h('div', { class: 'field' }, h('span', { class: 'label' }, label), h('div', { class: 'ctl' }, ctl));
     const rows = [];
-    if (!o.noMode) rows.push(f(T('rules.mode'), seg({ label: T('rules.mode'), options: modeOpts().map(x => Object.assign({}, x, { disabled: x.v === 'duel' && o.duelDisabled })), value: rules.mode, onChange: v => set({ mode: v }) })));
+    if (!o.noMode) rows.push(f(T('rules.mode'), seg({ label: T('rules.mode'), options: modeOpts(), value: rules.mode, onChange: v => set({ mode: v }) })));
     rows.push(f(T('rules.level'), seg({ label: T('rules.level'), cls: 'small', options: levelOpts(), value: rules.level, onChange: v => set({ level: v }) })));
     rows.push(f(T('rules.map'), root.UI.dropdown({ label: T('rules.map'), options: layoutOpts(), value: rules.layout, onChange: v => set({ layout: v }) })));
     rows.push(f(T('rules.theme'), root.UI.dropdown({ label: T('rules.theme'), options: themeDD(), value: String(rules.theme), onChange: v => set({ theme: v }) })));
@@ -182,13 +177,13 @@
         if ('theme' in patch) so.theme = String(patch.theme);
         save();
         if ('mode' in patch || 'level' in patch) paintPanel();
-      }, { duelDisabled: so.opponents === 0 }));
+      }));
       if (so.opponents === 0 && so.level === 'baby') panelBox.appendChild(h('p', { class: 'hint' }, T('solo.babyHint')));
     }
     paintOpp(); paintPanel();
     return screenBox('', h('div', { class: 'wrap' },
       topbar(T('home.solo'), () => go('home')),
-      h('div', { class: 'room-grid' },
+        h('div', { class: 'setup-grid' },
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
           h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el),
           h('section', { class: 'card' }, h('h3', null, T('solo.opponents')), oppBox)),
@@ -214,18 +209,17 @@
     if (so.opponents === 0 && so.level === 'baby') duration = 0;
     const mode = so.opponents === 0 ? 'race' : so.mode;
     const cfg = { mode, level: so.level, seed, layoutId: so.layout, themeId, duration, players };
-    go('game', { kind: 'solo', cfg, slot: 0, ai });
+    go('game', { cfg, slot: 0, ai });
   };
 
   /* ---------- 對局畫面 ---------- */
   App.screens.game = function (p) {
     const gs = new root.GameScreen({
-      kind: p.kind, cfg: p.cfg, slot: p.slot, ai: p.ai, t0Wall: p.t0Wall, serverNow: p.serverNow, goIn: p.goIn,
-      onAgain: () => (p.quest ? App.beginQuest(p.quest) : p.kind === 'solo' ? App.startSolo() : root.Online.again()),
+      cfg: p.cfg, slot: p.slot, ai: p.ai,
+      onAgain: () => (p.quest ? App.beginQuest(p.quest) : App.startSolo()),
       onNext: () => go('questLevels', { level: p.quest.level, open: p.quest.no + 1 }),
-      onRoom: () => (p.quest ? go('questLevels', { level: p.quest.level }) : p.kind === 'solo' ? go('solo') : root.Online.toRoom()),
-      onExit: () => (p.quest ? go('questLevels', { level: p.quest.level }) : p.kind === 'solo' ? go('solo') : root.Online.abandonToLobby()),
-      onHome: () => (p.kind === 'solo' ? go('home') : root.Online.leaveToHome())
+      onSetup: () => (p.quest ? go('questLevels', { level: p.quest.level }) : go('solo')),
+      onHome: () => go('home')
     });
     App.game = gs;
     return gs.root;
@@ -243,8 +237,6 @@
       const vibSw = toggle({ label: T('set.vibrate'), value: st.vibrate, onChange: v => { st.vibrate = v; save(); if (v && navigator.vibrate) try { navigator.vibrate(40); } catch (e) { /* 忽略 */ } } });
       const calmSw = toggle({ label: T('set.calm'), value: st.reduceMotion, onChange: v => { st.reduceMotion = v; save(); applySettings(); } });
       const lineSw = toggle({ label: T('set.aimLine'), value: st.aimLine, onChange: v => { st.aimLine = v; save(); } });
-      const lc = App.lobbyChat;
-      const chatSw = lc ? toggle({ label: lc.text('set'), value: lc.isEnabled(), onChange: v => lc.setEnabled(v) }) : null;
       const aimSeg = seg({ label: T('set.aimMode'), options: [{ v: 'tap', label: T('set.aimTap') }, { v: 'drag', label: T('set.aimDrag') }], value: st.aimMode, onChange: v => { st.aimMode = v; save(); } });
       const f = (label, ctl, hint) => h('div', { class: 'field' }, h('span', { class: 'label' }, label, hint ? h('span', { class: 'muted small' }, hint) : null), h('div', { class: 'ctl' }, ctl));
       const body = h('div', null,
@@ -255,11 +247,10 @@
         h('p', { class: 'muted small' }, T('set.aimHelp')),
         f(T('set.aimLine'), lineSw),
         navigator.vibrate ? f(T('set.vibrate'), vibSw) : null,
-        f(T('set.calm'), calmSw),
-        lc ? f(lc.text('set'), chatSw, lc.text('setSub')) : null);
+        f(T('set.calm'), calmSw));
       return {
         title: T('set.title'), content: body,
-        actions: [btn(T('set.reset'), { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); if (App.lobbyChat) App.lobbyChat.setEnabled(true); applySettings(); m.close(true); App.settingsOpen = false; toast(T('toast.resetDone')); App.openSettings(); } }),
+        actions: [btn(T('set.reset'), { cls: 'btn-ghost', onClick: () => { root.Store.resetSettings(st); applySettings(); m.close(true); App.settingsOpen = false; toast(T('toast.resetDone')); App.openSettings(); } }),
           btn(T('common.done'), { cls: 'btn-mint', onClick: () => m.close() })]
       };
     };
@@ -272,24 +263,14 @@
     m.close = function (silent) { App.settingsOpen = false; origClose(silent); };
   };
 
-  /* ---------- 連線狀態橫幅（text 可為字串或函式，語言切換時重新取字） ---------- */
-  App.banner = function (text, busy) {
-    const b = $('banner');
-    b.textContent = '';
-    App._banner = text ? { text, busy } : null;
-    if (!text) return;
-    b.appendChild(h('div', { class: 'banner' }, busy ? h('span', { class: 'spin', html: Art.icon('refresh', 18) }) : null, h('span', { class: 'banner-txt' }, typeof text === 'function' ? text() : text)));
-  };
-
   /* ---------- 返回鍵（Android／瀏覽器） ---------- */
   function onBack() {
     if (root.UI.modalOpen()) { root.UI.closeTopModal(); return true; }
     switch (App.screen) {
-      case 'help': case 'solo': case 'lobby': go('home'); return true;
+      case 'help': case 'solo': go('home'); return true;
       case 'quest': go('home'); return true;
       case 'questLevels': go('quest'); return true;
-      case 'room': root.Online && root.Online.confirmLeave(); return true;
-      case 'game': if (App.game) { App.game.kind === 'solo' ? App.game.pauseMenu() : App.game.confirmExit(); } return true;
+      case 'game': if (App.game) App.game.pauseMenu(); return true;
     }
     return false;
   }
@@ -302,16 +283,15 @@
     gear.addEventListener('click', () => { root.Sound.sfx('click'); App.openSettings(); });
     /* 語言切換鈕：設定鈕左邊（同一排） */
     root.I18N.mountToggle({ after: gear, id: 'b-lang', className: 'icon-btn' });
-    const lobbyLink = $('lobby-home-link');
-    const syncLobbyLink = () => { if (lobbyLink) lobbyLink.href = root.I18N.withLang(lobbyLink.getAttribute('data-base') || lobbyLink.href); };
-    if (lobbyLink) lobbyLink.setAttribute('data-base', lobbyLink.getAttribute('href'));
-    syncLobbyLink();
+    const portalLink = $('lobby-home-link');
+    const syncPortalLink = () => { if (portalLink) portalLink.href = root.I18N.withLang(portalLink.getAttribute('data-base') || portalLink.href); };
+    if (portalLink) portalLink.setAttribute('data-base', portalLink.getAttribute('href'));
+    syncPortalLink();
     /* 切換語言：畫面重畫文字，不重置對局狀態 */
     root.I18N.onChange(() => {
-      syncLobbyLink();
+      syncPortalLink();
       if (App.screen === 'game') { if (App.game && App.game.relocalize) App.game.relocalize(); }
       else if (App.screen) go(App.screen, App.params, { quiet: true });
-      if (App._banner) App.banner(App._banner.text, App._banner.busy);
     });
     document.addEventListener('pointerdown', () => root.Sound.unlock(), { passive: true });
     document.addEventListener('keydown', () => root.Sound.unlock(), { passive: true });
@@ -324,12 +304,7 @@
       onBack();
       history.pushState({ g: 1 }, '');
     });
-    if (root.OnlineGlue) root.OnlineGlue.init();
-    const q = new URLSearchParams(location.search);
-    if (q.get('room') && (q.get('t') || q.get('invite'))) {
-      App.invite = { room: String(q.get('room')).toUpperCase().slice(0, 8), token: String(q.get('t') || q.get('invite')).slice(0, 40), info: null, error: null };
-      go('lobby');
-    } else go('home');
+    go('home');
   };
 
   App.util = { myName, save, applySettings, topbar, screenBox, shuffle, get LEVEL_DD() { return levelOpts(); }, get TIME_OPTS() { return timeOpts(); } };

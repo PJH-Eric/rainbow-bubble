@@ -1,15 +1,16 @@
 /* ===== scripts/browser-check.js — 單機流程與版面檢查（Playwright） =====
- * 用法：node scripts/browser-check.js [網址，預設自己啟動本機伺服器 3198]
+ * 用法：node scripts/browser-check.js
  * 檢查：多種裝置尺寸 × 1～4 人的對局版面（無水平溢出、盤面夠大、沒有 JS 錯誤）、
  *       設定彈窗、暫停選單、結算 overlay 三個按鈕，截圖放在 shots/。
  */
 'use strict';
-const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 const { chromium } = require(fs.existsSync('/opt/npm-tools/node_modules/playwright') ? '/opt/npm-tools/node_modules/playwright' : 'playwright');
 
 const ROOT = path.join(__dirname, '..');
+const GAME_URL = pathToFileURL(path.join(ROOT, 'public', 'index.html')).href;
 const SHOTS = path.join(ROOT, 'shots');
 fs.mkdirSync(SHOTS, { recursive: true });
 let pass = 0, fail = 0;
@@ -27,18 +28,7 @@ const ALL_VIEWS = [
 /* 快速模式（預設）：桌機、平板直向、手機直向三個尺寸；FULL=1 才跑全部 5 種 */
 const VIEWS = FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
 
-async function waitHealth(base) {
-  for (let i = 0; i < 40; i++) { try { const r = await fetch(base + '/health'); if (r.ok) return; } catch (e) { /* 等待 */ } await new Promise(r => setTimeout(r, 150)); }
-  throw new Error('伺服器沒有起來');
-}
-
 (async () => {
-  let base = process.argv[2], child = null;
-  if (!base) {
-    child = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: '3198' }), stdio: 'ignore' });
-    base = 'http://127.0.0.1:3198';
-  }
-  await waitHealth(base);
   const br = await chromium.launch();
   const errs = [];
   const mk = async (v) => {
@@ -56,7 +46,7 @@ async function waitHealth(base) {
     const lines = ['\n[' + v.name + ' ' + v.w + '×' + v.h + ']'];
     const ok = (c, name, extra) => { if (c) { pass++; lines.push('  ok  ' + name); } else { fail++; lines.push('  FAIL ' + name + (extra ? '  ' + extra : '')); } };
     const { ctx, pg } = await mk(v);
-    await pg.goto(base + '/');
+    await pg.goto(GAME_URL);
     await pg.waitForSelector('.home-menu');
     ok(!(await overflow(pg)), '首頁沒有水平溢出');
     await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-home.png') });
@@ -118,7 +108,7 @@ async function waitHealth(base) {
     await pg.waitForSelector('.result-card', { timeout: 6000 });
     await pg.waitForTimeout(600);
     const btns = await pg.evaluate(() => Array.from(document.querySelectorAll('.result-card .result-actions .btn')).map(b => b.textContent.trim()));
-    ok(btns.join('|') === '再來一局|回到房間|回到首頁', '結算 overlay 三個按鈕：' + btns.join('、'));
+    ok(btns.join('|') === '再來一局|回到設定|回到首頁', '結算 overlay 三個按鈕：' + btns.join('、'));
     ok(await pg.evaluate(() => !!document.querySelector('.bslot canvas')), '結算 overlay 疊在棋盤上方（棋盤仍在）');
     ok(!(await overflow(pg)), '結算沒有水平溢出');
     await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-result.png') });
@@ -127,9 +117,9 @@ async function waitHealth(base) {
     ok(await pg.evaluate(() => !document.querySelector('.result-card')), '再來一局：重新開始新局');
     await pg.evaluate(() => { App.game.cfg.duration = 1; App.game.m.duration = 1; });
     await pg.waitForSelector('.result-card', { timeout: 8000 });
-    await pg.click('text=回到房間');
+    await pg.click('text=回到設定');
     await pg.waitForSelector('.sticky-cta');
-    ok(true, '回到房間 → 單機設定頁');
+  ok(true, '回到設定 → 單機設定頁');
     await pg.click('text=開始遊戲');
     await pg.waitForSelector('.bslot canvas');
     await pg.evaluate(() => { App.game.cfg.duration = 1; App.game.m.duration = 1; });
@@ -142,7 +132,6 @@ async function waitHealth(base) {
   }));
   reports.forEach(lines => lines.forEach(l => console.log(l)));
   await br.close();
-  if (child) child.kill();
   ok(errs.length === 0, '沒有 JS 錯誤 / console error', errs.slice(0, 5).join(' || '));
   console.log('\n' + (fail ? fail + ' 項失敗' : '全部通過') + '（通過 ' + pass + ' 項）');
   process.exit(fail ? 1 : 0);

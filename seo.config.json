@@ -1,13 +1,13 @@
 {
   "id": "rainbow-bubble",
   "siteUrl": "https://pjh-eric.github.io/rainbow-bubble/",
-  "title": "彩虹泡泡砲｜免費線上泡泡龍・多人射擊",
-  "description": "免費線上玩彩虹泡泡砲！發射同色泡泡，連接三顆以上即可消除。支援單機闖關、四段電腦與多人對戰，可觀戰或邀朋友同樂，手機平板免下載。",
+  "title": "彩虹泡泡砲｜單機闖關泡泡射擊遊戲",
+  "description": "瞄準發射，連接三顆以上同色泡泡即可消除。可離線遊玩單機或闖關，也能挑戰四段本機電腦對手。",
   "lobbyUrl": "https://pjh-eric.github.io/game-lobby/",
   "googleSiteVerification": "",
   "genre": "泡泡射擊",
-  "players": "1-4",
+  "players": "1",
   "iconUrl": "https://pjh-eric.github.io/rainbow-bubble/favicon-96.png",
   "ogImage": "https://pjh-eric.github.io/rainbow-bubble/assets/images/cover.webp",
-  "ogImageAlt": "彩虹泡泡砲免費線上泡泡龍遊戲封面"
+  "ogImageAlt": "彩虹泡泡砲單機泡泡龍遊戲封面"
 }

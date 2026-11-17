@@ -1,15 +1,14 @@
 'use strict';
-const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
+const { pathToFileURL } = require('url');
 const { chromium } = require(fs.existsSync('/opt/npm-tools/node_modules/playwright') ? '/opt/npm-tools/node_modules/playwright' : 'playwright');
 const ROOT = path.join(__dirname, '..');
+const GAME_URL = pathToFileURL(path.join(ROOT, 'public', 'index.html')).href;
 (async () => {
-  const child = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: '3197' }), stdio: 'ignore' });
-  await new Promise(r => setTimeout(r, 1200));
   const br = await chromium.launch();
   const pg = await (await br.newContext({ viewport: { width: 1180, height: 820 } })).newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => m.type() === 'error' && errs.push(m.text()));
-  await pg.goto('http://127.0.0.1:3197/'); await pg.waitForSelector('.home-menu');
+  await pg.goto(GAME_URL); await pg.waitForSelector('.home-menu');
   await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
   await pg.evaluate(() => { App.store.solo.opponents = 0; App.store.solo.mode = 'race'; App.store.solo.level = 'normal'; App.store.solo.duration = 0; App.go('solo'); });
   await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot canvas');
@@ -26,5 +25,5 @@ const ROOT = path.join(__dirname, '..');
     await pg.screenshot({ path: path.join(ROOT, 'shots', 'laser-' + k + '-after.png') });
   }
   console.log('errors:', JSON.stringify(errs));
-  await br.close(); child.kill();
+  await br.close();
 })();

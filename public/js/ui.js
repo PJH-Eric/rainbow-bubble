@@ -327,13 +327,5 @@
     return ok;
   }
 
-  /** 系統聊天訊息：伺服器附 k（字典代碼）與 p（參數）就依目前語言翻譯，否則用原文 */
-  function chatText(m) {
-    if (!m || !m.k) return m ? m.text : '';
-    const p = Object.assign({}, m.p || {});
-    if (p.dragon) p.name = T('ai.name', { dragon: T('dragon.short.' + p.dragon) });
-    return T(m.k, p, m.text);
-  }
-
-  root.UI = { chatText, h, btn, iconBtn, seg, stepper, toggle, volume, dropdown, closePop, avatar, keycap, toast, modal, confirmBox, copyText, modalOpen, closeAllModals, closeTopModal };
+  root.UI = { h, btn, iconBtn, seg, stepper, toggle, volume, dropdown, closePop, avatar, keycap, toast, modal, confirmBox, copyText, modalOpen, closeAllModals, closeTopModal };
 })(typeof self !== 'undefined' ? self : this);

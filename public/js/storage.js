@@ -21,7 +21,7 @@
     nickname: '',
     dragon: 'rainbow',
     solo: Object.assign({}, SOLO_DEFAULTS),
-    stats: {},             /* { solo: {play, win}, online: {play, win} } */
+    stats: {},             /* { solo: {play, win} } */
     seenHelp: false,
     quest: null             /* 闖關進度：{ v, baby:{stars:[…]}, easy, normal, hard, hints:{} } */
   }, SETTING_DEFAULTS);

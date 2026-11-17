@@ -1,13 +1,7 @@
-/* ===== match.js — 一場對局（最多 4 個盤面）的共用狀態與「可重播事件」 =====
+/* ===== match.js — 一場對局（最多 4 個盤面）的狀態與事件處理 =====
  *
- * 瀏覽器（單機）與 Node 伺服器（線上）共用同一份：
- *   - create(cfg)            建立對局：每個玩家一個盤面，初始盤面與發射序列用同一個 seed
- *   - apply(m, ev)           重播一個事件（shot／swap／pend／cancel／land／end）；結果只由事件決定
- *   - input(m, slot, inp, t) 「裁判端」收到玩家輸入：驗證、套用、並產生需要廣播的事件
- *   - tick(m, t)             「裁判端」依時間產生事件（送來的泡泡落下、時間到結束）
- *
- * 線上：伺服器是裁判，把事件依序廣播；每個客戶端對自己的 m 呼叫 apply()，盤面就會逐位元一致。
- * 單機：瀏覽器自己當裁判，呼叫 input()/tick() 後直接用回傳的事件與結果做動畫。
+ * create(cfg) 建立對局；input() 與 tick() 更新規則狀態，回傳的事件交給畫面播放。
+ * apply() 套用事件，也用於檢查同一串事件能否重播出一致的盤面。
  *
  * 事件格式（全部可 JSON 序列化）：
  *   { e:'shot', s:席位, a:角度(百分之一度), t:毫秒 }
@@ -55,15 +49,13 @@
       pending: players.map(() => []),
       reachedAt: players.map(() => 0),
       lastAttacker: players.map(() => -1),
-      left: players.map(() => false),
-      gid: 0, over: false, result: null, seq: 0
+      gid: 0, over: false, result: null
     };
     return m;
   }
 
   /* ---------- 重播事件 ---------- */
   function apply(m, ev) {
-    m.seq++;
     switch (ev.e) {
       case 'shot': {
         const b = m.boards[ev.s];
@@ -107,11 +99,11 @@
     return null;
   }
 
-  /* ---------- 裁判端 ---------- */
+  /* ---------- 對局規則 ---------- */
   function pickTarget(m, s) {
     let best = -1, bn = 1e9;
     for (let i = 0; i < m.players.length; i++) {
-      if (i === s || m.left[i] || m.boards[i].fullClear) continue;
+      if (i === s || m.boards[i].fullClear) continue;
       const n = Rules.bubbleCount(m.boards[i]);
       if (n < bn || (n === bn && i === m.lastAttacker[s])) { bn = n; best = i; }
     }
@@ -123,14 +115,14 @@
       const b = m.boards[i];
       return {
         s: i, name: p.name, dragon: p.dragon, kind: p.kind, aiLevel: p.aiLevel, cleared: b.cleared, fullClear: b.fullClear,
-        shots: b.shots, hits: b.hits | 0, best: b.best | 0, dropN: b.dropN | 0, rains: b.rains | 0, maxCombo: b.maxCombo, garbageOut: b.garbageOut, garbageIn: b.garbageIn, left: m.left[i], reachedAt: m.reachedAt[i]
+        shots: b.shots, hits: b.hits | 0, best: b.best | 0, dropN: b.dropN | 0, rains: b.rains | 0, maxCombo: b.maxCombo, garbageOut: b.garbageOut, garbageIn: b.garbageIn, reachedAt: m.reachedAt[i]
       };
     });
-    rows.sort((x, y) => (y.fullClear - x.fullClear) || (x.left - y.left) || (y.cleared - x.cleared) || (x.reachedAt - y.reachedAt) || (x.s - y.s));
+    rows.sort((x, y) => (y.fullClear - x.fullClear) || (y.cleared - x.cleared) || (x.reachedAt - y.reachedAt) || (x.s - y.s));
     /* 同分且同時間視為並列名次 */
     rows.forEach((r, i) => {
       const prev = rows[i - 1];
-      r.rank = prev && prev.cleared === r.cleared && prev.fullClear === r.fullClear && prev.reachedAt === r.reachedAt && prev.left === r.left ? prev.rank : i + 1;
+      r.rank = prev && prev.cleared === r.cleared && prev.fullClear === r.fullClear && prev.reachedAt === r.reachedAt ? prev.rank : i + 1;
     });
     return rows;
   }
@@ -144,10 +136,10 @@
     return [{ ev, res: null }];
   }
 
-  /** 玩家輸入：{ t:'shot', a } 或 { t:'swap' }。回傳 [{ ev, res }]，ev 要廣播，res 是本機動畫用的結果。 */
+  /** 處理玩家或電腦輸入：{ t:'shot', a } 或 { t:'swap' }，回傳畫面播放用的事件與動畫結果。 */
   function input(m, s, inp, t) {
     const out = [];
-    if (m.over || !inp || s < 0 || s >= m.players.length || m.left[s]) return out;
+    if (m.over || !inp || s < 0 || s >= m.players.length) return out;
     const b = m.boards[s];
     if (b.fullClear) return out;
     if (inp.t === 'swap') {
@@ -207,17 +199,7 @@
     return out;
   }
 
-  /** 有人離場（斷線超時、被踢）：盤面凍結，名次排在最後 */
-  function playerLeft(m, s, t) {
-    if (m.left[s]) return [];
-    m.left[s] = true;
-    const out = [];
-    /* 還有人在玩嗎？沒有就直接結束 */
-    if (m.players.every((p, i) => m.left[i] || p.kind === 'ai')) out.push.apply(out, endMatch(m, t, 'left'));
-    return out;
-  }
-
-  const api = { create, apply, input, tick, endMatch, ranking, playerLeft, pickTarget };
+  const api = { create, apply, input, tick, endMatch, ranking, pickTarget };
   root.Match = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

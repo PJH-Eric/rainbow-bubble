@@ -2,7 +2,7 @@
  * 1. zh-Hant 與 en 的 key 集合完全一致，沒有空字串；en 不可夾中文
  * 2. 兩邊同一個 key 的 {param} 完全一致
  * 3. 原始碼（public/js、index.html、lib）用到的 key 都存在字典裡（含動態組出來的 key 家族）
- * 4. 伺服器送出的代碼（sys.*、err.*、note.*）在字典裡都有翻譯
+ * 4. 單機電腦與遊戲狀態的動態 key 都有翻譯
  * 執行：node tests/i18n.js
  */
 'use strict';
@@ -71,31 +71,12 @@ ok(themes === 7, '讀到 7 個主題', String(themes));
 for (let i = 0; i < themes; i++) ok(has('theme.' + i), '缺 theme.' + i);
 for (let i = 0; i < 10; i++) ok(has('adj.' + i), '缺 adj.' + i);
 ['rainbow', 'star', 'starmark', 'laser', 'coin', 'cloud'].forEach(n => ['.n', '.d'].forEach(s => ok(has('help.sp.' + n + s), '缺 help.sp.' + n + s)));
-['q1', 'q2', 'q3', 'q4'].forEach(q => ok(has('chat.' + q), '缺 chat.' + q));
 ['animal', 'shape', 'thing', 'pattern', 'gen'].forEach(g => ok(has('layout.group.' + g), '缺 layout.group.' + g));
 const Layouts = require(path.join(ROOT, 'public/js/layouts.js'));
 const L = Layouts.Layouts || Layouts;
 L.list().forEach(x => ok(has('layout.' + x.id), '缺地圖名稱 layout.' + x.id));
-['abs', 'mixed'].forEach(c => ok(has('cfg.err.' + c), '缺 cfg.err.' + c));
-['room', 'countdown', 'playing'].forEach(p => ok(has('phase.' + p), '缺 phase.' + p));
-['invalid', 'revoked', 'expired', 'closed'].forEach(r => ok(has('inv.' + r), '缺 inv.' + r));
-
-/* 4. 伺服器代碼 */
-const srv = read('lib/rooms.js');
-let m;
-const sysRe = /'(sys\.\w+)'/g;
-let nSys = 0;
-while ((m = sysRe.exec(srv))) { nSys++; ok(has(m[1]), '伺服器用到的 ' + m[1] + ' 字典沒有'); }
-ok(nSys >= 10, '伺服器有附 sys 代碼', String(nSys));
-const errRe = /err\([^,]+,\s*'(\w+)'/g;
-while ((m = errRe.exec(srv))) ok(has('err.' + m[1]), '伺服器錯誤碼 ' + m[1] + ' 字典沒有');
-const startErr = /return \['(\w+)',/g;
-while ((m = startErr.exec(srv))) ok(has('err.' + m[1]), '開局錯誤碼 ' + m[1] + ' 字典沒有');
-const nkRe = /nk: '(\w+)'/g;
-while ((m = nkRe.exec(srv))) ok(has('note.' + m[1]), '提示代碼 ' + m[1] + ' 字典沒有');
+['pause.settings', 'solo.opp', 'solo.cpuLevel'].forEach(k => ok(has(k), '缺 ' + k));
 ok(used.size > 150, '原始碼掃到的 key 數量合理', String(used.size));
-ok(has('note.inGame') && has('note.full') && has('note.noRoom'), '加入提示三種代碼齊全');
-ok(has('closed.empty') && has('kicked.you'), '房間關閉／被請出的翻譯齊全');
 
 console.log((fail ? 'FAIL ' : 'OK ') + 'i18n：通過 ' + pass + ' 項，失敗 ' + fail + ' 項（字典 ' + zk.length + ' 個 key）');
 process.exit(fail ? 1 : 0);

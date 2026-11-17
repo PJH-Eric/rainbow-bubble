@@ -1,23 +1,21 @@
 /* ===== scripts/swap-hover-check.js — 滑鼠移到「交換泡泡」按鈕上的樣式（Playwright） =====
  * 用法：node scripts/swap-hover-check.js    檢查：移上去 hoverSwap 變 true、游標變手指、畫面真的不一樣；移開恢復；觸控不會誤觸 hover。 */
 'use strict';
-const { spawn } = require('child_process');
 const path = require('path'), fs = require('fs');
+const { pathToFileURL } = require('url');
 const { chromium } = require(fs.existsSync('/opt/npm-tools/node_modules/playwright') ? '/opt/npm-tools/node_modules/playwright' : 'playwright');
 const ROOT = path.join(__dirname, '..'), SHOTS = path.join(ROOT, 'shots');
+const GAME_URL = pathToFileURL(path.join(ROOT, 'public', 'index.html')).href;
 fs.mkdirSync(SHOTS, { recursive: true });
 let fail = 0;
 const ok = (c, n, x) => { console.log((c ? '  ok  ' : '  FAIL ') + n + (c || !x ? '' : '  ' + x)); if (!c) fail++; };
 (async () => {
-  const child = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: '3197' }), stdio: 'ignore' });
-  const base = 'http://127.0.0.1:3197';
-  for (let i = 0; i < 40; i++) { try { if ((await fetch(base + '/health')).ok) break; } catch (e) { /* 等 */ } await new Promise(r => setTimeout(r, 150)); }
   const br = await chromium.launch();
   const ctx = await br.newContext({ viewport: { width: 1180, height: 820 } });
   await ctx.addInitScript('window.__GO_IN = ' + (Number(process.env.GAME_GO_IN) || 3000));
   const pg = await ctx.newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
-  await pg.goto(base + '/'); await pg.waitForSelector('.home-menu');
+  await pg.goto(GAME_URL); await pg.waitForSelector('.home-menu');
   await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
   await pg.evaluate(() => { App.store.solo.opponents = 0; App.store.solo.mode = 'race'; App.store.solo.level = 'normal'; App.go('solo'); });
   await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot.mine canvas');
@@ -48,6 +46,6 @@ const ok = (c, n, x) => { console.log((c ? '  ok  ' : '  FAIL ') + n + (c || !x 
     ok(!(await get()).h, '滑鼠離開棋盤後也會恢復');
   }
   ok(errs.length === 0, '沒有 JS 錯誤', errs.join('|'));
-  await br.close(); child.kill();
+  await br.close();
   console.log(fail ? '\n有失敗' : '\n全部通過'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

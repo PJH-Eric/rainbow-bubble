@@ -1,15 +1,16 @@
 /* ===== scripts/quest-browser-check.js — 闖關模式瀏覽器實測（Playwright） =====
- * 用法：node scripts/quest-browser-check.js [網址，預設自己啟動本機伺服器 3197]
+ * 用法：node scripts/quest-browser-check.js
  * 流程（每種裝置尺寸各跑一次）：首頁闖關入口 → 四段難度 → 選關 → 目標卡 → 開局提示 → 真的打完一關 →
  *   結算（星等、存檔、下一關）→ 暫停選單 → 失敗結算 → 關主關 → 英文介面無中文殘留；全程檢查無水平溢出與 JS 錯誤。
  * 截圖放在 shots/quest-*.png（已被 .gitignore 排除）。 */
 'use strict';
-const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 const { chromium } = require(fs.existsSync('/opt/npm-tools/node_modules/playwright') ? '/opt/npm-tools/node_modules/playwright' : 'playwright');
 
 const ROOT = path.join(__dirname, '..');
+const GAME_URL = pathToFileURL(path.join(ROOT, 'public', 'index.html')).href;
 const SHOTS = path.join(ROOT, 'shots');
 fs.mkdirSync(SHOTS, { recursive: true });
 let pass = 0, fail = 0;
@@ -25,11 +26,6 @@ const ALL_VIEWS = [
 const ONLY = (process.env.VIEWS || '').split(',').filter(Boolean);
 const VIEWS = ONLY.length ? ALL_VIEWS.filter(v => ONLY.includes(v.name)) : FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-async function waitHealth(base) {
-  for (let i = 0; i < 40; i++) { try { const r = await fetch(base + '/health'); if (r.ok) return; } catch (e) { /* 等待 */ } await sleep(150); }
-  throw new Error('伺服器沒有起來');
-}
 
 /** 用目標導向的電腦在瀏覽器裡把這一關打完（透過 GameScreen.fire，和玩家點擊走同一條路） */
 async function playOut(pg, maxShots) {
@@ -52,12 +48,6 @@ async function playOut(pg, maxShots) {
 }
 
 (async () => {
-  let base = process.argv[2], child = null;
-  if (!base) {
-    child = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: Object.assign({}, process.env, { PORT: '3197' }), stdio: 'ignore' });
-    base = 'http://127.0.0.1:3197';
-  }
-  await waitHealth(base);
   const br = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
   const errs = [];
   const overflow = pg => pg.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1);
@@ -75,7 +65,7 @@ async function playOut(pg, maxShots) {
     const shot = n => pg.screenshot({ path: path.join(SHOTS, 'quest-' + v.name + '-' + n + '.png') });
 
     /* 1. 首頁 → 闖關入口，並確認兩種返回操作 */
-    await pg.goto(base + '/');
+    await pg.goto(GAME_URL);
     await pg.waitForSelector('.home-menu');
     ok(await pg.locator('.home-menu .quest-entry').count() === 1, '首頁直接提供闖關入口');
     ok(!(await overflow(pg)), '首頁沒有水平溢出（含闖關入口）');
@@ -91,7 +81,6 @@ async function playOut(pg, maxShots) {
       await pg.evaluate(() => I18N.setLang('zh-Hant'));
       await pg.evaluate(() => {
         App.store.stats.solo = { win: 9, play: 10 };
-        App.store.stats.online = { win: 9, play: 10 };
         App.go('home');
       });
       const clearOfSettings = await pg.evaluate(() => {
@@ -245,7 +234,6 @@ async function playOut(pg, maxShots) {
   reports.forEach(lines => lines.forEach(l => console.log(l)));
 
   await br.close();
-  if (child) child.kill();
   ok(errs.length === 0, '沒有 JS 錯誤', errs.slice(0, 5).join(' / '));
   console.log('\n' + pass + ' 項通過，' + fail + ' 項失敗');
   process.exit(fail ? 1 : 0);

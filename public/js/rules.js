@@ -1,9 +1,8 @@
-/* ===== rules.js — 彩虹泡泡砲的共用規則核心（瀏覽器與 Node 伺服器共用，純函式、無 DOM） =====
+/* ===== rules.js — 彩虹泡泡砲的共用規則核心（純函式、無 DOM） =====
  *
- * 單機、電腦、線上全部走同一份規則：
+ * 單機玩家與電腦對手都走同一份規則：
  *   - 盤面是六角交錯格：偶數列 cols 格、奇數列 cols-1 格（parity 會在天花板下降時翻轉）
  *   - 一發泡泡的整個結果（飛行路徑、落點、消除、掉落）都由「盤面狀態＋角度」決定，
- *     所以線上只要依相同順序重播「發射／交換／落下」事件，每個人的盤面就會完全一致
  *   - 為了讓不同瀏覽器與 Node 算出完全相同的軌跡，三角函式不用 Math.sin/cos（各引擎末位可能不同），
  *     改用只靠加減乘除的自製表（IEEE 754 四則運算在所有引擎上結果一致）
  *
@@ -25,7 +24,7 @@
 
   /* ---------- 難度表 ---------- */
   const LEVELS = ['baby', 'easy', 'normal', 'hard'];
-  /* 難度名稱：有 I18N 時跟著語言走（伺服器端沒有 I18N，維持中文） */
+  /* 難度名稱：有 I18N 時跟著語言走；無 I18N 時維持中文 */
   const LEVEL_NAME = {};
   [['baby', '幼幼班'], ['easy', '簡單'], ['normal', '普通'], ['hard', '困難']].forEach(function (p) {
     Object.defineProperty(LEVEL_NAME, p[0], { enumerable: true, get: function () { return root.I18N ? root.I18N.t('level.' + p[0], null, p[1]) : p[1]; } });
@@ -229,7 +228,7 @@
       while (row.length < rowLen(b, r)) row.push(0);
       b.rows.push(row);
     });
-    /* 多人對戰指定數量（opt.count）：比目標多就從最下面一排開始拿掉（連帶懸空的也拿掉），不夠的由下面的補足處理 */
+    /* 多盤對局指定數量（opt.count）：比目標多就從最下面一排開始拿掉（連帶懸空的也拿掉），不夠的由下面的補足處理 */
     const target = opt.count > 0 ? opt.count : minCount;
     const tr1 = mulberry32(hash2(opt.seed, 811));
     if (opt.count > 0) trimTo(b, target, tr1);
@@ -271,12 +270,12 @@
     {
       const mr = mulberry32(hash2(opt.seed, 271));
       const draw = 2 + (mr() < 0.36 ? 1 : 0);
-      const want = opt.stars >= 0 ? opt.stars : draw;     /* 多人對戰：星星數跟第一位玩家一樣 */
+      const want = opt.stars >= 0 ? opt.stars : draw;     /* 多盤對局：星星數跟第一個盤面一樣 */
       const marked = [], plain = [];
       b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 1) marked.push([r, c]); else if (modOf(v) === 0) plain.push([r, c]); } }));
       while (marked.length > want) { const q = marked.splice(Math.floor(mr() * marked.length), 1)[0]; b.rows[q[0]][q[1]] &= 15; }
       while (marked.length < want && plain.length) { const q = plain.splice(Math.floor(mr() * plain.length), 1)[0]; b.rows[q[0]][q[1]] |= (1 << 4); marked.push(q); }
-      /* 多人對戰：獎勵泡泡（算 3 顆）數量也跟第一位玩家一樣 */
+      /* 多盤對局：獎勵泡泡（算 3 顆）數量也跟第一個盤面一樣 */
       if (opt.bonus >= 0) {
         const bonus = [], rest = [];
         b.rows.forEach((row, r) => row.forEach((v, c) => { if (isBubble(v)) { if (modOf(v) === 2) bonus.push([r, c]); else if (modOf(v) === 0) rest.push([r, c]); } }));
@@ -284,7 +283,7 @@
         while (bonus.length < opt.bonus && rest.length) { const q = rest.splice(Math.floor(mr() * rest.length), 1)[0]; b.rows[q[0]][q[1]] |= (2 << 4); bonus.push(q); }
       }
     }
-    /* 整片只靠 1～2 顆吊著的補上接點（會多出幾顆，多人對戰再修回指定數量） */
+    /* 整片只靠 1～2 顆吊著的補上接點（會多出幾顆，多盤對局再修回指定數量） */
     ensureAnchored(b, mulberry32(hash2(opt.seed, 1201)));
     if (opt.count > 0) trimTo(b, target, tr1);
     ensureStartable(b, rng);

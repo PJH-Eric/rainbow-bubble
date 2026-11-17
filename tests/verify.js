@@ -32,10 +32,6 @@ t('GA4 結算依並列名次判定勝負，不將平手記為落敗', () => {
     assert.equal(events.pop(), expected);
     assert.equal(events.length, 0, '重複結算不重送');
   }
-  const spectator = Object.create(scope.GameScreen.prototype);
-  Object.assign(spectator, { spectator: true, clearHint() {} });
-  spectator.onEnd();
-  assert.equal(events.length, 0, '觀戰不送結算');
 });
 
 /* 手工盤面：清空後用 put 擺放 */
@@ -327,7 +323,7 @@ function playScripted(mode, level, seed, steps) {
   }
   return { m, log };
 }
-t('把伺服器端事件依序重播到另一場，四個盤面雜湊全相同（競賽、對打）', () => {
+t('把對局事件依序重播到另一場，四個盤面雜湊全相同（競賽、對打）', () => {
   for (const mode of ['race', 'duel']) for (const level of ['baby', 'normal', 'hard']) {
     const { m, log } = playScripted(mode, level, 123, 400);
     const m2 = M.create({ mode, level, seed: 123, duration: 180000, players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] });
@@ -366,14 +362,6 @@ t('時間到結束並排名；先全清者獲勝', () => {
   assert.strictEqual(m.result.winner, 1);
   assert.strictEqual(m.result.ranks[0].rank, 1);
 });
-t('離場的玩家排最後', () => {
-  const m = M.create({ mode: 'race', level: 'baby', seed: 8, duration: 5000, players: [{ name: 'A' }, { name: 'B' }] });
-  m.boards[0].cleared = 99;
-  M.playerLeft(m, 0, 100);
-  M.tick(m, 5000);
-  assert.strictEqual(m.result.ranks[1].s, 0);
-});
-
 console.log('電腦：四段難度');
 t('四段電腦：清光盤面所需的發數：簡單以下明顯多於普通，普通多於困難（幼幼班主要差在反應時間）（簡單盤面 80 局，上限 150 發）', () => {
   const avg = {};
@@ -423,7 +411,7 @@ t('泡泡數量不能太少：普通 ≥ 60、困難 ≥ 72、簡單 ≥ 48、�
     }
   }
 });
-t('多人對局：每位玩家的盤面（顏色、版型、發射順序）都不一樣，但同一場可重現', () => {
+t('電腦對手：每個盤面的顏色、版型與發射順序不同，但同 seed 可重現', () => {
   const players = [{}, {}, {}, {}];
   for (let seed = 1; seed <= 40; seed++) {
     const m = M.create({ mode: 'race', level: 'normal', seed, players });
@@ -435,7 +423,7 @@ t('多人對局：每位玩家的盤面（顏色、版型、發射順序）都�
     assert.deepStrictEqual(m2.boards.map(b => R.boardHash(b)), m.boards.map(b => R.boardHash(b)), '同 seed 要可重現');
   }
 });
-t('多人對局公平：盤面不同，但每人的泡泡數、星星數、獎勵泡泡數都一樣', () => {
+t('電腦對手公平：盤面不同，但泡泡數、星星數與獎勵泡泡數都一樣', () => {
   const marks = (b, k) => { let n = 0; b.rows.forEach(r => r.forEach(v => { if (R.isBubble(v) && R.modOf(v) === k) n++; })); return n; };
   for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 80 : 25); seed++) {
     const m = M.create({ mode: 'race', level: lv, seed: seed * 9973, players: [{}, {}, {}, {}] });

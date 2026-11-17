@@ -10,7 +10,7 @@
 
   var LEGAL = '.abcdefABCDEF#*+X';
   var GROUP_KEY = { '動物': 'animal', '形狀': 'shape', '物品': 'thing', '圖案': 'pattern', '程序生成': 'gen' };
-  function tr(k, fb) { return root.I18N ? root.I18N.t(k, null, fb) : fb; }   // 名稱跟著語言走；伺服器端沒有 I18N 維持中文
+  function tr(k, fb) { return root.I18N ? root.I18N.t(k, null, fb) : fb; }   // 名稱跟著語言走；沒有 I18N 時維持中文
   var X_MAX_RATIO = 0.2; // X 佔非空格的比例上限
 
   // ---------- 基本工具 ----------

@@ -1,8 +1,8 @@
 /* ===== scripts/run-all.js — 全部測試，分兩條線同時跑（預設快速模式，目標 3 分鐘內） =====
  * 用法：node scripts/run-all.js            快速模式（倒數縮成 0.4 秒、抽樣減量、瀏覽器只測 3 種尺寸）
  *       node scripts/run-all.js --full      完整模式（抽樣全開、5 種尺寸、倒數照原本）
- * A 線：規則 → 房間 → 伺服器 → 線上 → 網路同步（純 Node，不開瀏覽器）
- * B 線：單機瀏覽器版面 → 交換按鈕 hover → 線上瀏覽器（Playwright）
+ * A 線：規則、AI、語系、闖關與 SEO（純 Node，不開瀏覽器）
+ * B 線：單機與闖關瀏覽器檢查（Playwright）
  * 兩條線各用不同埠，每條線依序跑，輸出各自存檔，最後一起列出，有任何失敗就以 1 結束。 */
 'use strict';
 const { spawn } = require('child_process');
@@ -14,8 +14,8 @@ if (process.argv.includes('--full')) env.FULL = '1';
 const envB = Object.assign({}, env);
 if (!env.FULL && !env.GAME_GO_IN) { envB.GAME_GO_IN = '400'; envB.GAME_DURATION_SCALE = '0.2'; }
 const LANES = {
-  A: ['tests/verify.js', 'tests/rooms.js', 'tests/server.js', 'scripts/online-check.js', 'scripts/netcode-check.js'],
-  B: ['scripts/browser-check.js', 'scripts/swap-hover-check.js', 'scripts/timer-row-check.js', 'scripts/online-browser-check.js']
+  A: ['tests/analytics.js', 'tests/localization.js', 'tests/i18n.js', 'tests/verify.js', 'tests/i18n-hans.js', 'tests/quest.js', 'tests/quest-data.js', 'tests/seo.js'],
+  B: ['scripts/browser-check.js', 'scripts/swap-hover-check.js', 'scripts/timer-row-check.js', 'scripts/quest-browser-check.js']
 };
 const t0 = Date.now();
 const run = (file, e) => new Promise(res => {
