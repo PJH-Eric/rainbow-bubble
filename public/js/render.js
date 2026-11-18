@@ -58,7 +58,11 @@
 
     resize(force) {
       const p = this.el.parentNode;
-      const cw = this.el.clientWidth || (p && p.clientWidth) || 300, ch = this.el.clientHeight || (p && p.clientHeight) || 400;
+      const wrapStyle = p && root.getComputedStyle(this.el);
+      const left = parseFloat(wrapStyle && wrapStyle.left) || 0, right = parseFloat(wrapStyle && wrapStyle.right) || 0;
+      const top = parseFloat(wrapStyle && wrapStyle.top) || 0, bottom = parseFloat(wrapStyle && wrapStyle.bottom) || 0;
+      const cw = p && p.clientWidth ? Math.max(0, p.clientWidth - left - right) : this.el.clientWidth || 300;
+      const ch = p && p.clientHeight ? Math.max(0, p.clientHeight - top - bottom) : this.el.clientHeight || 400;
       const dpr = Math.min(2.5, root.devicePixelRatio || 1);
       const ws = worldSize(this.cols);
       const fw = ws.w + 2 * ws.pad, fh = ws.h + 2 * ws.pad;

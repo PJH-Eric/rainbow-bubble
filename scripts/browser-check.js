@@ -90,8 +90,10 @@ const VIEWS = ONLY.length ? ALL_VIEWS.filter(v => ONLY.includes(v.name)) : FULL 
       const rect = node => { const r = node.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top), bottom: Math.round(r.bottom) }; };
       const wrap = el.closest('.board-wrap');
       const slot = el.closest('.bslot'), wrapStyle = getComputedStyle(wrap), slotStyle = getComputedStyle(slot);
+      const px = value => parseFloat(value) || 0;
       return {
-        canvas: rect(el), wrap: Object.assign(rect(wrap), { clientHeight: wrap.clientHeight, inlineCanvasHeight: el.style.height, inset: wrapStyle.inset, offsetParent: wrap.offsetParent && wrap.offsetParent.className }),
+        canvas: rect(el), bar: rect(wrap.querySelector('.board-bar')), wrap: Object.assign(rect(wrap), { clientHeight: wrap.clientHeight, inlineCanvasHeight: el.style.height, inset: wrapStyle.inset, ctop: wrapStyle.getPropertyValue('--ctop'), offsetParent: wrap.offsetParent && wrap.offsetParent.className }),
+        available: { w: Math.round(slot.clientWidth - px(wrapStyle.left) - px(wrapStyle.right)), h: Math.round(slot.clientHeight - px(wrapStyle.top) - px(wrapStyle.bottom)) },
         slot: Object.assign(rect(slot), { className: slot.className, tbar: slotStyle.getPropertyValue('--tbar'), position: slotStyle.position }),
         boards: rect(el.closest('.boards')), main: rect(el.closest('.game-main'))
       };
@@ -99,6 +101,9 @@ const VIEWS = ONLY.length ? ALL_VIEWS.filter(v => ONLY.includes(v.name)) : FULL 
     const canvas = mine.canvas;
     const minMine = v.w < 500 ? 150 : 200;
     ok(canvas.w >= minMine && canvas.h >= 250, '單人盤面尺寸足夠 ' + canvas.w + '×' + canvas.h);
+    const fill = Math.max(canvas.w / mine.available.w, canvas.h / mine.available.h);
+    ok(fill >= 0.95 && fill <= 1.02, '盤面盡量填滿可用區域（' + Math.round(fill * 100) + '%）', JSON.stringify(mine));
+    ok(mine.bar.bottom <= canvas.top + 2, '計時列位於盤面上緣', JSON.stringify(mine));
     ok(canvas.top >= 0 && canvas.bottom <= v.h + 1, '盤面完整顯示於視窗內', JSON.stringify(mine));
     ok(!(await overflow(pg)), '對局沒有水平溢出');
     const cv = await pg.$('.bslot.mine canvas');
