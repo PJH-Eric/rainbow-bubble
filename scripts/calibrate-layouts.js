@@ -1,11 +1,11 @@
 /* ===== scripts/calibrate-layouts.js — 量每個地圖在各難度的「好不好打」，產生 public/js/layout-tiers.js =====
- * 做法：用固定強度的電腦（hard）在每張地圖上各玩 K 局，量要幾發才清光盤面。
+ * 做法：用闖關測試求解器（hard）在每張地圖上各跑 K 局，量要幾發才清光盤面。
  * 只保留清光發數接近該難度中位數的地圖（太好打、太難打的剔除），讓每一局的體感難度一致。
  * 用法：node scripts/calibrate-layouts.js [K=10] [下限倍數=0.65] [上限倍數=1.6]
  */
 'use strict';
 const fs = require('fs'), path = require('path');
-const R = require('../public/js/rules.js'), AI = require('../public/js/ai.js'), L = require('../public/js/layouts.js');
+const R = require('../public/js/rules.js'), Solver = require('./quest-solver.js'), L = require('../public/js/layouts.js');
 const K = +process.argv[2] || 10, LO = +process.argv[3] || 0.65, HI = +process.argv[4] || 1.6, CAP = 60;
 const ids = L.PATTERNS.map(p => p.id).concat(L.FAMILIES.map(f => f.id));
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
@@ -19,12 +19,12 @@ for (const lv of R.LEVELS) {
     for (let k = 1; k <= K; k++) {
       const seed = k * 7919 + 101;
       const b = R.newBoard({ seed, level: lv, layoutId: id });
-      const brain = AI.createBrain('hard', seed);
+      const brain = Solver.createBrain('hard', seed);
       let n = 0;
-      while (n < CAP && !b.fullClear) { const d = AI.decide(b, brain, 'race'); if (d.swap) R.swapItems(b); R.applyShot(b, d.a); n++; }
+      while (n < CAP && !b.fullClear) { const d = Solver.decide(b, brain); if (d.swap) R.swapItems(b); R.applyShot(b, d.a); n++; }
       arr.push(n);
     }
-    cost[id] = median(arr);       /* 這張地圖要幾發才清光（固定強度的電腦，取中位數） */
+    cost[id] = median(arr);       /* 這張地圖要幾發才清光（測試求解器固定強度，取中位數） */
   }
   const M = median(Object.values(cost));
   let allow = Object.keys(cost).filter(id => cost[id] >= M * LO && cost[id] <= M * HI);

@@ -1,17 +1,15 @@
 /* ===== app.js — 畫面切換、首頁、教學、單機設定、設定彈窗 ===== */
 (function (root) {
   'use strict';
-  const { h, btn, seg, stepper, toggle, volume, avatar, keycap, toast, modal } = root.UI;
-  const R = root.Rules, Art = root.Art, AI = root.AI, Layouts = root.Layouts;
+  const { h, btn, seg, toggle, volume, avatar, keycap, toast, modal } = root.UI;
+  const R = root.Rules, Art = root.Art, Layouts = root.Layouts;
   const $ = id => document.getElementById(id);
 
   const T = (k, p, fb) => root.I18N.t(k, p, fb);
   /* 選項清單都在使用當下才組（語言切換後重畫就會換字） */
   const levelHint = k => T('level.hint.' + k);
   const levelOpts = () => R.LEVELS.map(k => ({ v: k, label: R.LEVEL_NAME[k] }));
-  const aiDD = () => AI.LEVEL_ORDER.map(k => ({ v: k, label: R.LEVEL_NAME[k], hint: T('ai.hint.' + k) }));
   const timeOpts = () => [{ v: 120000, label: T('time.2') }, { v: 180000, label: T('time.3') }, { v: 300000, label: T('time.5') }, { v: 0, label: T('time.off') }];
-  const modeOpts = () => [{ v: 'race', label: T('mode.race') }, { v: 'duel', label: T('mode.duel') }];
   const themeDD = () => [{ v: 'random', label: T('theme.random'), swatch: 'linear-gradient(135deg,#8fd6ff,#ffbfe0,#bdeecb)' }]
     .concat(Art.THEMES.map(t => ({ v: String(t.id), label: t.name, swatch: 'linear-gradient(135deg,' + t.sky[0] + ',' + t.sky[1] + ')' })));
   function layoutOpts() {
@@ -77,7 +75,7 @@
         h('p', { class: 'hero-sub' }, T('home.sub')),
         h('div', { class: 'hero-cast' }, Art.DRAGONS.map(d => avatar(d.id, 70)))),
       h('nav', { class: 'home-menu', 'aria-label': T('home.menu') },
-        btn(T('home.solo'), { cls: 'btn-pink btn-lg btn-block', icon: 'robot', iconSize: 28, onClick: () => go('solo') }),
+        btn(T('home.solo'), { cls: 'btn-pink btn-lg btn-block', icon: 'target', iconSize: 28, onClick: () => go('solo') }),
         btn(T('quest.entry.btn'), { cls: 'btn-sun btn-lg btn-block quest-entry', icon: 'flag', iconSize: 28, onClick: () => go('quest') }),
         btn(T('help.title'), { cls: 'btn-sun btn-lg btn-block', icon: 'help', iconSize: 28, onClick: () => go('help') })),
       sline.length ? h('p', { class: 'home-foot' }, T('home.stats') + sline.join('　')) : null
@@ -107,9 +105,6 @@
           fig('s:cloud', 'cloud'))),
       h('section', { class: 'card' }, h('h3', null, T('help.fall.h')),
         h('p', null, T('help.fall.p'))),
-      h('section', { class: 'card' }, h('h3', null, T('help.duel.h')),
-        h('p', null, T('help.duel.p1')),
-        h('p', { class: 'muted small', style: { marginTop: '6px' } }, T('help.duel.p2'))),
       h('section', { class: 'card' }, h('h3', null, T('help.levels.h')),
         h('div', { class: 'help-levels' }, R.LEVELS.map(k => h('div', null, h('b', null, R.LEVEL_NAME[k]), '　', h('span', { class: 'muted' }, levelHint(k)))))),
       h('div', { class: 'row', style: { justifyContent: 'center' } },
@@ -145,7 +140,6 @@
     o = o || {};
     const f = (label, ctl) => h('div', { class: 'field' }, h('span', { class: 'label' }, label), h('div', { class: 'ctl' }, ctl));
     const rows = [];
-    if (!o.noMode) rows.push(f(T('rules.mode'), seg({ label: T('rules.mode'), options: modeOpts(), value: rules.mode, onChange: v => set({ mode: v }) })));
     rows.push(f(T('rules.level'), seg({ label: T('rules.level'), cls: 'small', options: levelOpts(), value: rules.level, onChange: v => set({ level: v }) })));
     rows.push(f(T('rules.map'), root.UI.dropdown({ label: T('rules.map'), options: layoutOpts(), value: rules.layout, onChange: v => set({ layout: v }) })));
     rows.push(f(T('rules.theme'), root.UI.dropdown({ label: T('rules.theme'), options: themeDD(), value: String(rules.theme), onChange: v => set({ theme: v }) })));
@@ -157,65 +151,44 @@
   App.screens.solo = function () {
     const st = App.store, so = st.solo;
     const prof = App.profileEditor({ onChange: () => {} });
-    const oppBox = h('div'), panelBox = h('div');
-    const f = (label, ctl) => h('div', { class: 'field' }, h('span', { class: 'label' }, label), h('div', { class: 'ctl' }, ctl));
-    function paintOpp() {
-      oppBox.textContent = '';
-      const rows = [];
-      for (let i = 0; i < so.opponents; i++) {
-        rows.push(h('div', { class: 'ai-row' }, h('span', { class: 'name' }, T('solo.cpu', { n: i + 1 })),
-          root.UI.dropdown({ label: T('solo.cpuLevel', { n: i + 1 }), cls: 'lvl', options: aiDD(), value: so.aiLevels[i], onChange: v => { so.aiLevels[i] = v; save(); } })));
-      }
-      oppBox.appendChild(h('div', null,
-        f(T('solo.opp'), stepper({ label: T('solo.count'), min: 0, max: 3, value: so.opponents, onChange: v => { so.opponents = v; if (v === 0) so.mode = 'race'; save(); paintOpp(); paintPanel(); } })),
-        so.opponents ? h('div', { class: 'ai-rows' }, rows) : h('p', { class: 'muted small' }, T('solo.alone'))));
-    }
+    const panelBox = h('div');
     function paintPanel() {
       panelBox.textContent = '';
       panelBox.appendChild(App.rulesPanel(so, patch => {
         Object.assign(so, patch);
         if ('theme' in patch) so.theme = String(patch.theme);
         save();
-        if ('mode' in patch || 'level' in patch) paintPanel();
+        if ('level' in patch) paintPanel();
       }));
-      if (so.opponents === 0 && so.level === 'baby') panelBox.appendChild(h('p', { class: 'hint' }, T('solo.babyHint')));
+      if (so.level === 'baby') panelBox.appendChild(h('p', { class: 'hint' }, T('solo.babyHint')));
     }
-    paintOpp(); paintPanel();
+    paintPanel();
     return screenBox('', h('div', { class: 'wrap' },
       topbar(T('home.solo'), () => go('home')),
-        h('div', { class: 'setup-grid' },
+      h('div', { class: 'setup-grid' },
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
-          h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el),
-          h('section', { class: 'card' }, h('h3', null, T('solo.opponents')), oppBox)),
+          h('section', { class: 'card' }, h('h3', null, T('solo.yourDragon')), prof.el)),
         h('div', { style: { display: 'grid', gap: '14px', alignContent: 'start' } },
           h('section', { class: 'card' }, h('h3', null, T('rules.h')), panelBox))),
       h('div', { class: 'sticky-cta' }, btn(T('solo.start'), { cls: 'btn-pink btn-lg btn-block', icon: 'play', iconSize: 26, onClick: () => App.startSolo() }))));
   };
 
   /* ---------- 單機開局 ---------- */
-  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   App.startSolo = function () {
     const st = App.store, so = st.solo;
-    const others = shuffle(Art.DRAGONS.map(d => d.id).filter(id => id !== st.dragon));
-    const players = [{ name: myName(), dragon: st.dragon, kind: 'human' }];
-    const ai = {};
-    for (let i = 0; i < so.opponents; i++) {
-      players.push({ name: T('ai.name', { dragon: T('dragon.short.' + others[i]) }), dragon: others[i], kind: 'ai', aiLevel: so.aiLevels[i] });
-      ai[i + 1] = so.aiLevels[i];
-    }
+    const players = [{ name: myName(), dragon: st.dragon }];
     const seed = Math.floor(Math.random() * 4294967296) >>> 0;
     let themeId = so.theme === 'random' ? Math.floor(Math.random() * Art.THEMES.length) : (+so.theme | 0);
     let duration = so.duration;
-    if (so.opponents === 0 && so.level === 'baby') duration = 0;
-    const mode = so.opponents === 0 ? 'race' : so.mode;
-    const cfg = { mode, level: so.level, seed, layoutId: so.layout, themeId, duration, players };
-    go('game', { cfg, slot: 0, ai });
+    if (so.level === 'baby') duration = 0;
+    const cfg = { mode: 'solo', level: so.level, seed, layoutId: so.layout, themeId, duration, players };
+    go('game', { cfg, slot: 0 });
   };
 
   /* ---------- 對局畫面 ---------- */
   App.screens.game = function (p) {
     const gs = new root.GameScreen({
-      cfg: p.cfg, slot: p.slot, ai: p.ai,
+      cfg: p.cfg, slot: p.slot,
       onAgain: () => (p.quest ? App.beginQuest(p.quest) : App.startSolo()),
       onNext: () => go('questLevels', { level: p.quest.level, open: p.quest.no + 1 }),
       onSetup: () => (p.quest ? go('questLevels', { level: p.quest.level }) : go('solo')),
@@ -307,6 +280,6 @@
     go('home');
   };
 
-  App.util = { myName, save, applySettings, topbar, screenBox, shuffle, get LEVEL_DD() { return levelOpts(); }, get TIME_OPTS() { return timeOpts(); } };
+  App.util = { myName, save, applySettings, topbar, screenBox, get LEVEL_DD() { return levelOpts(); }, get TIME_OPTS() { return timeOpts(); } };
   document.addEventListener('DOMContentLoaded', () => App.boot());
 })(typeof self !== 'undefined' ? self : this);

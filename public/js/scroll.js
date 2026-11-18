@@ -6,7 +6,7 @@
   'use strict';
   const doc = root.document;
   const V_SEL = '.screen, .dialog-body, .chat-log, .game-side, .summary, .dd-list';
-  const H_SEL = '.seg, .chips, .quick-chat, .ai-faces, .seat-actions';
+  const H_SEL = '.seg, .chips';
   const reg = new Set();
 
   function mk(cls) { const d = doc.createElement('div'); d.className = cls; return d; }

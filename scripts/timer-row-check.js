@@ -22,15 +22,16 @@ const VIEWS = [['desktop', 1366, 768], ['tablet-land', 1180, 820], ['tablet-port
     const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(name + ' ' + e.message));
     await pg.goto(GAME_URL); await pg.waitForSelector('.home-menu');
     await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
-    for (const opp of [0, 1, 3]) {
-      await pg.evaluate(n => { App.store.solo.opponents = n; App.store.solo.mode = n ? 'duel' : 'race'; App.go('solo'); }, opp);
+    for (const run of [0]) {
+      await pg.evaluate(() => { App.go('solo'); });
       await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot.mine canvas'); await pg.waitForTimeout(GO + 400);
       const r = await pg.evaluate(() => {
         const g = q => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.left, r: b.right, t: b.top, b: b.bottom, cy: (b.top + b.bottom) / 2 }; };
         const tag = g('.bslot.mine .btag'), tm = g('.board-time'), pa = g('.board-pause'), cv = g('.bslot.mine canvas');
-        return { tag, tm, pa, cv, vw: innerWidth };
+        return { tag, tm, pa, cv, vw: innerWidth, boards: document.querySelectorAll('.bslot').length };
       });
-      const tag = `${name} ${opp + 1}人`;
+      const tag = `${name} 單人`;
+      ok(r.boards === 1, tag + '：只顯示一個盤面', String(r.boards));
       ok(r.tag && r.tm && r.pa, tag + '：名牌、計時牌、暫停鍵都在');
       const rows = Math.max(r.tag.cy, r.tm.cy, r.pa.cy) - Math.min(r.tag.cy, r.tm.cy, r.pa.cy);
       ok(rows <= 3, tag + '：三個在同一排（垂直中心差 ' + rows.toFixed(1) + 'px）');
@@ -40,8 +41,8 @@ const VIEWS = [['desktop', 1366, 768], ['tablet-land', 1180, 820], ['tablet-port
       const gL = r.tag.x - r.cv.x, gR = r.cv.r - r.pa.r;
       ok(Math.abs(gL - gR) <= 3 || r.tag.x <= r.cv.x + 2, tag + '：整組置中（左空 ' + gL.toFixed(0) + '／右空 ' + gR.toFixed(0) + '）');
       ok(r.tm.x - r.tag.r <= 14 && r.pa.x - r.tm.r <= 14, tag + '：間距小（' + (r.tm.x - r.tag.r).toFixed(0) + '、' + (r.pa.x - r.tm.r).toFixed(0) + 'px）');
-      if (opp === 1) await pg.screenshot({ path: path.join(SHOTS, 'timer-row-' + name + '.png'), clip: { x: 0, y: 0, width: Math.min(w, 700), height: Math.min(h, 330) } });
-      await pg.evaluate(() => App.go('home')); await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
+      await pg.screenshot({ path: path.join(SHOTS, 'timer-row-' + name + '.png'), clip: { x: 0, y: 0, width: Math.min(w, 700), height: Math.min(h, 330) } });
+      await pg.evaluate(() => App.go('home'));
     }
     await ctx.close();
     return lines;

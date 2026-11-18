@@ -5,7 +5,7 @@
 const assert = require('assert');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');
-const AI = require('../public/js/ai.js');
+const Solver = require('../scripts/quest-solver.js');
 const L = require('../public/js/layouts.js');
 const Q = require('../public/js/quests.js');
 const Tiers = require('../public/js/layout-tiers.js');
@@ -200,10 +200,10 @@ t('每段難度每組抽 1 關，電腦能在發射數上限內過關（至少 5
       for (let k = 0; k < 2; k++) {
         const dd = lv === 'baby' ? Object.assign({}, d) : d;
         const m = M.create({ mode: 'quest', quest: dd, level: lv, seed: dd.seed, players: [{ name: 'x' }] });
-        const br = AI.createBrain(SIM[lv], 1000 + k);
+        const br = Solver.createBrain(SIM[lv], 1000 + k);
         br.p = Object.assign({}, br.p, lv === 'hard' ? { step: 200 } : lv === 'normal' ? { step: 300 } : {});
         for (let i = 0; i < 170 && !m.over; i++) {
-          const dec = AI.decide(m.boards[0], br, 'quest');
+          const dec = Solver.decide(m.boards[0], br);
           if (dec.swap) M.input(m, 0, { t: 'swap' }, i * 300);
           M.input(m, 0, { t: 'shot', a: dec.a }, i * 300);
         }

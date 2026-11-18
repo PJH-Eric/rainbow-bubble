@@ -5,7 +5,6 @@ require('./seo.js');
 const assert = require('assert');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');
-const AI = require('../public/js/ai.js');
 const FULL = !!process.env.FULL;   /* 預設快速模式（抽樣少一點），FULL=1 才跑完整抽樣 */
 const L = require('../public/js/layouts.js');
 
@@ -15,19 +14,15 @@ function t(name, fn) {
   catch (e) { console.error('  FAIL ' + name + '\n       ' + (e && e.stack || e)); process.exitCode = 1; }
 }
 
-t('GA4 結算依並列名次判定勝負，不將平手記為落敗', () => {
+t('GA4 單人結算只依清盤判定勝利，且結算只記一次', () => {
   const events = [];
   const scope = { UI: {}, Match: M, GameAnalytics: { end: params => events.push(params.result) } };
   require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/js/game.js'), 'utf8'), {
     self: scope, setTimeout() {}
   });
-  for (const [slot, ranks, expected] of [
-    [1, [{ s: 0, rank: 1 }, { s: 1, rank: 1 }], 'draw'],
-    [1, [{ s: 1, rank: 1 }, { s: 0, rank: 2 }], 'win'],
-    [1, [{ s: 0, rank: 1 }, { s: 1, rank: 2 }], 'lose']
-  ]) {
+  for (const [reason, expected] of [['clear', 'win'], ['time', 'loss']]) {
     const screen = Object.create(scope.GameScreen.prototype);
-    Object.assign(screen, { m: { result: { ranks } }, slot, clearHint() {} });
+    Object.assign(screen, { m: { result: { reason } }, quest: null, over: false, clearHint() {} });
     screen.onEnd(); screen.onEnd();
     assert.equal(events.pop(), expected);
     assert.equal(events.length, 0, '重複結算不重送');
@@ -219,14 +214,6 @@ t('碰壁反彈：軌跡有轉折點', () => {
   const tr = R.trace(b, 2000);                /* 20°：很斜，一定會撞牆 */
   assert(tr.path.length >= 3, '應有反彈點');
 });
-t('觸底會被泡泡雨沖掉最底下 3 列，之後有保護', () => {
-  const b = blank();
-  for (let r = 0; r <= R.LINE_ROW; r++) for (let c = 0; c < R.rowLen(b, r); c++) put(b, r, c, r % 3 + 1);
-  const g = R.applyGarbage(b, 3, 1);
-  assert(g.rain, '應觸發泡泡雨');
-  assert(b.protect > 0);
-  assert(R.lowestRow(b) < R.LINE_ROW, '沖掉之後不該再碰到底線');
-});
 t('下壓：普通以上連續沒消除會下降一列，幼幼班不會', () => {
   const run = lv => {
     let desc = 0;
@@ -238,30 +225,6 @@ t('下壓：普通以上連續沒消除會下降一列，幼幼班不會', () =>
   };
   assert(run('baby') === 0, '幼幼班不會下降');
   assert(run('normal') > 0 && run('hard') >= run('normal'), '普通以上會下降，困難更頻繁');
-});
-t('送泡泡量表與倍率', () => {
-  assert.strictEqual(R.attackFor(3, 10, 1), 0);
-  assert.strictEqual(R.attackFor(5, 10, 1), 5);
-  assert.strictEqual(R.attackFor(8, 10, 1), 10);
-  assert.strictEqual(R.attackFor(12, 10, 1), 20);
-  assert.strictEqual(R.attackFor(12, 8, 0.5), 8);
-});
-t('塞入泡泡：滿列先入、最後一列不滿，且都連著天花板', () => {
-  const b = R.newBoard({ seed: 3, level: 'normal' });
-  const before = R.bubbleCount(b);
-  R.applyGarbage(b, 15, 4);
-  assert.strictEqual(R.bubbleCount(b) - before, 15);
-  assert.strictEqual(R.floating(b).length, 0);
-});
-t('塞入泡泡：零頭不會變成天花板上不滿的一列（不會整盤只靠幾顆吊著）', () => {
-  for (const n of [2, 5, 13, 20]) {
-    const b = R.newBoard({ seed: 9, level: 'normal' });
-    const before = R.bubbleCount(b);
-    R.applyGarbage(b, n, 1);
-    assert.strictEqual(R.bubbleCount(b) - before, n, '塞 ' + n + ' 顆數量要對');
-    assert.strictEqual(R.floating(b).length, 0);
-    if (n >= b.cols) assert(b.rows[0].every(v => v), '塞 ' + n + ' 顆：天花板那排要是滿的');
-  }
 });
 t('開局不會整片只靠 1～2 顆吊著：任何一組同色打掉，掉下去的不超過盤面 1/4', () => {
   for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 60 : 20); seed++) {
@@ -308,87 +271,41 @@ t('不同 seed 的盤面不同；地圖種類夠多', () => {
   assert(ids.size >= (FULL ? 30 : 22), '抽樣局數只出現 ' + ids.size + ' 種版型');
 });
 
-console.log('對局：事件重播與對打');
-function playScripted(mode, level, seed, steps) {
-  const m = M.create({ mode, level, seed, duration: 180000, players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] });
+console.log('對局：單機事件重播與計時');
+ t('單機設定只建立一位玩家和一個盤面，其他席位輸入無效', () => {
+  const m = M.create({ mode: 'solo', level: 'normal', seed: 17, players: [{ name: 'A' }, { name: 'B' }] });
+  assert.strictEqual(m.players.length, 1);
+  assert.strictEqual(m.boards.length, 1);
+  assert.deepStrictEqual(M.input(m, 1, { t: 'shot', a: 9000 }, 1000), []);
+  assert.strictEqual(m.boards[0].shots, 0);
+});
+function playScripted(level, seed, steps) {
+  const m = M.create({ mode: 'solo', level, seed, duration: 180000, players: [{ name: 'A' }] });
   const log = [];
   const rng = R.mulberry32(seed + 5);
   let now = 0;
   for (let i = 0; i < steps && !m.over; i++) {
     now += 400;
-    const s = Math.floor(rng() * 4);
     const inp = rng() < 0.1 ? { t: 'swap' } : { t: 'shot', a: 1500 + Math.floor(rng() * 13500) };
-    for (const o of M.input(m, s, inp, now)) log.push(o.ev);
+    for (const o of M.input(m, 0, inp, now)) log.push(o.ev);
     for (const o of M.tick(m, now)) log.push(o.ev);
   }
   return { m, log };
 }
-t('把對局事件依序重播到另一場，四個盤面雜湊全相同（競賽、對打）', () => {
-  for (const mode of ['race', 'duel']) for (const level of ['baby', 'normal', 'hard']) {
-    const { m, log } = playScripted(mode, level, 123, 400);
-    const m2 = M.create({ mode, level, seed: 123, duration: 180000, players: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] });
+t('單機事件依序重播後盤面一致', () => {
+  for (const level of ['baby', 'normal', 'hard']) {
+    const { m, log } = playScripted(level, 123, 400);
+    const m2 = M.create({ mode: 'solo', level, seed: 123, duration: 180000, players: [{ name: 'A' }] });
     for (const ev of JSON.parse(JSON.stringify(log))) M.apply(m2, ev);
-    m.boards.forEach((b, i) => assert.strictEqual(R.boardHash(m2.boards[i]), R.boardHash(b), `${mode}/${level} 盤面 ${i} 不一致`));
+    assert.strictEqual(R.boardHash(m2.boards[0]), R.boardHash(m.boards[0]), `${level} 盤面不一致`);
   }
 });
-t('對打：消除會產生預告，預告到期才落下；自己消除可以抵銷', () => {
-  const m = M.create({ mode: 'duel', level: 'normal', seed: 5, duration: 0, players: [{ name: 'A' }, { name: 'B' }] });
-  /* 讓 A 的盤面擺好一個大連消 */
-  const b = m.boards[0];
-  b.rows = [];
-  for (let r = 0; r < 4; r++) b.rows.push(new Array(R.rowLen(b, r)).fill(0));
-  for (let c = 0; c < 9; c++) put(b, 0, c, 1);
-  put(b, 1, 2, 3); put(b, 1, 3, 3); put(b, 1, 4, 3); put(b, 1, 5, 3);
-  put(b, 1, 0, R.OBST); put(b, 2, 0, 4);       /* 另外留一顆，避免整盤清光而提前結束 */
-  b.cur = { k: 'n', c: 1 };
-  const a = angleTo(b, 0, 9);
-  assert(a != null, '找不到角度');
-  const out = M.input(m, 0, { t: 'shot', a }, 1000);
-  const pend = out.find(o => o.ev.e === 'pend');
-  assert(pend, '大連消應該送出泡泡，事件：' + out.map(o => o.ev.e));
-  assert.strictEqual(pend.ev.to, 1);
-  assert(pend.ev.at > 1000);
-  assert.strictEqual(M.tick(m, 1001).length, 0, '預告期間不落下');
-  const before = R.bubbleCount(m.boards[1]);
-  const land = M.tick(m, pend.ev.at);
-  assert(land.some(o => o.ev.e === 'land'));
-  assert(R.bubbleCount(m.boards[1]) > before, '泡泡應落到對手盤面');
-});
-t('時間到結束並排名；先全清者獲勝', () => {
-  const m = M.create({ mode: 'race', level: 'baby', seed: 8, duration: 5000, players: [{ name: 'A' }, { name: 'B' }] });
-  m.boards[1].cleared = 7;
+ t('單機時間到時結束對局並回報時間結果', () => {
+  const m = M.create({ mode: 'solo', level: 'baby', seed: 8, duration: 5000, players: [{ name: 'A' }] });
   const out = M.tick(m, 5000);
   assert(m.over && out.some(o => o.ev.e === 'end'));
-  assert.strictEqual(m.result.winner, 1);
-  assert.strictEqual(m.result.ranks[0].rank, 1);
-});
-console.log('電腦：四段難度');
-t('四段電腦：清光盤面所需的發數：簡單以下明顯多於普通，普通多於困難（幼幼班主要差在反應時間）（簡單盤面 80 局，上限 150 發）', () => {
-  const avg = {};
-  for (const lv of AI.LEVEL_ORDER) {
-    const arr = [];
-    const N = FULL ? 80 : 30;
-    for (let seed = 1; seed <= N; seed++) {
-      const b = R.newBoard({ seed, level: 'easy' });
-      const brain = AI.createBrain(lv, seed);
-      let n = 0;
-      while (n < 150 && !b.fullClear) {
-        const d = AI.decide(b, brain, 'race');
-        if (d.swap) R.swapItems(b);
-        R.applyShot(b, d.a);
-        n++;
-      }
-      arr.push(n);
-    }
-    arr.sort((x, y) => x - y);
-    avg[lv] = arr[N >> 1];   /* 中位數：避免少數卡關的盤面拉高平均 */
-  }
-  console.log('       中位發數：' + AI.LEVEL_ORDER.map(l => l + ' ' + avg[l].toFixed(1)).join(' > '));
-  assert(avg.baby > avg.normal && avg.easy > avg.normal && avg.normal > avg.hard, JSON.stringify(avg));
-});
-t('反應間隔：幼幼班最慢、困難最快', () => {
-  const d = lv => { const b = AI.createBrain(lv, 1); let s = 0; for (let i = 0; i < 200; i++) s += AI.delayOf(b); return s / 200; };
-  assert(d('baby') > d('easy') && d('easy') > d('normal') && d('normal') > d('hard'));
+  assert.strictEqual(m.result.reason, 'time');
+  assert.strictEqual(m.boards.length, 1);
 });
 
 t('不會出現單一顏色占大半的盤面（上限：普通 23%、困難 18%；開局後的微調允許再多 4%）', () => {
@@ -411,27 +328,6 @@ t('泡泡數量不能太少：普通 ≥ 60、困難 ≥ 72、簡單 ≥ 48、�
     }
   }
 });
-t('電腦對手：每個盤面的顏色、版型與發射順序不同，但同 seed 可重現', () => {
-  const players = [{}, {}, {}, {}];
-  for (let seed = 1; seed <= 40; seed++) {
-    const m = M.create({ mode: 'race', level: 'normal', seed, players });
-    const hs = new Set(m.boards.map(b => R.boardHash(b)));
-    assert.strictEqual(hs.size, 4, 'seed ' + seed + ' 四個盤面雜湊應各不相同');
-    const q = new Set(m.boards.map(b => b.queueSeed));
-    assert.strictEqual(q.size, 4, '發射順序種子應各不相同');
-    const m2 = M.create({ mode: 'race', level: 'normal', seed, players });
-    assert.deepStrictEqual(m2.boards.map(b => R.boardHash(b)), m.boards.map(b => R.boardHash(b)), '同 seed 要可重現');
-  }
-});
-t('電腦對手公平：盤面不同，但泡泡數、星星數與獎勵泡泡數都一樣', () => {
-  const marks = (b, k) => { let n = 0; b.rows.forEach(r => r.forEach(v => { if (R.isBubble(v) && R.modOf(v) === k) n++; })); return n; };
-  for (const lv of R.LEVELS) for (let seed = 1; seed <= (FULL ? 80 : 25); seed++) {
-    const m = M.create({ mode: 'race', level: lv, seed: seed * 9973, players: [{}, {}, {}, {}] });
-    const sig = m.boards.map(b => R.bubbleCount(b) + '/' + marks(b, 1) + '/' + marks(b, 2));
-    assert.strictEqual(new Set(sig).size, 1, lv + ' seed ' + seed + '：' + sig.join(' | '));
-  }
-});
-
 console.log('地圖資料');
 t('版型數量與重採樣', () => {
   assert(L.PATTERNS.length >= 40 && L.FAMILIES.length >= 8);

@@ -2,7 +2,7 @@
  * 1. zh-Hant 與 en 的 key 集合完全一致，沒有空字串；en 不可夾中文
  * 2. 兩邊同一個 key 的 {param} 完全一致
  * 3. 原始碼（public/js、index.html、lib）用到的 key 都存在字典裡（含動態組出來的 key 家族）
- * 4. 單機電腦與遊戲狀態的動態 key 都有翻譯
+ * 4. 支援的模式 key 完整，已移除的電腦對手 key 不殘留
  * 執行：node tests/i18n.js
  */
 'use strict';
@@ -61,8 +61,7 @@ used.forEach(k => ok(has(k), '原始碼用到但字典沒有：' + k));
 prefixes.forEach(p => ok(zk.some(k => k.indexOf(p) === 0), '動態 key 前綴在字典裡找不到：' + p));
 
 /* 動態 key 家族逐一驗 */
-['baby', 'easy', 'normal', 'hard'].forEach(l => ['level.', 'level.hint.', 'ai.hint.'].forEach(p => ok(has(p + l), '缺 ' + p + l)));
-['race', 'duel'].forEach(m => ok(has('mode.' + m), '缺 mode.' + m));
+['baby', 'easy', 'normal', 'hard'].forEach(l => ['level.', 'level.hint.'].forEach(p => ok(has(p + l), '缺 ' + p + l)));
 const dragons = (read('public/js/art-dragons.js').match(/\{ id: '(\w+)',\s+name: '/g) || []).map(s => s.match(/'(\w+)'/)[1]);
 ok(dragons.length === 8, '讀到 8 隻龍', String(dragons.length));
 dragons.forEach(d => ['dragon.', 'dragon.short.'].forEach(p => ok(has(p + d), '缺 ' + p + d)));
@@ -75,8 +74,9 @@ for (let i = 0; i < 10; i++) ok(has('adj.' + i), '缺 adj.' + i);
 const Layouts = require(path.join(ROOT, 'public/js/layouts.js'));
 const L = Layouts.Layouts || Layouts;
 L.list().forEach(x => ok(has('layout.' + x.id), '缺地圖名稱 layout.' + x.id));
-['pause.settings', 'solo.opp', 'solo.cpuLevel'].forEach(k => ok(has(k), '缺 ' + k));
-ok(used.size > 150, '原始碼掃到的 key 數量合理', String(used.size));
+['pause.settings', 'home.solo', 'quest.entry.btn'].forEach(k => ok(has(k), '缺 ' + k));
+['solo.opp', 'solo.opponents', 'solo.cpu', 'ai.name', 'mode.duel', 'mode.race', 'help.duel.h'].forEach(k => ok(!has(k), '已移除的對手字典 key 不應殘留：' + k));
+ok(used.size > 130, '原始碼掃到的 key 數量合理', String(used.size));
 
 console.log((fail ? 'FAIL ' : 'OK ') + 'i18n：通過 ' + pass + ' 項，失敗 ' + fail + ' 項（字典 ' + zk.length + ' 個 key）');
 process.exit(fail ? 1 : 0);

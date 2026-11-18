@@ -7,7 +7,7 @@ const run=async lv=>{
  const ctx=await br.newContext({viewport:{width:900,height:700}});await ctx.addInitScript('window.__GO_IN = 300');const pg=await ctx.newPage();
  pg.on('pageerror',e=>errs.push(lv+e.message));pg.on('console',m=>m.type()==='error'&&errs.push(lv+m.text()));
  await pg.goto(GAME_URL);await pg.waitForSelector('.home-menu');await pg.click('text=一個人玩');await pg.waitForSelector('.sticky-cta');
- await pg.evaluate(l=>{App.store.solo.opponents=1;App.store.solo.mode='duel';App.store.solo.level=l;App.store.solo.duration=0;App.go('solo')},lv);
+ await pg.evaluate(l=>{App.store.solo.level=l;App.store.solo.duration=0;App.go('solo')},lv);
  await pg.click('text=開始遊戲');await pg.waitForSelector('.bslot canvas');await pg.waitForFunction(()=>App.game&&App.game.mt()>300);
  const cv=await pg.$('.bslot.mine canvas');const bb=await cv.boundingBox();const seen={};let lasers=0,bad=0;
  for(let i=0;i<40;i++){

@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');
-const AI = require('../public/js/ai.js');
+const Solver = require('./quest-solver.js');
 const L = require('../public/js/layouts.js');
 const Tiers = require('../public/js/layout-tiers.js');
 
@@ -27,7 +27,7 @@ const ROWS = { baby: [5, 7], easy: [6, 8], normal: [7, 9], hard: [8, 10] };
 const BOSS_ROWS = { baby: 8, easy: 9, normal: 10, hard: 10 };
 const FACTOR = { baby: 0, easy: 1.6, normal: 1.4, hard: 1.25 };
 const PASS_MIN = { easy: 0.8, normal: 0.6, hard: 0.4 };
-const SIM_AI = { baby: 'easy', easy: 'easy', normal: 'normal', hard: 'hard' };
+const SIM_LEVEL = { baby: 'easy', easy: 'easy', normal: 'normal', hard: 'hard' };
 const BOSS_ORDER = {
   baby:   ['boss-heart', 'boss-sun', 'boss-cat', 'boss-flower', 'boss-rainbow', 'boss-balloons', 'boss-butterfly', 'boss-rocket', 'boss-star', 'boss-castle'],
   easy:   ['boss-cat', 'boss-rainbow', 'boss-flower', 'boss-heart', 'boss-balloons', 'boss-sun', 'boss-rocket', 'boss-butterfly', 'boss-castle', 'boss-star'],
@@ -126,7 +126,7 @@ let firstSeen = {};
 
 /* ---------- 校準：用電腦模擬 ---------- */
 function simProfile(lv) {
-  const p = Object.assign({}, AI.PROFILE[SIM_AI[lv]]);
+  const p = Object.assign({}, Solver.PROFILE[SIM_LEVEL[lv]]);
   if (lv === 'hard') p.step = 200;
   if (lv === 'normal') p.step = 300;
   return p;
@@ -135,12 +135,12 @@ function simOnce(def, trialSeed, lv) {
   const d = Object.assign({}, def, { shots: 0 });
   const m = M.create({ mode: 'quest', quest: d, level: d.level, seed: d.seed, players: [{ name: 'sim' }] });
   const b = m.boards[0];
-  const brain = AI.createBrain(SIM_AI[lv], trialSeed);
+  const brain = Solver.createBrain(SIM_LEVEL[lv], trialSeed);
   brain.p = simProfile(lv);
   /* 模擬時不限發射數：看電腦到底要幾發才過關 */
   let t = 0;
   for (let i = 0; i < 160 && !m.over; i++) {
-    const dec = AI.decide(b, brain, 'quest');
+    const dec = Solver.decide(b, brain);
     if (dec.swap) M.input(m, 0, { t: 'swap' }, t);
     M.input(m, 0, { t: 'shot', a: dec.a }, t);
     t += 300;

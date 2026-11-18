@@ -1,7 +1,7 @@
 {
   "name": "彩虹泡泡砲",
   "short_name": "彩虹泡泡砲",
-  "description": "可愛的泡泡射擊小遊戲：單機、電腦對手與闖關",
+  "description": "可愛的泡泡射擊小遊戲：單機遊玩與闖關",
   "start_url": ".",
   "display": "standalone",
   "orientation": "any",

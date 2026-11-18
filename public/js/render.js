@@ -249,7 +249,6 @@
       this.drawBubbles(g, now, boardOff);
       this.drawFx(g, now, boardOff, preOff);
       g.restore();
-      this.drawPending(g, now);
       this.drawShooter(g, now);
       this.drawFlight(g, now);
       this.drawTexts(g, now);
@@ -420,45 +419,6 @@
       g.closePath(); g.fill();
     }
 
-    drawPending(g, now) {
-      const list = this.m ? this.m.pending[this.slot] : null;
-      if (!list || !list.length) return;
-      const T = this.getT();
-      const ws = this.ws;
-      let x = 2.0;
-      for (const p of list) {
-        const total = this.live.cfg.warnMs;
-        const left = Math.max(0, p.at - T);
-        const frac = clamp01(left / total);
-        const urgent = frac < 0.4;
-        const shake = urgent && !this.set().reduceMotion ? Math.sin(now / 45) * 0.1 : 0;
-        const bob = Math.sin(now / 220 + x) * 0.1;
-        const cx0 = x + shake, cy0 = 1.05 + bob;
-        g.save();
-        /* 雨雲 */
-        g.fillStyle = urgent ? '#ff8aa0' : '#8da2e6'; g.strokeStyle = '#fff'; g.lineWidth = 0.16; g.lineJoin = 'round';
-        g.beginPath();
-        g.arc(cx0 - 0.75, cy0 + 0.1, 0.62, Math.PI * 0.5, Math.PI * 1.5);
-        g.arc(cx0 - 0.25, cy0 - 0.3, 0.7, Math.PI, Math.PI * 2);
-        g.arc(cx0 + 0.5, cy0 - 0.15, 0.6, Math.PI * 1.2, Math.PI * 2.1);
-        g.arc(cx0 + 0.8, cy0 + 0.2, 0.5, Math.PI * 1.5, Math.PI * 2.5);
-        g.closePath(); g.fill(); g.stroke();
-        /* 數字 */
-        g.font = '900 0.95px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.lineWidth = 0.22; g.strokeStyle = urgent ? '#c23a56' : '#4a5fb0'; g.fillStyle = '#fff';
-        g.strokeText(p.n, cx0, cy0 + 0.05); g.fillText(p.n, cx0, cy0 + 0.05);
-        /* 倒數條 */
-        g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(cx0 - 0.9, cy0 + 0.78, 1.8, 0.16);
-        g.fillStyle = urgent ? '#ff4d6d' : '#fff'; g.fillRect(cx0 - 0.9, cy0 + 0.78, 1.8 * frac, 0.16);
-        /* 雨滴 */
-        g.fillStyle = '#7cc4ff';
-        for (let k = 0; k < 3; k++) { const ph = ((now / 500) + k * 0.37) % 1; g.globalAlpha = 1 - ph; g.beginPath(); g.arc(cx0 - 0.5 + k * 0.5, cy0 + 0.85 + ph * 0.5, 0.08, 0, 7); g.fill(); }
-        g.restore();
-        x += 2.5;
-        if (x > ws.w - 1.2) break;
-      }
-    }
-
     drawShooter(g, now) {
       const b = this.live, s = R.shooterPos(b), sy = TOP + s.y, ws = this.ws;
       /* 龍（左下） */
@@ -526,7 +486,7 @@
       }
       /* 瞄準線 */
       if (this.showAim && this.set().aimLine !== false && !b.fullClear && !this.m.over) {
-        const key = this.aim + ':' + b.shots + ':' + b.parity + ':' + b.cleared + ':' + b.garbageIn + ':' + b.cur.k + b.cur.c;
+        const key = this.aim + ':' + b.shots + ':' + b.parity + ':' + b.cleared + ':' + b.cur.k + b.cur.c;
         if (key !== this.aimKey) { this.aimKey = key; this.aimTrace = R.trace(b, this.aim); }
         const pts = this.aimTrace.path;
         g.save(); g.fillStyle = 'rgba(255,255,255,.95)'; g.strokeStyle = 'rgba(90,70,160,.55)'; g.lineWidth = 0.05;

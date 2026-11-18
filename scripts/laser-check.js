@@ -10,7 +10,7 @@ const GAME_URL = pathToFileURL(path.join(ROOT, 'public', 'index.html')).href;
   const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await pg.goto(GAME_URL); await pg.waitForSelector('.home-menu');
   await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
-  await pg.evaluate(() => { App.store.solo.opponents = 0; App.store.solo.mode = 'race'; App.store.solo.level = 'normal'; App.store.solo.duration = 0; App.go('solo'); });
+  await pg.evaluate(() => { App.store.solo.level = 'normal'; App.store.solo.duration = 0; App.go('solo'); });
   await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot canvas');
   await pg.waitForFunction(() => App.game && App.game.mt() > 300, null, { timeout: 8000 });
   for (const k of ['laser']) {

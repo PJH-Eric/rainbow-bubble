@@ -1,9 +1,9 @@
 /* ===== game.js — 單機對局畫面 =====
  *
  * GameScreen 負責：
- *   - 版面：顯示自己的盤面和 0～3 個電腦對手
+ *   - 版面：顯示玩家自己的盤面
  *   - 輸入：點哪射哪／拖曳瞄準、鍵盤、交換泡泡（砲台右邊的 ⇄ 圖示按鈕，或 S 鍵）
- *   - 時鐘與事件：瀏覽器處理玩家輸入、電腦 AI 與對局規則
+ *   - 時鐘與事件：瀏覽器處理玩家輸入與對局規則
  *   - 左側資訊欄、倒數、暫停、結算 overlay
  */
 (function (root) {
@@ -11,9 +11,6 @@
   const { h, btn, iconBtn, avatar, toast, modal } = root.UI;
   const R = root.Rules, M = root.Match, Art = root.Art;
   const T = (k, p, fb) => root.I18N.t(k, p, fb);
-  const modeName = m => T('mode.' + m);
-  /* 電腦玩家的名字跟著語言走；真人暱稱原樣顯示 */
-  const pname = p => (p && p.kind === 'ai' ? T('ai.name', { dragon: T('dragon.short.' + p.dragon) }) : (p ? p.name : ''));
   const SHOT_GAP = 270;
 
   function fmtTime(ms) {
@@ -22,21 +19,19 @@
   }
 
   class GameScreen {
-    /** o = { cfg, slot, ai:{slot:level}, onAgain, onSetup, onHome } */
+    /** o = { cfg, slot, onAgain, onSetup, onHome } */
     constructor(o) {
-      this.o = o; this.cfg = o.cfg; this.slot = o.slot == null ? 0 : o.slot;
+      this.o = o; this.cfg = o.cfg; this.slot = 0;
       this.store = root.App.store;
       this.m = M.create(o.cfg);
       this.quest = o.cfg.mode === 'quest' ? o.cfg.quest : null;      /* 闖關：本關的定義（單機專屬） */
       this.theme = Art.THEMES[o.cfg.themeId | 0] || Art.THEMES[0];
-      if (root.GameAnalytics) root.GameAnalytics.start(this.quest ? { mode: 'solo', variant: 'quest', difficulty: this.m.level, content_id: this.quest.id, players: 1 } : { mode: 'solo', difficulty: this.m.level, players: this.m.players.length });
+      if (root.GameAnalytics) root.GameAnalytics.start(this.quest ? { mode: 'solo', variant: 'quest', difficulty: this.m.level, content_id: this.quest.id, players: 1 } : { mode: 'solo', difficulty: this.m.level, players: 1 });
       this.paused = false; this.pausedAt = 0; this.pausedTotal = 0;
       this.lastShot = 0; this.lastAction = performance.now();
       this.keys = {}; this.over = false; this.resultShown = false; this.goShown = false; this.lastCount = 99;
       this.hintKey = ''; this.lastHud = 0; this.dead = false;
       this.tStart = performance.now() + (root.__GO_IN >= 0 ? root.__GO_IN : 3000);
-      this.brains = {};
-      Object.keys(o.ai || {}).forEach(s => { this.brains[s] = root.AI.createBrain(o.ai[s], (o.cfg.seed + 977 * (+s + 1)) >>> 0); });
       this.build();
       this.bindInput();
       this.last = performance.now();
@@ -50,7 +45,6 @@
 
     /* ---------- 版面 ---------- */
     build() {
-      const n = this.cfg.players.length;
       this.root = h('div', { class: 'game game-solo side-closed' });
       this.root.style.backgroundImage = 'url("' + Art.svgUrl(Art.themeBgSVG(this.theme.id)) + '")';
 
@@ -64,30 +58,24 @@
       /* 盤面 */
       this.views = [];
       this.boardsEl = h('div', { class: 'boards' });
-      const order = [];
-      order.push(this.slot);
-      for (let i = 0; i < n; i++) if (i !== this.slot) order.push(i);
-      const mainLayout = n >= 3;
-      this.boardsEl.classList.add(mainLayout ? 'l-main' : (n === 2 ? 'l-two' : n === 1 ? 'l-one' : 'l-grid'), 'n' + n);
+      const order = [this.slot];
+      this.boardsEl.classList.add('l-one', 'n1');
       const sets = () => this.store;
-      order.forEach((s, idx) => {
+      order.forEach(s => {
         const p = this.cfg.players[s];
         const v = new root.BoardView({
           slot: s, name: p.name, dragon: p.dragon, theme: this.theme, mine: s === this.slot,
-          audio: s === this.slot, getT: () => this.mt(), settings: sets, small: mainLayout && idx > 0
+          audio: true, getT: () => this.mt(), settings: sets
         });
         v.setup(this.m);
         v.showAim = s === this.slot;
         this.views[s] = v;
         const tag = h('div', { class: 'btag' }, avatar(p.dragon, 30),
-          h('span', { class: 'bt-name', 'data-s': s }, pname(p) + (p.kind === 'ai' ? ' 🤖' : '')),
+          h('span', { class: 'bt-name', 'data-s': s }, p.name),
           h('span', { class: 'bt-n', 'data-n': s }, '0'));
-        if (idx === 0) this.mainTag = tag;     /* 主盤面的名牌改放進上方那一排（跟計時牌、暫停鍵同排） */
-        const slotEl = h('div', { class: 'bslot' + (s === this.slot ? ' mine' : '') + (mainLayout && idx > 0 ? ' small' : '') }, v.el, idx === 0 ? null : tag);
-        if ((mainLayout || n === 2) && s !== this.slot) {
-          if (!this.oppCol) { this.oppCol = h('div', { class: 'opp-col' }); this.boardsEl.appendChild(this.oppCol); }
-          this.oppCol.appendChild(slotEl);
-        } else this.boardsEl.appendChild(slotEl);
+        this.mainTag = tag;     /* 主盤面的名牌改放進上方那一排（跟計時牌、暫停鍵同排） */
+        const slotEl = h('div', { class: 'bslot mine' }, v.el);
+        this.boardsEl.appendChild(slotEl);
         if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => v.resize()); ro.observe(slotEl); (this.ros = this.ros || []).push(ro); }
       });
 
@@ -119,7 +107,7 @@
     }
 
     modeLabel() {
-      return (this.quest ? T('quest.levelN', { n: this.quest.no }) : modeName(this.cfg.mode)) + '・' + R.LEVEL_NAME[this.cfg.level];
+      return (this.quest ? T('quest.levelN', { n: this.quest.no }) : T('home.solo')) + '・' + R.LEVEL_NAME[this.cfg.level];
     }
 
     /** 資訊欄開關鈕：開著顯示「收起」雙箭頭（«），關著顯示「展開」雙箭頭（»） */
@@ -140,30 +128,15 @@
     /* ---------- 摘要 ---------- */
     renderSummary() {
       if (this.quest) return this.renderQuestSummary();
-      const m = this.m, rows = [];
-      const order = m.players.map((p, i) => i).sort((a, b) => (m.boards[b].cleared - m.boards[a].cleared) || a - b);
-      const max = Math.max(1, ...m.boards.map(b => b.cleared));
+      const m = this.m, b = m.boards[0];
       this.sumEl.textContent = '';
       this.sumEl.appendChild(h('div', { class: 'sum-meta' },
-        h('div', null, h('b', null, modeName(m.mode)), '・', R.LEVEL_NAME[m.level]),
-        h('div', { class: 'muted small' }, T('game.map') + (m.boards[0].layoutId ? T('layout.' + m.boards[0].layoutId, null, m.boards[0].layoutName) : T('game.random')) + '・' + this.theme.name),
-        h('div', { class: 'muted small' }, m.mode === 'duel' ? T('game.goalDuel') : T('game.goalRace'))));
-      order.forEach((s, rank) => {
-        const p = m.players[s], b = m.boards[s];
-        rows.push(h('div', { class: 'sum-row' + (s === this.slot ? ' me' : '') },
-          h('span', { class: 'sum-rank' }, rank + 1),
-          avatar(p.dragon, 34),
-          h('div', { class: 'sum-main' }, h('div', { class: 'sum-name' }, pname(p) + (s === this.slot ? T('game.you') : '') + (p.kind === 'ai' ? ' 🤖' : '')),
-            h('div', { class: 'sum-bar' }, h('i', { style: { width: Math.round(b.cleared / max * 100) + '%' } }))),
-          h('b', { class: 'sum-n' }, b.cleared)));
-      });
-      rows.forEach(r => this.sumEl.appendChild(r));
-      const mine = m.boards[this.slot];
+        h('div', null, h('b', null, T('home.solo')), '・', R.LEVEL_NAME[m.level]),
+        h('div', { class: 'muted small' }, T('game.map') + (b.layoutId ? T('layout.' + b.layoutId, null, b.layoutName) : T('game.random')) + '・' + this.theme.name)));
       this.sumEl.appendChild(h('div', { class: 'mystats' },
-        h('div', { class: 'stat' }, h('b', null, mine.shots), h('span', null, T('stat.shots'))),
-        h('div', { class: 'stat' }, h('b', null, mine.maxCombo), h('span', null, T('stat.combo'))),
-        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageOut), h('span', null, T('stat.out'))) : null,
-        m.mode === 'duel' ? h('div', { class: 'stat' }, h('b', null, mine.garbageIn), h('span', null, T('stat.in'))) : null));
+        h('div', { class: 'stat' }, h('b', null, b.shots), h('span', null, T('stat.shots'))),
+        h('div', { class: 'stat' }, h('b', null, b.maxCombo), h('span', null, T('stat.combo'))),
+        h('div', { class: 'stat' }, h('b', null, b.cleared), h('span', null, T('res.tCleared')))));
       this.sumEl.appendChild(h('div', { class: 'side-keys muted small keyline' },
         h('span', null, T('key.aim'), root.UI.keycap('←'), root.UI.keycap('→')), h('span', null, T('key.fire'), root.UI.keycap(T('key.space'))), h('span', null, T('key.swap'), root.UI.keycap('S'))));
     }
@@ -286,24 +259,15 @@
     /* ---------- 主迴圈 ---------- */
     loop(now) {
       if (this.dead) return;
+      if (!this.mounted && this.root.isConnected) {
+        this.mounted = true;
+        for (const v of this.views) if (v) v.resize(true);
+      }
       this.raf = requestAnimationFrame(t => this.loop(t));
       const dt = Math.min(100, now - this.last); this.last = now;
       const t = this.mt();
       if (!this.paused) {
-        if (!this.over) {
-          if (t >= 0) {
-            this.dispatch(M.tick(this.m, t));
-            for (const s of Object.keys(this.brains)) {
-              const b = this.m.boards[s];
-              if (this.m.over) break;
-              const dec = root.AI.think(this.brains[s], b, dt, this.m.mode, !b.fullClear);
-              if (dec) {
-                if (dec.swap) this.dispatch(M.input(this.m, +s, { t: 'swap' }, t));
-                this.dispatch(M.input(this.m, +s, { t: 'shot', a: dec.a }, t));
-              }
-            }
-          }
-        }
+        if (!this.over && t >= 0) this.dispatch(M.tick(this.m, t));
         /* 方向鍵連續瞄準：左鍵把砲口往左轉（角度變大） */
         if (this.keys.l || this.keys.r) {
           const v = this.views[this.slot];
@@ -335,7 +299,7 @@
       if (!v || v.job || v.jobs.length || this.paused) return;
       if (now - this.lastAction < 2800) return;
       const b = this.m.boards[this.slot];
-      const key = b.shots + ':' + b.cleared + ':' + b.garbageIn;
+      const key = b.shots + ':' + b.cleared;
       if (v.hint && this.hintKey === key) return;
       if (this.hintKey === key && !v.hint) return;
       this.hintKey = key;
@@ -389,10 +353,7 @@
       if (root.GameAnalytics && this.quest) {
         root.GameAnalytics.end({ result: this.m.result && this.m.result.quest && this.m.result.quest.win ? 'win' : 'lose' });
       } else if (root.GameAnalytics) {
-        const ranks = this.m.result ? this.m.result.ranks : M.ranking(this.m);
-        const mine = ranks.find(row => row.s === this.slot);
-        const tied = ranks.filter(row => row.rank === 1).length > 1;
-        root.GameAnalytics.end({ result: mine && mine.rank === 1 ? (tied ? 'draw' : 'win') : 'lose' });
+        root.GameAnalytics.end({ result: this.m.result && this.m.result.reason === 'clear' ? 'win' : 'loss' });
       }
       this.clearHint();
       setTimeout(() => this.showResult(), 1100);
@@ -401,12 +362,10 @@
       if (this.dead || this.resultShown) return;
       this.resultShown = true;
       if (this.quest) return this.showQuestResult();
-      const r = this.m.result || { ranks: M.ranking(this.m), winner: 0, reason: 'time', mode: this.m.mode };
-      const ranks = r.ranks;
-      const me = ranks.find(x => x.s === this.slot);
-      const win = me && me.rank === 1;
-      const tie = ranks.filter(x => x.rank === 1).length > 1;
-      this.resCtx = { r, ranks, me, win, tie };
+      const r = this.m.result || { reason: 'time' };
+      const win = r.reason === 'clear';
+      const me = this.m.boards[0];
+      this.resCtx = { r, me, win };
       root.Sound.sfx(win ? 'win' : 'lose');
       root.App.recordResult(!!win);
       this.renderResult();
@@ -455,32 +414,18 @@
 
     /** 結算畫面（語言切換時會重畫，不重複記錄戰績） */
     renderResult() {
-      const { r, ranks, me, win, tie } = this.resCtx;
-      const nameOf = x => pname(x);
-      let head;
-      if (tie && me.rank === 1) head = T('res.tie');
-      else head = win ? T('res.youWin') : T('res.wins', { name: nameOf(ranks[0]) });
+      const { r, me, win } = this.resCtx;
+      const head = win ? T('res.youWin') : T('res.rTime');
       const hadFocus = this.overlay.querySelector('.result-card button:focus');
       const fidx = hadFocus ? Array.from(this.overlay.querySelectorAll('.result-card button')).indexOf(hadFocus) : 0;
       this.overlay.textContent = '';
-      const maxCl = Math.max(1, ...ranks.map(x => x.cleared));
-      const rows = ranks.map(x => h('div', { class: 'rank-row' + (x.rank === 1 ? ' win' : '') + (x.s === this.slot ? ' me' : '') },
-        h('span', { class: 'no' }, x.rank === 1 ? '🏆' : x.rank), avatar(x.dragon, 40),
-        h('div', { class: 'rk-mid' },
-          h('span', { class: 'nm' }, nameOf(x) + (x.s === this.slot ? T('game.you') : '') + (x.fullClear ? T('res.cleared') : '')),
-          h('span', { class: 'rk-bar' }, h('i', { style: { width: Math.max(3, Math.round(x.cleared / maxCl * 100)) + '%' } })),
-          h('span', { class: 'rk-meta' }, [T('res.shots', { n: x.shots }), T('res.combo', { n: x.maxCombo })].concat(this.cfg.mode === 'duel' ? [T('res.sendRecv', { a: x.garbageOut, b: x.garbageIn })] : []).map(t => h('i', null, t)))),
-        h('b', null, T('res.count', { n: x.cleared }))));
-      /* 我的（或冠軍的）戰績卡 */
-      const who = (me || ranks[0]);
       const tile = (ico, big, label) => h('div', { class: 'stat-tile' }, h('div', { class: 'st-ico' }, ico), h('b', null, big), h('span', null, label));
       const tiles = [
-        tile('🫧', who.cleared, T('res.tCleared')),
-        tile('🔥', who.maxCombo, T('stat.combo')),
-        tile('💥', who.best | 0, T('res.tBest')),
-        tile('🍂', who.dropN | 0, T('res.tDrop'))
+        tile('🫧', me.cleared, T('res.tCleared')),
+        tile('🔥', me.maxCombo, T('stat.combo')),
+        tile('💥', me.best | 0, T('res.tBest')),
+        tile('🍂', me.dropN | 0, T('res.tDrop'))
       ];
-      if (this.cfg.mode === 'duel') tiles.push(tile('🎁', who.garbageOut + ' / ' + who.garbageIn, T('res.tSendRecv')));
       const stats = h('div', { class: 'stat-grid', 'aria-label': T('res.yourStats') }, tiles);
       const dragon = this.cfg.players[this.slot].dragon;
       const card = h('div', { class: 'dialog result-card', 'data-result-share': '', role: 'dialog', 'aria-modal': 'true', 'aria-label': T('res.aria') },
@@ -490,7 +435,6 @@
           h('div', { class: 'muted small' }, r.reason === 'clear' ? T('res.rClear') : T('res.rTime'))),
         h('div', { class: 'stat-title' }, T('res.yourStats')),
         stats,
-        h('div', { class: 'rank' }, rows),
         h('div', { class: 'result-actions' },
           btn(T('res.again'), { cls: 'btn-pink btn-lg', icon: 'refresh', onClick: () => this.o.onAgain() }),
           btn(T('pause.settings'), { cls: 'btn-sky', icon: 'back', onClick: () => this.o.onSetup() }),
@@ -510,7 +454,7 @@
       lab(this.exitBtn, 'game.pause');
       this.syncSideIcon();
       this.modeEl.textContent = this.modeLabel();
-      this.cfg.players.forEach((p, s) => { const el = this.boardsEl.querySelector('.bt-name[data-s="' + s + '"]'); if (el) el.textContent = pname(p) + (p.kind === 'ai' ? ' 🤖' : ''); });
+      this.cfg.players.forEach((p, s) => { const el = this.boardsEl.querySelector('.bt-name[data-s="' + s + '"]'); if (el) el.textContent = p.name; });
       this.updateHud(this.mt());
       if (this.quest) { this.sumEl && this.renderSummary(); const hk = this.hintBubble && this.hintBubble.querySelector('.q-hint-txt'); if (hk) hk.textContent = T('quest.hint.' + hk.getAttribute('data-k')); }
       if (this.resultShown && this.resCtx) (this.resCtx.quest ? this.renderQuestResult() : this.renderResult());

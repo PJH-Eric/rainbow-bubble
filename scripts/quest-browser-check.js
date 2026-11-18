@@ -27,17 +27,17 @@ const ONLY = (process.env.VIEWS || '').split(',').filter(Boolean);
 const VIEWS = ONLY.length ? ALL_VIEWS.filter(v => ONLY.includes(v.name)) : FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/** 用目標導向的電腦在瀏覽器裡把這一關打完（透過 GameScreen.fire，和玩家點擊走同一條路） */
+/** 用闖關測試求解器完成關卡（透過 GameScreen.fire，和玩家點擊走同一條路） */
 async function playOut(pg, maxShots) {
   return pg.evaluate(async (max) => {
     const g = App.game;
-    const brain = AI.createBrain('normal', 5);
+    const brain = QuestSolver.createBrain('normal', 5);
     brain.p = Object.assign({}, brain.p, { step: 120 });
     let n = 0;
     while (!g.over && n < max) {
       while (!g.canAct() && !g.over) await new Promise(r => setTimeout(r, 60));
       if (g.over) break;
-      const d = AI.decide(g.m.boards[0], brain, 'quest');
+      const d = QuestSolver.decide(g.m.boards[0], brain);
       if (d.swap) g.swap();
       g.fire(d.a);
       n++;
@@ -66,6 +66,7 @@ async function playOut(pg, maxShots) {
 
     /* 1. 首頁 → 闖關入口，並確認兩種返回操作 */
     await pg.goto(GAME_URL);
+    await pg.addScriptTag({ path: path.join(ROOT, 'scripts', 'quest-solver.js') });
     await pg.waitForSelector('.home-menu');
     ok(await pg.locator('.home-menu .quest-entry').count() === 1, '首頁直接提供闖關入口');
     ok(!(await overflow(pg)), '首頁沒有水平溢出（含闖關入口）');

@@ -4,7 +4,7 @@
 const assert = require('assert');
 const R = require('../public/js/rules.js');
 const M = require('../public/js/match.js');
-const AI = require('../public/js/ai.js');
+const Solver = require('../scripts/quest-solver.js');
 
 let pass = 0;
 function t(name, fn) {
@@ -20,11 +20,11 @@ function startQuest(def) {
   return M.create({ mode: 'quest', quest: def, level: def.level, seed: def.seed, players: [{ name: 'p' }] });
 }
 /** 用目標導向的電腦打到結束（上限 maxShots 發），回傳 match */
-function autoPlay(m, aiLevel, maxShots) {
-  const br = AI.createBrain(aiLevel || 'normal', m.seed);
+function autoPlay(m, level, maxShots) {
+  const br = Solver.createBrain(level || 'normal', m.seed);
   let tt = 0;
   for (let i = 0; !m.over && i < (maxShots || 300); i++) {
-    const d = AI.decide(m.boards[0], br, 'quest');
+    const d = Solver.decide(m.boards[0], br);
     if (d.swap) M.input(m, 0, { t: 'swap' }, tt);
     M.input(m, 0, { t: 'shot', a: d.a }, tt);
     tt += 300;
@@ -217,10 +217,10 @@ t('同一串事件重播，盤面逐位元一致（含目標計數）', () => {
   const def = baseDef({ goal: { type: 'color', color: 2, n: 8 }, shots: 90, seed: 4242 });
   const m = startQuest(def);
   const evs = [];
-  const br = AI.createBrain('normal', 9);
+  const br = Solver.createBrain('normal', 9);
   let tt = 0;
   while (!m.over && tt < 300 * 120) {
-    const d = AI.decide(m.boards[0], br, 'quest');
+    const d = Solver.decide(m.boards[0], br);
     if (d.swap) M.input(m, 0, { t: 'swap' }, tt).forEach(x => evs.push(x.ev));
     M.input(m, 0, { t: 'shot', a: d.a }, tt).forEach(x => evs.push(x.ev));
     tt += 300;
@@ -238,12 +238,11 @@ t('結算事件帶 quest 摘要（id、星等、發射數、小目標）', () =>
   for (const k of ['id', 'win', 'verdict', 'stars', 'shots', 'shotsMax', 'mini', 'miniId', 'ref']) assert(k in q, '缺 ' + k);
   assert.strictEqual(q.id, 't-1');
 });
-t('既有玩法不受影響：race／duel 的盤面不帶 quest 欄位', () => {
-  for (const mode of ['race', 'duel']) {
-    const m = M.create({ mode, level: 'normal', seed: 5, players: [{ name: 'a' }, { name: 'b' }] });
-    assert(!m.boards[0].quest && m.mode === mode);
-    assert.strictEqual(m.duration, 180000);
-  }
+t('單機模式維持單一盤面且沒有闖關欄位', () => {
+  const m = M.create({ mode: 'solo', level: 'normal', seed: 5, duration: 180000, players: [{ name: 'a' }] });
+  assert(!m.boards[0].quest && m.mode === 'solo');
+  assert.strictEqual(m.boards.length, 1);
+  assert.strictEqual(m.duration, 180000);
 });
 
 console.log('\n' + pass + ' 項通過' + (process.exitCode ? '，有失敗' : ''));

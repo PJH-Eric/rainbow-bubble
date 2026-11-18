@@ -17,7 +17,7 @@ const ok = (c, n, x) => { console.log((c ? '  ok  ' : '  FAIL ') + n + (c || !x 
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(GAME_URL); await pg.waitForSelector('.home-menu');
   await pg.click('text=一個人玩'); await pg.waitForSelector('.sticky-cta');
-  await pg.evaluate(() => { App.store.solo.opponents = 0; App.store.solo.mode = 'race'; App.store.solo.level = 'normal'; App.go('solo'); });
+  await pg.evaluate(() => { App.store.solo.level = 'normal'; App.go('solo'); });
   await pg.click('text=開始遊戲'); await pg.waitForSelector('.bslot.mine canvas');
   await pg.waitForFunction(() => App.game && App.game.mt() > 300);
   const bb = await (await pg.$('.bslot.mine canvas')).boundingBox();

@@ -51,11 +51,10 @@
       var value = params[key];
       if ((typeof value === 'string' || typeof value === 'number') && /^[a-zA-Z0-9_-]{1,40}$/.test(String(value))) out[key] = String(value);
     });
-    if (['solo', 'ai', 'practice', 'solo_random'].indexOf(params.mode) !== -1) {
-      out.mode = params.mode === 'ai' || params.players > 1 ? 'ai' : 'solo';
+    if (['solo', 'practice', 'solo_random'].indexOf(params.mode) !== -1) {
+      out.mode = 'solo';
       if (params.mode === 'practice' || params.mode === 'solo_random') out.variant = params.mode;
     }
-    if (Number.isInteger(params.players) && params.players >= 1 && params.players <= 32) out.players = params.players;
     if (Number.isFinite(params.duration_sec) && params.duration_sec >= 0) out.duration_sec = Math.round(params.duration_sec);
     if (['win', 'lose', 'loss', 'draw', 'complete', 'dnf'].indexOf(params.result) !== -1) out.result = params.result === 'loss' ? 'lose' : params.result;
     if (['add', 'remove'].indexOf(params.action) === -1) delete out.action;

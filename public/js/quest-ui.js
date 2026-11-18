@@ -124,7 +124,7 @@
   App.beginQuest = function (def) {
     const st = App.store;
     const cfg = Q.matchCfg(def, { name: App.util.myName(), dragon: st.dragon, kind: 'human' });
-    go('game', { kind: 'solo', cfg, slot: 0, ai: {}, quest: def });
+    go('game', { kind: 'solo', cfg, slot: 0, quest: def });
   };
 
   root.QuestUI = { goalText, goalIcon, miniText, stars, bossDragon, layoutName };

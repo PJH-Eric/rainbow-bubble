@@ -1,6 +1,6 @@
 /* ===== rules.js — 彩虹泡泡砲的共用規則核心（純函式、無 DOM） =====
  *
- * 單機玩家與電腦對手都走同一份規則：
+ * 單機與闖關共用同一份規則：
  *   - 盤面是六角交錯格：偶數列 cols 格、奇數列 cols-1 格（parity 會在天花板下降時翻轉）
  *   - 一發泡泡的整個結果（飛行路徑、落點、消除、掉落）都由「盤面狀態＋角度」決定，
  *   - 為了讓不同瀏覽器與 Node 算出完全相同的軌跡，三角函式不用 Math.sin/cos（各引擎末位可能不同），
@@ -30,10 +30,10 @@
     Object.defineProperty(LEVEL_NAME, p[0], { enumerable: true, get: function () { return root.I18N ? root.I18N.t('level.' + p[0], null, p[1]) : p[1]; } });
   });
   const DIFF = {
-    baby:   { assist: 0.8, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    mult: 0.5,  warnMs: 2500, rows: [5, 7] },
-    easy:   { assist: 0.7, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  mult: 0.75, warnMs: 2000, rows: [6, 8] },
-    normal: { assist: 0.15, pity: 1, starR: 1, laser: 0.035, laserBoost: 3.5, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 8, rainbow: 0.035, star: 0.035, wild: 0.25, mult: 1,    warnMs: 1500, rows: [7, 9] },
-    hard:   { assist: 0.08, pity: 3, starR: 1, laser: 0.04, laserBoost: 1.5, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 6, rainbow: 0.04, star: 0.04, wild: 0.33, mult: 1,    warnMs: 1500, rows: [8, 10] }
+    baby:   { assist: 0.8, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 9,  colors: [1, 2, 4, 6],        descend: 0,  rainbow: 0.04, star: 0.04, wild: 0,    rows: [5, 7] },
+    easy:   { assist: 0.7, pity: 1, starR: 1, laser: 0.04, laserBoost: 3.5, cols: 10, colors: [1, 2, 3, 4, 5, 6],  descend: 10, rainbow: 0.04, star: 0.04, wild: 0.1,  rows: [6, 8] },
+    normal: { assist: 0.15, pity: 1, starR: 1, laser: 0.035, laserBoost: 3.5, cols: 12, colors: [1, 2, 3, 4, 5, 6, 7, 8],descend: 8, rainbow: 0.035, star: 0.035, wild: 0.25, rows: [7, 9] },
+    hard:   { assist: 0.08, pity: 3, starR: 1, laser: 0.04, laserBoost: 1.5, cols: 14, colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], descend: 6, rainbow: 0.04, star: 0.04, wild: 0.33, rows: [8, 10] }
   };
 
   /* ---------- 亂數：mulberry32 與雜湊 ---------- */
@@ -190,7 +190,7 @@
     const b = {
       level, cfg, cols, parity: 0, rows: [], colors: cfg.colors.slice(0, opt.colors > 0 ? Math.min(opt.colors, cfg.colors.length) : cfg.colors.length),
       seed: opt.seed >>> 0, queueSeed: hash2(opt.seed, 99), shots: 0, miss: 0, cleared: 0, combo: 0,
-      maxCombo: 0, hits: 0, best: 0, dropN: 0, descents: 0, rains: 0, protect: 0, fullClear: false, layoutId: '', layoutName: '', garbageIn: 0, garbageOut: 0,
+      maxCombo: 0, hits: 0, best: 0, dropN: 0, descents: 0, rains: 0, protect: 0, fullClear: false, layoutId: '', layoutName: '',
       cur: { k: 'n', c: 1 }, nxt: { k: 'n', c: 1 }
     };
     const Layouts = root.Layouts || (typeof require === 'function' ? require('./layouts.js') : null);
@@ -698,52 +698,7 @@
 
   function swapItems(b) { const t = b.cur; b.cur = b.nxt; b.nxt = t; if (b.quest) b.qSwaps++; }
 
-  /* ---------- 送來的泡泡（對打） ---------- */
-  /** 在盤面頂端塞入 count 顆泡泡：只塞整列（天花板那排永遠是滿的），湊不滿一列的零頭補進最上面、貼著現有泡泡的空格。
-   *  不滿的一列若直接放在天花板，整盤會只靠那幾顆吊著，打掉就一發清光。回傳 { rows:[…新列], extra:[[r,c]…], rain } */
-  function applyGarbage(b, count, gid) {
-    const rng = mulberry32(hash2(b.seed, 70000 + (gid | 0)));
-    const out = { rows: [], extra: [], rain: null };
-    let left = Math.max(0, count | 0);
-    for (let guard = 0; guard < 20 && left > 0; guard++) {
-      const lenNext = b.cols - ((b.parity ^ 1) & 1);
-      if (left < lenNext) break;
-      out.rows.push(pushRow(b, lenNext, rng));
-      left -= lenNext;
-    }
-    const present = presentColors(b);
-    const pool = present.length ? present : b.colors;
-    while (left > 0) {
-      let cand = [];
-      for (let r = 0; r < MAX_ROWS && !cand.length; r++) {
-        ensureRow(b, r);
-        for (let c = 0; c < rowLen(b, r); c++) {
-          if (b.rows[r][c]) continue;
-          if (r === 0 || neighbors(b, r, c).some(q => b.rows[q[0]] && b.rows[q[0]][q[1]])) cand.push([r, c]);
-        }
-      }
-      if (!cand.length) { out.rows.push(pushRow(b, left, rng)); left = 0; break; }   /* 盤面滿到沒空格（幾乎不會發生）：照舊塞一列 */
-      const p = cand[Math.floor(rng() * cand.length)];
-      b.rows[p[0]][p[1]] = pool[Math.floor(rng() * pool.length)];
-      out.extra.push(p);
-      left--;
-    }
-    b.garbageIn += count;
-    out.rain = rain(b);
-    trimRows(b);
-    return out;
-  }
-
-  /** 一次清除 gained 顆時，要送給對手幾顆（依難度倍率） */
-  function attackFor(gained, cols, mult) {
-    let base = 0;
-    if (gained >= 10) base = cols * 2;
-    else if (gained >= 7) base = cols;
-    else if (gained >= 5) base = Math.round(cols / 2);
-    return Math.round(base * (mult == null ? 1 : mult));
-  }
-
-  /* ---------- 預覽（AI 與瞄準輔助：不改原盤面） ---------- */
+  /* ---------- 預覽（瞄準輔助：不改原盤面） ---------- */
   function preview(b, angle, swapFirst) {
     const c = cloneBoard(b);
     if (swapFirst) swapItems(c);
@@ -857,7 +812,7 @@
       level: b.level, cols: b.cols, parity: b.parity, rows: b.rows.map(r => r.slice()), colors: b.colors.slice(), seed: b.seed,
       queueSeed: b.queueSeed, shots: b.shots, miss: b.miss, cleared: b.cleared, combo: b.combo, maxCombo: b.maxCombo, hits: b.hits, best: b.best, dropN: b.dropN,
       descents: b.descents, rains: b.rains, protect: b.protect, fullClear: b.fullClear, layoutId: b.layoutId, layoutName: b.layoutName,
-      garbageIn: b.garbageIn, garbageOut: b.garbageOut, cur: b.cur, nxt: b.nxt, qIdx: b.qIdx
+      cur: b.cur, nxt: b.nxt, qIdx: b.qIdx
     };
   }
   function fromSnapshot(s) {
@@ -876,7 +831,7 @@
     colorOf, modOf, isBubble, offOf, rowLen, cx, cy, get, neighbors, inBoard, shooterPos,
     cloneBoard, bubbleCount, lowestRow, presentColors,
     GOAL_TYPES, MINI_IDS, questOpts, newQuestBoard, questProgress, questMini, questStars, questSummary, countMark,
-    newBoard, trace, applyShot, swapItems, applyGarbage, attackFor, preview, boardHash, snapshot, fromSnapshot, group, floating, settle, laserLine, genItem
+    newBoard, trace, applyShot, swapItems, preview, boardHash, snapshot, fromSnapshot, group, floating, settle, laserLine, genItem
   };
   root.Rules = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

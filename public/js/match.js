@@ -1,205 +1,92 @@
-/* ===== match.js — 一場對局（最多 4 個盤面）的狀態與事件處理 =====
+/* ===== match.js — 單機與闖關對局狀態 =====
  *
- * create(cfg) 建立對局；input() 與 tick() 更新規則狀態，回傳的事件交給畫面播放。
- * apply() 套用事件，也用於檢查同一串事件能否重播出一致的盤面。
- *
- * 事件格式（全部可 JSON 序列化）：
- *   { e:'shot', s:席位, a:角度(百分之一度), t:毫秒 }
- *   { e:'swap', s, t }
- *   { e:'pend', to, from, id, n, at, t }   對打：有 n 顆泡泡將在 at 毫秒落到 to 的盤面頂端（先預告）
- *   { e:'cancel', to, id, n, t }           預告期間被抵銷，n 是剩下的顆數（0 代表整筆取消）
- *   { e:'land', s, id, n, t }              預告結束，泡泡落下
- *   { e:'end', t, result }                 對局結束
+ * create(cfg) 建立單一盤面的對局；input() 與 tick() 更新規則狀態。
+ * shot、swap、end 事件可序列化，供重播測試使用。
  */
 (function (root) {
   'use strict';
 
   const Rules = root.Rules || (typeof require === 'function' ? require('./rules.js') : null);
 
-  /** 每位玩家的盤面種子：第 0 位沿用對局 seed，其他人各自混出不同的 seed（顏色、排版、發射順序都不一樣） */
-  function boardSeed(seed, i) { return i === 0 ? seed >>> 0 : (Math.imul((seed >>> 0) ^ (i * 0x9E3779B1), 0x85EBCA6B) ^ Math.imul(i + 1, 0xC2B2AE35)) >>> 0; }
-  /** 每人盤面不同，但泡泡數、星星數、獎勵泡泡數都跟第 0 位一樣（公平） */
-  function boardsFor(cfg, n) {
-    if (cfg.mode === 'quest') return [Rules.newQuestBoard(cfg.quest)];   /* 闖關：單盤面，由關卡定義決定一切 */
-    const base = { level: cfg.level, layoutId: cfg.layoutId };
-    const first = Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, 0) }, base));
-    const marks = m => { let k = 0; first.rows.forEach(row => row.forEach(v => { if (Rules.isBubble(v) && Rules.modOf(v) === m) k++; })); return k; };
-    const same = { count: Rules.bubbleCount(first), stars: marks(1), bonus: marks(2) };
-    let out = [first];
-    for (let i = 1; i < n; i++) out.push(Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, i) }, base, same)));
-    /* 有人的版型裝不下那麼多顆：大家一起降到最少的那個數量（只會往下拿掉，一定做得到） */
-    const min = Math.min.apply(null, out.map(b => Rules.bubbleCount(b)));
-    if (min < same.count) {
-      same.count = min;
-      out = out.map((b, i) => Rules.bubbleCount(b) === min ? b : Rules.newBoard(Object.assign({ seed: boardSeed(cfg.seed, i) }, base, same)));
-    }
-    return out;
-  }
   function create(cfg) {
-    const players = cfg.players.map((p, i) => ({
-      slot: i, name: p.name || '', dragon: p.dragon || 'rainbow', kind: p.kind || 'human', aiLevel: p.aiLevel || null
-    }));
-    const m = {
-      mode: cfg.mode === 'duel' ? 'duel' : cfg.mode === 'quest' ? 'quest' : 'race',
-      quest: cfg.mode === 'quest' ? cfg.quest : null,
-      level: cfg.level || 'normal', seed: cfg.seed >>> 0, layoutId: cfg.layoutId || 'random', themeId: cfg.themeId | 0,
-      duration: cfg.mode === 'quest' ? 0 : (cfg.duration == null ? 180000 : cfg.duration),
-      players,
-      boards: boardsFor(cfg, players.length),
-      pending: players.map(() => []),
-      reachedAt: players.map(() => 0),
-      lastAttacker: players.map(() => -1),
-      gid: 0, over: false, result: null
+    const quest = cfg.mode === 'quest';
+    const player = Object.assign({ name: '', dragon: 'rainbow' }, cfg.players && cfg.players[0]);
+    const boardCfg = { level: cfg.level || 'normal', layoutId: cfg.layoutId || 'random' };
+    const board = quest
+      ? Rules.newQuestBoard(cfg.quest)
+      : Rules.newBoard(Object.assign({ seed: cfg.seed >>> 0 }, boardCfg));
+    return {
+      mode: quest ? 'quest' : 'solo',
+      quest: quest ? cfg.quest : null,
+      level: cfg.level || 'normal',
+      seed: cfg.seed >>> 0,
+      themeId: cfg.themeId | 0,
+      duration: quest ? 0 : (cfg.duration == null ? 180000 : cfg.duration),
+      players: [player],
+      boards: [board],
+      over: false,
+      result: null
     };
-    return m;
   }
 
-  /* ---------- 重播事件 ---------- */
   function apply(m, ev) {
     switch (ev.e) {
       case 'shot': {
-        const b = m.boards[ev.s];
-        if (!b || b.fullClear) return null;
-        const before = b.cleared;
-        const res = Rules.applyShot(b, ev.a);
-        if (b.cleared > before) m.reachedAt[ev.s] = ev.t || 0;
-        return res;
+        const b = m.boards[0];
+        if (m.over || b.fullClear) return null;
+        return Rules.applyShot(b, ev.a);
       }
-      case 'swap': {
-        const b = m.boards[ev.s];
-        if (b) Rules.swapItems(b);
+      case 'swap':
+        if (!m.over && !m.boards[0].fullClear) Rules.swapItems(m.boards[0]);
         return null;
-      }
-      case 'pend': {
-        m.pending[ev.to].push({ id: ev.id, n: ev.n, from: ev.from, at: ev.at });
-        if (ev.id > m.gid) m.gid = ev.id;
-        const fb = m.boards[ev.from];
-        if (fb) fb.garbageOut += ev.n;
+      case 'end':
+        m.over = true;
+        m.result = ev.result;
         return null;
-      }
-      case 'cancel': {
-        const list = m.pending[ev.to];
-        const i = list.findIndex(p => p.id === ev.id);
-        if (i >= 0) { if (ev.n <= 0) list.splice(i, 1); else list[i].n = ev.n; }
+      default:
         return null;
-      }
-      case 'land': {
-        const list = m.pending[ev.s];
-        const i = list.findIndex(p => p.id === ev.id);
-        if (i >= 0) list.splice(i, 1);
-        const b = m.boards[ev.s];
-        if (!b || b.fullClear) return null;
-        return Rules.applyGarbage(b, ev.n, ev.id);
-      }
-      case 'end': {
-        m.over = true; m.result = ev.result;
-        return null;
-      }
     }
-    return null;
-  }
-
-  /* ---------- 對局規則 ---------- */
-  function pickTarget(m, s) {
-    let best = -1, bn = 1e9;
-    for (let i = 0; i < m.players.length; i++) {
-      if (i === s || m.boards[i].fullClear) continue;
-      const n = Rules.bubbleCount(m.boards[i]);
-      if (n < bn || (n === bn && i === m.lastAttacker[s])) { bn = n; best = i; }
-    }
-    return best;
-  }
-
-  function ranking(m) {
-    const rows = m.players.map((p, i) => {
-      const b = m.boards[i];
-      return {
-        s: i, name: p.name, dragon: p.dragon, kind: p.kind, aiLevel: p.aiLevel, cleared: b.cleared, fullClear: b.fullClear,
-        shots: b.shots, hits: b.hits | 0, best: b.best | 0, dropN: b.dropN | 0, rains: b.rains | 0, maxCombo: b.maxCombo, garbageOut: b.garbageOut, garbageIn: b.garbageIn, reachedAt: m.reachedAt[i]
-      };
-    });
-    rows.sort((x, y) => (y.fullClear - x.fullClear) || (y.cleared - x.cleared) || (x.reachedAt - y.reachedAt) || (x.s - y.s));
-    /* 同分且同時間視為並列名次 */
-    rows.forEach((r, i) => {
-      const prev = rows[i - 1];
-      r.rank = prev && prev.cleared === r.cleared && prev.fullClear === r.fullClear && prev.reachedAt === r.reachedAt ? prev.rank : i + 1;
-    });
-    return rows;
   }
 
   function endMatch(m, t, reason) {
     if (m.over) return [];
-    const rank = ranking(m);
-    const ev = { e: 'end', t, result: { reason, t: Math.round(t || 0), ranks: rank, winner: rank[0].s, mode: m.mode, layoutName: m.boards[0].layoutName } };
-    if (m.mode === 'quest') ev.result.quest = Rules.questSummary(m.boards[0]);
+    const result = {
+      reason,
+      t: Math.round(t || 0),
+      mode: m.mode,
+      layoutName: m.boards[0].layoutName
+    };
+    if (m.mode === 'quest') result.quest = Rules.questSummary(m.boards[0]);
+    const ev = { e: 'end', t, result };
     apply(m, ev);
     return [{ ev, res: null }];
   }
 
-  /** 處理玩家或電腦輸入：{ t:'shot', a } 或 { t:'swap' }，回傳畫面播放用的事件與動畫結果。 */
-  function input(m, s, inp, t) {
-    const out = [];
-    if (m.over || !inp || s < 0 || s >= m.players.length) return out;
-    const b = m.boards[s];
-    if (b.fullClear) return out;
+  function input(m, slot, inp, t) {
+    if (m.over || slot !== 0 || !inp || m.boards[0].fullClear) return [];
     if (inp.t === 'swap') {
-      const ev = { e: 'swap', s, t };
-      apply(m, ev); out.push({ ev, res: null });
-      return out;
+      const ev = { e: 'swap', s: 0, t };
+      apply(m, ev);
+      return [{ ev, res: null }];
     }
-    if (inp.t !== 'shot') return out;
-    const a = Rules.clampAngle(+inp.a);
-    if (!isFinite(a)) return out;
-    const ev = { e: 'shot', s, a, t };
+    if (inp.t !== 'shot') return [];
+    const angle = Rules.clampAngle(+inp.a);
+    if (!isFinite(angle)) return [];
+    const ev = { e: 'shot', s: 0, a: angle, t };
     const res = apply(m, ev);
-    out.push({ ev, res });
-    if (!res) return out;
-    /* 對打：這一發的清除量換成送給對手的泡泡 */
-    if (m.mode === 'duel' && res.gained > 0) {
-      let n = Rules.attackFor(res.gained, b.cols, b.cfg.mult);
-      if (n > 0) {
-        /* 先抵銷自己頭上還沒落下的 */
-        const mine = m.pending[s].slice().sort((x, y) => x.at - y.at);
-        for (const p of mine) {
-          if (n <= 0) break;
-          const cut = Math.min(n, p.n);
-          const rest = p.n - cut;
-          n -= cut;
-          const cev = { e: 'cancel', to: s, id: p.id, n: rest, t };
-          apply(m, cev); out.push({ ev: cev, res: null });
-        }
-        if (n > 0) {
-          const to = pickTarget(m, s);
-          if (to >= 0) {
-            const pev = { e: 'pend', to, from: s, id: ++m.gid, n, at: t + m.boards[to].cfg.warnMs, t };
-            m.lastAttacker[to] = s;
-            apply(m, pev); out.push({ ev: pev, res: null });
-          }
-        }
-      }
-    }
-    if (m.mode === 'quest' && b.qDone) out.push.apply(out, endMatch(m, t, b.qDone));
-    else if (res.fullClear) out.push.apply(out, endMatch(m, t, 'clear'));
+    const out = [{ ev, res }];
+    const board = m.boards[0];
+    if (board.qDone) out.push.apply(out, endMatch(m, t, board.qDone));
+    else if (res && res.fullClear) out.push.apply(out, endMatch(m, t, 'clear'));
     return out;
   }
 
-  /** 時間推進：預告到期的泡泡落下、時間到結束 */
   function tick(m, t) {
-    const out = [];
-    if (m.over) return out;
-    const due = [];
-    for (let s = 0; s < m.players.length; s++) for (const p of m.pending[s]) if (p.at <= t) due.push({ s, p });
-    due.sort((x, y) => x.p.at - y.p.at || x.p.id - y.p.id);
-    for (const d of due) {
-      const ev = { e: 'land', s: d.s, id: d.p.id, n: d.p.n, t };
-      const res = apply(m, ev);
-      out.push({ ev, res });
-    }
-    if (m.duration > 0 && t >= m.duration) out.push.apply(out, endMatch(m, t, 'time'));
-    return out;
+    if (!m.over && m.duration > 0 && t >= m.duration) return endMatch(m, t, 'time');
+    return [];
   }
 
-  const api = { create, apply, input, tick, endMatch, ranking, pickTarget };
+  const api = { create, apply, input, tick, endMatch };
   root.Match = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

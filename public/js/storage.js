@@ -11,9 +11,6 @@
     aimLine: true            /* 顯示瞄準虛線 */
   };
   const SOLO_DEFAULTS = {
-    mode: 'race',            /* 單機：race 比賽／duel 對打 */
-    opponents: 0,            /* 電腦對手數 0～3 */
-    aiLevels: ['easy', 'easy', 'easy'],
     level: 'easy',           /* 自己的盤面難度 baby/easy/normal/hard */
     layout: 'random', theme: 'random', duration: 180000
   };
@@ -31,7 +28,9 @@
     try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { raw = null; }
     const data = Object.assign({}, DEFAULTS, raw || {});
     data.solo = Object.assign({}, SOLO_DEFAULTS, (raw && raw.solo) || {});
-    if (!Array.isArray(data.solo.aiLevels) || data.solo.aiLevels.length < 3) data.solo.aiLevels = SOLO_DEFAULTS.aiLevels.slice();
+    delete data.solo.mode;
+    delete data.solo.opponents;
+    delete data.solo.aiLevels;
     data.stats = Object.assign({}, (raw && raw.stats) || {});
     data.quest = normalizeQuest(raw && raw.quest);
     if (!raw || !raw.dragon) {

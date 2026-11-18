@@ -1,6 +1,6 @@
 /* ===== scripts/browser-check.js — 單機流程與版面檢查（Playwright） =====
  * 用法：node scripts/browser-check.js
- * 檢查：多種裝置尺寸 × 1～4 人的對局版面（無水平溢出、盤面夠大、沒有 JS 錯誤）、
+ * 檢查：多種裝置尺寸的單人盤面（無水平溢出、盤面夠大、沒有 AI／對手 UI 或 JS 錯誤）、
  *       設定彈窗、暫停選單、結算 overlay 三個按鈕，截圖放在 shots/。
  */
 'use strict';
@@ -26,7 +26,8 @@ const ALL_VIEWS = [
   { name: 'phone-land', w: 844, h: 390 }
 ];
 /* 快速模式（預設）：桌機、平板直向、手機直向三個尺寸；FULL=1 才跑全部 5 種 */
-const VIEWS = FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
+const ONLY = (process.env.VIEWS || '').split(',').filter(Boolean);
+const VIEWS = ONLY.length ? ALL_VIEWS.filter(v => ONLY.includes(v.name)) : FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port', 'phone-port'].includes(v.name));
 
 (async () => {
   const br = await chromium.launch();
@@ -54,37 +55,75 @@ const VIEWS = FULL ? ALL_VIEWS : ALL_VIEWS.filter(v => ['desktop', 'tablet-port'
     await pg.click('text=一個人玩');
     await pg.waitForSelector('.sticky-cta');
     ok(!(await overflow(pg)), '單機設定沒有水平溢出');
-    /* 逐一測 1、2、4 人 */
-    for (const opp of [0, 1, 3]) {
-      await pg.evaluate(n => { App.store.solo.opponents = n; App.store.solo.mode = n ? 'duel' : 'race'; App.store.solo.level = 'normal'; App.store.solo.duration = 120000; App.go('solo'); }, opp);
-      await pg.click('text=開始遊戲');
-      await pg.waitForSelector('.bslot canvas');
-      await pg.waitForFunction(() => App.game && App.game.mt() > 300, null, { timeout: 8000 });
-      const info = await pg.evaluate(() => Array.from(document.querySelectorAll('.bslot')).map(el => { const r = el.querySelector('canvas').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), mine: el.classList.contains('mine') }; }));
-      ok(info.length === opp + 1, '盤面數量 = ' + (opp + 1), JSON.stringify(info));
-      const mine = info.find(x => x.mine);
-      const minMine = v.w < 500 ? 150 : 200;
-      ok(mine && mine.w >= minMine && mine.h >= 250, '自己的盤面夠大 ' + (mine ? mine.w + '×' + mine.h : ''), JSON.stringify(info));
-      ok(info.every(x => x.w >= 55 && x.h >= 70), '所有盤面可辨識（最小 ' + Math.min.apply(null, info.map(x => x.w)) + 'px 寬）');
-      ok(!(await overflow(pg)), '對局沒有水平溢出');
-      /* 打幾發 */
-      const cv = await pg.$('.bslot.mine canvas');
-      const bb = await cv.boundingBox();
-      for (let i = 0; i < 4; i++) { await pg.mouse.click(bb.x + bb.width * (0.25 + 0.17 * i), bb.y + bb.height * 0.35); await pg.waitForTimeout(330); }
-      await pg.waitForTimeout(700);
-      const shots = await pg.evaluate(() => App.game.m.boards[0].shots);
-      ok(shots >= 3, '點擊棋盤真的會發射（' + shots + ' 發）');
-      await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game' + (opp + 1) + 'p.png') });
-      if (opp === 3 || (opp === 1 && v.name === 'phone-port')) { /* 資訊欄開關 */
-        if (await pg.locator('.side-toggle').isVisible()) await pg.click('.side-toggle');
-        await pg.waitForTimeout(350);
-        await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game' + (opp + 1) + 'p-side.png') });
-        ok(!(await overflow(pg)), '開啟資訊欄後沒有水平溢出');
-      }
-      await pg.evaluate(() => App.go('home'));
+    /* 載入舊設定，確認移除的對手選項會在遷移時清掉 */
+    await pg.evaluate(() => {
+      localStorage.setItem('rainbow-bubble', JSON.stringify(Object.assign({}, App.store, {
+        solo: Object.assign({}, App.store.solo, { mode: 'duel', opponents: 3, aiLevels: ['easy', 'normal', 'hard'] })
+      })));
+      App.store = Store.load();
+      App.go('solo');
+    });
+    await pg.waitForSelector('.sticky-cta');
+    ok(await pg.evaluate(() => !('opponents' in App.store.solo) && !('aiLevels' in App.store.solo) && !('mode' in App.store.solo)), '舊存檔中的電腦對手設定已移除');
+    for (const lang of ['zh-Hant', 'zh-Hans', 'en']) {
+      await pg.evaluate(lang => I18N.setLang(lang), lang);
+      const text = await pg.locator('[data-screen="solo"]').innerText();
+      ok(!/電腦|對手|computer opponent|\bbots?\b|\bopponents?\b/i.test(text), lang + ' 單機設定沒有對手文案');
     }
+    await pg.evaluate(() => { I18N.setLang('zh-Hant'); App.store.solo.level = 'normal'; App.store.solo.duration = 120000; App.go('solo'); });
+    await pg.click('text=開始遊戲');
+    await pg.waitForSelector('.bslot canvas', { timeout: 8000 }).catch(async error => {
+      console.error('單機開局診斷', JSON.stringify(await pg.evaluate(() => ({ screen: App.screen, game: !!App.game, text: document.querySelector('#app').innerText.slice(0, 600) }))));
+      console.error('瀏覽器錯誤', errs.join(' | '));
+      throw error;
+    });
+    await pg.waitForFunction(() => App.game && App.game.mt() > 300, null, { timeout: 8000 });
+    const info = await pg.evaluate(() => ({
+      boards: document.querySelectorAll('.bslot').length,
+      players: App.game.m.players.length,
+      logicalBoards: App.game.m.boards.length,
+      hasOpponentUi: !!document.querySelector('.ai-row,.ai-faces,.opp-col,.rank-row')
+    }));
+    ok(info.boards === 1 && info.players === 1 && info.logicalBoards === 1, '單人對局只有一位玩家與一個盤面', JSON.stringify(info));
+    ok(!info.hasOpponentUi, '遊戲中沒有 AI、對手欄或排名元件');
+    const mine = await pg.$eval('.bslot.mine canvas', el => {
+      const rect = node => { const r = node.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top), bottom: Math.round(r.bottom) }; };
+      const wrap = el.closest('.board-wrap');
+      const slot = el.closest('.bslot'), wrapStyle = getComputedStyle(wrap), slotStyle = getComputedStyle(slot);
+      return {
+        canvas: rect(el), wrap: Object.assign(rect(wrap), { clientHeight: wrap.clientHeight, inlineCanvasHeight: el.style.height, inset: wrapStyle.inset, offsetParent: wrap.offsetParent && wrap.offsetParent.className }),
+        slot: Object.assign(rect(slot), { className: slot.className, tbar: slotStyle.getPropertyValue('--tbar'), position: slotStyle.position }),
+        boards: rect(el.closest('.boards')), main: rect(el.closest('.game-main'))
+      };
+    });
+    const canvas = mine.canvas;
+    const minMine = v.w < 500 ? 150 : 200;
+    ok(canvas.w >= minMine && canvas.h >= 250, '單人盤面尺寸足夠 ' + canvas.w + '×' + canvas.h);
+    ok(canvas.top >= 0 && canvas.bottom <= v.h + 1, '盤面完整顯示於視窗內', JSON.stringify(mine));
+    ok(!(await overflow(pg)), '對局沒有水平溢出');
+    const cv = await pg.$('.bslot.mine canvas');
+    const bb = await cv.boundingBox();
+    for (let i = 0; i < 4; i++) { await pg.mouse.click(bb.x + bb.width * (0.25 + 0.17 * i), bb.y + bb.height * 0.35); await pg.waitForTimeout(330); }
+    await pg.waitForTimeout(700);
+    const shots = await pg.evaluate(() => App.game.m.boards[0].shots);
+    ok(shots >= 3, '點擊棋盤真的會發射（' + shots + ' 發）');
+    const pixels = await pg.evaluate(() => {
+      const v = App.game.views[0], canvas = v.canvas;
+      const ctx = canvas.getContext('2d'), points = [[8, 8], [canvas.width >> 1, canvas.height >> 1], [canvas.width - 8, canvas.height - 8]];
+      const before = points.map(([x, y]) => ctx.getImageData(x, y, 1, 1).data[3]);
+      return { size: [canvas.width, canvas.height], alpha: before, mounted: App.game.mounted, connected: App.game.root.isConnected, shown: !!v.shown };
+    });
+    ok(pixels.alpha.some(alpha => alpha > 0), '盤面 canvas 有繪製內容', JSON.stringify(pixels));
+    await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game-solo.png') });
+    if (await pg.locator('.side-toggle').isVisible()) {
+      await pg.click('.side-toggle');
+      await pg.waitForTimeout(350);
+      await pg.screenshot({ path: path.join(SHOTS, 'rwd-' + v.name + '-game-side.png') });
+      ok(!(await overflow(pg)), '開啟資訊欄後沒有水平溢出');
+    }
+    await pg.evaluate(() => App.go('home'));
     /* 設定彈窗與暫停 */
-    await pg.evaluate(() => { App.store.solo.opponents = 1; App.go('solo'); });
+    await pg.evaluate(() => App.go('solo'));
     await pg.click('text=開始遊戲');
     await pg.waitForSelector('.bslot canvas');
     await pg.waitForTimeout(GO + 300);

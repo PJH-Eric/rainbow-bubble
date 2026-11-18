@@ -1,19 +1,19 @@
 {
   "zh-Hant": {
     "name": "彩虹泡泡砲",
-    "summary": "瞄準發射，連成三顆以上同色泡泡就能消除，懸空泡泡也會落下。可離線單機闖關或挑戰四段本機電腦對手。",
+    "summary": "瞄準發射，連成三顆以上同色泡泡就能消除，懸空泡泡也會落下。可離線單人遊玩或挑戰闖關。",
     "modes": ["單機模式", "闖關模式"],
     "controls": "點哪裡泡泡就飛向哪裡；右下角小泡泡可以換泡泡"
   },
   "zh-Hans": {
     "name": "彩虹泡泡砲",
-    "summary": "瞄准发射，连成三个以上同色泡泡就能消除，悬空泡泡也会落下。可离线单机闯关或挑战四段本机电脑对手。",
+    "summary": "瞄准发射，连成三个以上同色泡泡就能消除，悬空泡泡也会落下。可离线单人游玩或挑战闯关。",
     "modes": ["单机模式", "闯关模式"],
     "controls": "点哪里泡泡就飞向哪里；右下角小泡泡可以换泡泡"
   },
   "en": {
     "name": "Rainbow Bubble Blaster",
-    "summary": "Aim and shoot: match three or more bubbles to pop them, and unsupported bubbles fall. Play solo or clear levels offline, with four difficulty levels of local computer opponents.",
+    "summary": "Aim and shoot: match three or more bubbles to pop them, and unsupported bubbles fall. Play offline solo or clear quest stages.",
     "modes": ["Solo", "Quest"],
     "controls": "Bubbles fly wherever you tap; swap bubbles with the small bubble at the bottom right"
   }
